@@ -2,17 +2,24 @@
 //!
 //! 정책 (ADR-0025, phase-6p-updater-pipelines-decision.md §5):
 //! - request 도착 시 body를 JSON으로 파싱 → `PipelineChain::apply_request` 적용 → 변경된 body로 inner forward.
-//! - response 도착 시 *content-type*이 `text/event-stream`이면 byte-perfect pass-through (SSE invariant).
-//!   non-SSE면 body를 파싱 → `PipelineChain::apply_response` → 변경된 body로 클라이언트.
+//! - response 도착 시 *content-type*이 `text/event-stream`이면:
+//!     - Phase 8'.c.4 (ADR-0030): SSE chunk parser로 chunk 단위 변환. PII redact 등이 streaming 응답에 적용.
+//!     - 단, NoOp pipeline 통과 시에는 byte-identical 보장 (golden test로 회귀 가드).
+//!     - non-SSE면 body를 파싱 → `PipelineChain::apply_response` → 변경된 body로 클라이언트.
 //! - Pipeline이 `Err` 반환 시 OpenAI envelope 형태의 4xx/5xx 응답으로 short-circuit.
 //! - body 크기는 `MAX_BODY_BYTES` (2 MiB) 제한 — gateway 기본 limit과 일치.
 //! - 본 레이어는 *opt-in* — 기본 라우터에는 미적용. 호출자가 명시적으로 `with_pipelines`로 mount.
+//!
+//! Phase 8'.c.2 (ADR-0028): chain은 `Arc<ArcSwap<PipelineChain>>`으로 보관 — 사용자 토글 시 lock-free 교체.
+//! Phase 8'.c.3 (ADR-0029): `principal_key_scope`가 `enabled_pipelines = Some([...])`이면 그 ID 화이트리스트만 적용.
 
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
+use arc_swap::ArcSwap;
 use axum::body::{to_bytes, Body};
 use axum::http::{header, HeaderValue, Request, Response, StatusCode};
+use bytes::Bytes;
 use futures::future::BoxFuture;
 use http_body_util::BodyExt as _;
 use pipelines::{AuditEntry, PipelineChain, PipelineContext, PipelineError};
@@ -20,10 +27,22 @@ use serde_json::{json, Value};
 use tokio::sync::mpsc;
 use tower::{Layer, Service};
 
+use crate::sse_chunk::{SseChunk, SseChunkParser};
+
 /// 본문 크기 제한 — 가벼운 전체 버퍼링이 가능하도록 2 MiB cap.
 pub const MAX_BODY_BYTES: usize = 2 * 1024 * 1024;
 
-/// Pipeline 미들웨어 레이어 — `Arc<PipelineChain>`을 보관 + `Service`를 wrap.
+/// Phase 8'.c.3 (ADR-0029) — auth middleware가 인증된 키의 `enabled_pipelines`를
+/// request extension으로 set하는 마커 타입.
+///
+/// 정책:
+/// - `None` (또는 extension 미존재) = 전역 토글 따름.
+/// - `Some(Vec)` = 해당 ID 화이트리스트만 적용. PipelineLayer가 chain.filter_by_ids로 좁힘.
+/// - `Some(빈 Vec)` = 모든 Pipeline 비활성 (raw passthrough).
+#[derive(Debug, Clone)]
+pub struct KeyPipelinesOverride(pub Option<Vec<String>>);
+
+/// Pipeline 미들웨어 레이어 — `Arc<ArcSwap<PipelineChain>>`을 보관 + `Service`를 wrap.
 ///
 /// 사용 예:
 /// ```ignore
@@ -34,29 +53,47 @@ pub const MAX_BODY_BYTES: usize = 2 * 1024 * 1024;
 ///
 /// Phase 6'.d — `with_audit_channel`로 `AuditEntry`를 외부 receiver(예: Tauri PipelinesState
 /// ring buffer)에 best-effort try_send. channel full / drop 시 처리 흐름은 절대 block 안 해요.
+///
+/// Phase 8'.c.2 (ADR-0028) — chain은 `ArcSwap`으로 보관해 사용자가 Pipelines 토글을 바꿀 때
+/// `swap_chain()`이 lock-free하게 교체. 진행 중 요청은 `load()` 시점의 chain 인스턴스를 보존해서
+/// 안전하게 종료해요. 다음 요청부터 새 chain 적용.
 #[derive(Clone)]
 pub struct PipelineLayer {
-    chain: Arc<PipelineChain>,
+    chain_swap: Arc<ArcSwap<PipelineChain>>,
     audit_sender: Option<mpsc::Sender<AuditEntry>>,
 }
 
 impl PipelineLayer {
     pub fn new(chain: PipelineChain) -> Self {
         Self {
-            chain: Arc::new(chain),
+            chain_swap: Arc::new(ArcSwap::new(Arc::new(chain))),
             audit_sender: None,
         }
     }
 
-    pub fn from_arc(chain: Arc<PipelineChain>) -> Self {
+    /// 외부에서 만든 ArcSwap handle을 공유. Phase 8'.c.2에서 Tauri PipelinesState가 동일 swap을 보유.
+    pub fn from_swap(chain_swap: Arc<ArcSwap<PipelineChain>>) -> Self {
         Self {
-            chain,
+            chain_swap,
             audit_sender: None,
         }
     }
 
-    pub fn chain(&self) -> &PipelineChain {
-        &self.chain
+    /// 현재 chain snapshot — 디버깅 / 테스트 용.
+    pub fn chain(&self) -> Arc<PipelineChain> {
+        self.chain_swap.load_full()
+    }
+
+    /// chain_swap handle — Tauri 측에서 토글 시 swap 호출용.
+    pub fn chain_swap(&self) -> Arc<ArcSwap<PipelineChain>> {
+        Arc::clone(&self.chain_swap)
+    }
+
+    /// 새 chain으로 atomic swap. 다음 요청부터 새 chain 적용. 진행 중 요청은 옛 chain 안전 보존.
+    ///
+    /// Phase 8'.c.2 (ADR-0028) — `RwLock<Arc<T>>` 대비 lock-free라서 read 경합 0.
+    pub fn swap_chain(&self, new_chain: PipelineChain) {
+        self.chain_swap.store(Arc::new(new_chain));
     }
 
     /// 외부 receiver(예: Tauri PipelinesState)로 AuditEntry를 전달할 채널을 주입.
@@ -82,7 +119,7 @@ impl<S> Layer<S> for PipelineLayer {
     fn layer(&self, inner: S) -> Self::Service {
         PipelineMiddleware {
             inner,
-            chain: self.chain.clone(),
+            chain_swap: Arc::clone(&self.chain_swap),
             audit_sender: self.audit_sender.clone(),
         }
     }
@@ -91,7 +128,7 @@ impl<S> Layer<S> for PipelineLayer {
 #[derive(Clone)]
 pub struct PipelineMiddleware<S> {
     inner: S,
-    chain: Arc<PipelineChain>,
+    chain_swap: Arc<ArcSwap<PipelineChain>>,
     audit_sender: Option<mpsc::Sender<AuditEntry>>,
 }
 
@@ -151,7 +188,9 @@ where
     }
 
     fn call(&mut self, req: Request<Body>) -> Self::Future {
-        let chain = self.chain.clone();
+        // Phase 8'.c.2 — chain은 ArcSwap에서 1회 load. 이 future가 진행 중인 동안 토글이
+        // 발생해도 옛 chain 인스턴스를 안전하게 사용 (Arc strong_count로 보존).
+        let chain = self.chain_swap.load_full();
         let audit_sender = self.audit_sender.clone();
         // Service::call 안에서 self.inner를 unwrap-clone해 future로 옮김 (tower standard).
         let clone = self.inner.clone();
@@ -212,8 +251,34 @@ where
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
 
+            // Phase 8'.c.3 (ADR-0029) — auth middleware가 request extension에 set한
+            // `KeyPipelinesOverride`가 있으면 ctx에 복사. 없으면 None (전역 설정 따름).
+            if let Some(over) = parts.extensions.get::<KeyPipelinesOverride>() {
+                ctx.principal_key_pipelines = over.0.clone();
+            }
+
+            // chain은 ArcSwap에서 load한 *전역* chain. 키별 override가 있다면 sub-chain으로 좁혀요.
+            // 본 effective_chain은 request + response + SSE 모두 동일하게 사용 — 키 정책 일관성.
+            let effective_chain =
+                Arc::new(chain.filter_by_ids(ctx.principal_key_pipelines.as_deref()));
+
             // 2) request 단계 적용.
-            if let Err(e) = chain.apply_request(&mut ctx, &mut request_body).await {
+            if effective_chain.is_empty() {
+                // 본 키는 모든 Pipeline 비활성 — chain을 적용하지 않고 inner forward.
+                // (request body는 그대로). SSE / non-SSE 모두 raw passthrough.
+                tracing::debug!(
+                    target: "lmmaster.pipelines",
+                    request_id = %ctx.request_id,
+                    "principal_key_pipelines empty — pipeline 적용 skip"
+                );
+                let req = Request::from_parts(parts, Body::from(collected));
+                return inner.call(req).await;
+            }
+
+            if let Err(e) = effective_chain
+                .apply_request(&mut ctx, &mut request_body)
+                .await
+            {
                 // 차단된 경우라도 누적된 audit (이전 Pipeline의 passed/modified + 본 Pipeline의 blocked)을
                 // 보존하기 위해 drain 후 envelope 반환.
                 drain_audit(audit_sender.as_ref(), &mut ctx);
@@ -246,7 +311,8 @@ where
 
             let response = inner.call(new_req).await?;
 
-            // 4) response 단계 — SSE면 byte-perfect pass-through.
+            // 4) response 단계 — Phase 8'.c.4 (ADR-0030).
+            //    SSE면 chunk parser로 chunk 단위 변환을 적용. NoOp 통과 시 byte-identical 보장.
             let is_sse = response
                 .headers()
                 .get(header::CONTENT_TYPE)
@@ -254,12 +320,13 @@ where
                 .map(|s| s.starts_with("text/event-stream"))
                 .unwrap_or(false);
             if is_sse {
-                tracing::debug!(
-                    target: "lmmaster.pipelines",
-                    request_id = %ctx.request_id,
-                    "SSE response — pipeline response stage skipped (byte-perfect relay)"
-                );
-                return Ok(response);
+                return process_sse_response(
+                    response,
+                    Arc::clone(&effective_chain),
+                    audit_sender.clone(),
+                    &mut ctx,
+                )
+                .await;
             }
 
             // non-SSE — body를 파싱해 apply_response. 파싱 실패하면 그대로 pass-through.
@@ -296,7 +363,10 @@ where
                 }
             };
 
-            if let Err(e) = chain.apply_response(&mut ctx, &mut response_body).await {
+            if let Err(e) = effective_chain
+                .apply_response(&mut ctx, &mut response_body)
+                .await
+            {
                 drain_audit(audit_sender.as_ref(), &mut ctx);
                 return Ok(error_envelope_for(&e));
             }
@@ -328,6 +398,146 @@ where
             ))
         })
     }
+}
+
+/// SSE 응답에 Pipeline의 `apply_response`를 chunk 단위로 적용.
+///
+/// 정책 (ADR-0030, Phase 8'.c.4):
+/// - chunk parser로 frame 단위 추출 → JSON parse → `chain.apply_response` → reserialize → emit.
+/// - `[DONE]` sentinel은 변형 없이 그대로 forward.
+/// - JSON parse 실패한 chunk는 `tracing::warn!` 후 원본 그대로 forward (best-effort).
+/// - chain이 chunk를 변경하지 않은 경우(equal) 원본 frame bytes를 그대로 emit → byte-identical 보장.
+/// - 본 v1 구현은 stream을 *전체 buffer*해서 한 번에 emit. 즉 streaming의 latency 이점은
+///   사라지지만 PII redact가 응답 전체에 적용된다는 가치를 우선. v1.x에서 진정한 streaming
+///   transformation으로 진화 (chunk-by-chunk emit + Body::from_stream).
+async fn process_sse_response<E>(
+    response: Response<Body>,
+    chain: Arc<PipelineChain>,
+    audit_sender: Option<mpsc::Sender<AuditEntry>>,
+    ctx: &mut PipelineContext,
+) -> Result<Response<Body>, E> {
+    let (resp_parts, resp_body) = response.into_parts();
+    let resp_bytes = match resp_body.collect().await {
+        Ok(c) => c.to_bytes(),
+        Err(e) => {
+            tracing::warn!(error = %e, "SSE response body 읽기 실패 — pipeline skip");
+            return Ok(envelope_response(
+                StatusCode::BAD_GATEWAY,
+                "upstream_error",
+                "response_body_read_failed",
+                "응답 본문 읽기에 실패했어요.",
+            ));
+        }
+    };
+    if resp_bytes.is_empty() {
+        return Ok(Response::from_parts(resp_parts, Body::from(resp_bytes)));
+    }
+
+    let mut parser = SseChunkParser::new();
+    let mut chunks = parser.parse(Bytes::copy_from_slice(&resp_bytes));
+    chunks.extend(parser.flush());
+
+    // chain이 비어있거나 결과가 비어있으면 원본 그대로 forward.
+    if chunks.is_empty() {
+        return Ok(Response::from_parts(resp_parts, Body::from(resp_bytes)));
+    }
+
+    let mut out_buf = String::with_capacity(resp_bytes.len() + 64);
+    let mut any_change = false;
+
+    for chunk_result in chunks {
+        let chunk = match chunk_result {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::warn!(
+                    target: "lmmaster.pipelines",
+                    request_id = %ctx.request_id,
+                    error = %e,
+                    "SSE frame parse 실패 — chunk skip (data 누락)"
+                );
+                continue;
+            }
+        };
+
+        // [DONE] sentinel은 변형 없이 그대로.
+        if chunk.is_done() {
+            out_buf.push_str(&chunk.serialize());
+            continue;
+        }
+
+        // JSON parse 시도. 실패 시 원본 그대로 emit + warn.
+        let mut value = match chunk.parse_json() {
+            Some(Ok(v)) => v,
+            Some(Err(e)) => {
+                tracing::warn!(
+                    target: "lmmaster.pipelines",
+                    request_id = %ctx.request_id,
+                    error = %e,
+                    "SSE chunk JSON parse 실패 — 원본 forward"
+                );
+                out_buf.push_str(&chunk.serialize());
+                continue;
+            }
+            None => {
+                // is_done()이 true가 아닌데도 None — 정의상 발생 안 함.
+                out_buf.push_str(&chunk.serialize());
+                continue;
+            }
+        };
+
+        // chain.apply_response 호출.
+        let before = value.clone();
+        if let Err(e) = chain.apply_response(ctx, &mut value).await {
+            // chain 에러 시 audit drain + envelope 반환.
+            drain_audit(audit_sender.as_ref(), ctx);
+            return Ok(error_envelope_for(&e));
+        }
+
+        if value == before {
+            // 변경 없음 — 원본 frame을 그대로 emit. byte-identical guarantee를 위해 reserialize 회피.
+            out_buf.push_str(&chunk.serialize());
+        } else {
+            any_change = true;
+            // 변경 있음 — 새 frame 직렬화.
+            let new_data = match serde_json::to_string(&value) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(
+                        target: "lmmaster.pipelines",
+                        request_id = %ctx.request_id,
+                        error = %e,
+                        "SSE chunk reserialize 실패 — 원본 forward"
+                    );
+                    out_buf.push_str(&chunk.serialize());
+                    continue;
+                }
+            };
+            let new_chunk = SseChunk {
+                event: chunk.event,
+                id: chunk.id,
+                data: new_data,
+            };
+            out_buf.push_str(&new_chunk.serialize());
+        }
+    }
+
+    drain_audit(audit_sender.as_ref(), ctx);
+
+    let final_bytes: Bytes = if any_change {
+        Bytes::from(out_buf.into_bytes())
+    } else {
+        // 정책 (ADR-0030 byte-identical invariant):
+        // 어떤 chunk도 변경되지 않았으면 원본 buffer를 그대로 emit. parser/serializer round-trip이
+        // 미세한 byte 차이를 발생시킬 수 있어 NoOp 시에는 입력 그대로 보장.
+        resp_bytes
+    };
+
+    let mut new_parts = resp_parts;
+    new_parts.headers.remove(header::CONTENT_LENGTH);
+    if let Ok(v) = HeaderValue::from_str(&final_bytes.len().to_string()) {
+        new_parts.headers.insert(header::CONTENT_LENGTH, v);
+    }
+    Ok(Response::from_parts(new_parts, Body::from(final_bytes)))
 }
 
 /// 빠른 uuid-like — request_id 헤더가 없을 때 fallback. tracing용 식별자만 필요해서
@@ -504,8 +714,11 @@ mod tests {
         );
     }
 
+    /// Phase 8'.c.4 (ADR-0030) — SSE chunk transformation.
+    /// PII redact pipeline은 streaming chunk 안의 휴대폰 번호도 redact 해야 해요.
+    /// ADR-0025 §"감내한 트레이드오프" supersede — byte-perfect 보존 정책에서 chunk 단위 변환으로 전환.
     #[tokio::test]
-    async fn sse_response_passes_through_byte_perfect() {
+    async fn sse_response_pii_redacted_per_chunk() {
         let chain = PipelineChain::new().add(Arc::new(PiiRedactPipeline::new()));
         let router = make_router(chain);
         let req = Request::builder()
@@ -522,13 +735,46 @@ mod tests {
         );
         let body = resp.into_body().collect().await.unwrap().to_bytes();
         let received = std::str::from_utf8(&body).unwrap();
-        // SSE chunk 안의 010-1234-5678이 byte-perfect 보존되어야 함 (response stage skip).
-        assert!(received.contains("010-1234-5678"));
-        assert!(received.contains("[DONE]"));
-        // [REDACTED-..] 마커가 들어 있으면 SSE relay 깨진 것.
+        // 010-1234-5678이 redact 되어 사라져야 해요.
         assert!(
-            !received.contains("[REDACTED"),
-            "SSE byte-perfect 보존이 깨졌어요: {received}"
+            !received.contains("010-1234-5678"),
+            "SSE chunk PII redact가 적용되지 않았어요: {received}"
+        );
+        // [REDACTED-휴대폰] 마커 + [DONE] 둘 다 있어야 해요.
+        assert!(
+            received.contains("[REDACTED-휴대폰]"),
+            "redact 마커가 보여야 해요: {received}"
+        );
+        assert!(
+            received.contains("[DONE]"),
+            "[DONE] sentinel 보존: {received}"
+        );
+    }
+
+    /// NoOp pipeline (실제로 body를 변경하지 않는 chain)이 SSE 응답을 통과시킬 때 byte-identical 보장.
+    /// ADR-0030 invariant — "변경하지 않으면 원본 그대로".
+    #[tokio::test]
+    async fn sse_response_with_observability_only_is_byte_identical() {
+        use pipelines::ObservabilityPipeline;
+        // ObservabilityPipeline은 body를 변경하지 않음 — tracing only.
+        let chain = PipelineChain::new().add(Arc::new(ObservabilityPipeline::new()));
+        let router = make_router(chain);
+        let req = Request::builder()
+            .method("POST")
+            .uri("/sse")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"model":"x","messages":[],"stream":true}"#))
+            .unwrap();
+        let resp = router.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let received = std::str::from_utf8(&body).unwrap();
+        // sse_handler가 emit한 원본 그대로.
+        let original =
+            "data: {\"choices\":[{\"delta\":{\"content\":\"010-1234-5678\"}}]}\n\ndata: [DONE]\n\n";
+        assert_eq!(
+            received, original,
+            "NoOp pipeline은 byte-identical 보장 (ADR-0030)"
         );
     }
 
@@ -922,5 +1168,235 @@ mod tests {
             ctx.audit_log.is_empty(),
             "sender None이어도 audit_log은 drain되어야 해요"
         );
+    }
+
+    // ───────────────────────────────────────────────────────────────────
+    // Phase 8'.c.2 — Pipelines hot-reload (ArcSwap)
+    // ───────────────────────────────────────────────────────────────────
+
+    /// `swap_chain()` 후 다음 요청에서 새 chain 인스턴스가 적용돼요.
+    #[tokio::test]
+    async fn swap_chain_applies_new_chain_to_next_request() {
+        // 1) PII redact만 있는 chain으로 시작.
+        let chain1 = PipelineChain::new().add(Arc::new(PiiRedactPipeline::new()));
+        let layer = PipelineLayer::new(chain1);
+
+        // 첫 요청 — alice@example.com이 redact 되어야.
+        let router = Router::new()
+            .route("/echo", post(echo))
+            .layer(layer.clone());
+        let req = Request::builder()
+            .method("POST")
+            .uri("/echo")
+            .header("content-type", "application/json")
+            .body(Body::from(
+                r#"{"messages":[{"role":"user","content":"alice@example.com"}]}"#,
+            ))
+            .unwrap();
+        let resp = router.oneshot(req).await.unwrap();
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let v: Value = serde_json::from_slice(&body).unwrap();
+        assert!(v["messages"][0]["content"]
+            .as_str()
+            .unwrap()
+            .contains("[REDACTED-이메일]"));
+
+        // 2) chain을 빈 것으로 swap. 다음 요청은 redact 안 됨.
+        let new_chain = PipelineChain::new();
+        layer.swap_chain(new_chain);
+        let router2 = Router::new()
+            .route("/echo", post(echo))
+            .layer(layer.clone());
+        let req2 = Request::builder()
+            .method("POST")
+            .uri("/echo")
+            .header("content-type", "application/json")
+            .body(Body::from(
+                r#"{"messages":[{"role":"user","content":"alice@example.com"}]}"#,
+            ))
+            .unwrap();
+        let resp2 = router2.oneshot(req2).await.unwrap();
+        let body2 = resp2.into_body().collect().await.unwrap().to_bytes();
+        let v2: Value = serde_json::from_slice(&body2).unwrap();
+        // swap 후엔 redact 안 됨.
+        assert_eq!(v2["messages"][0]["content"], "alice@example.com");
+    }
+
+    /// `chain_swap` 핸들이 외부에서 공유 가능 — 외부 store로도 swap 작동.
+    #[tokio::test]
+    async fn chain_swap_handle_shares_state_externally() {
+        let chain1 = PipelineChain::new().add(Arc::new(PiiRedactPipeline::new()));
+        let layer = PipelineLayer::new(chain1);
+        let swap_handle = layer.chain_swap();
+
+        // 외부에서 직접 store.
+        swap_handle.store(Arc::new(PipelineChain::new()));
+
+        // layer가 본 swap에서 chain을 load → 빈 chain.
+        let loaded = layer.chain();
+        assert!(loaded.is_empty(), "external store가 layer에도 보여야");
+    }
+
+    /// 여러 swap이 race 없이 모두 적용돼요. 마지막 swap이 결정적으로 보임.
+    #[tokio::test]
+    async fn concurrent_swaps_do_not_panic_or_corrupt() {
+        use async_trait::async_trait;
+        use pipelines::{Pipeline, PipelineStage};
+
+        struct MarkPipeline(&'static str);
+        #[async_trait]
+        impl Pipeline for MarkPipeline {
+            fn id(&self) -> &str {
+                self.0
+            }
+            fn stage(&self) -> PipelineStage {
+                PipelineStage::Request
+            }
+            async fn apply_request(
+                &self,
+                _c: &mut PipelineContext,
+                _b: &mut Value,
+            ) -> Result<(), PipelineError> {
+                Ok(())
+            }
+            async fn apply_response(
+                &self,
+                _c: &mut PipelineContext,
+                _b: &mut Value,
+            ) -> Result<(), PipelineError> {
+                Ok(())
+            }
+        }
+
+        let layer = PipelineLayer::new(PipelineChain::new());
+        let mut handles = Vec::new();
+        for i in 0..50 {
+            let l = layer.clone();
+            handles.push(tokio::spawn(async move {
+                let mark: &'static str = match i % 3 {
+                    0 => "alpha",
+                    1 => "beta",
+                    _ => "gamma",
+                };
+                let chain = PipelineChain::new().add(Arc::new(MarkPipeline(mark)));
+                l.swap_chain(chain);
+            }));
+        }
+        for h in handles {
+            h.await.unwrap();
+        }
+        // 마지막 chain의 첫 Pipeline ID가 alpha/beta/gamma 중 하나여야.
+        let final_chain = layer.chain();
+        assert_eq!(final_chain.len(), 1);
+        let id = final_chain.pipelines()[0].id();
+        assert!(matches!(id, "alpha" | "beta" | "gamma"));
+    }
+
+    /// 진행 중 요청 중간에 swap이 발생해도 그 요청은 옛 chain을 안전하게 끝내요.
+    /// (Arc strong_count로 옛 chain 인스턴스 보존)
+    #[tokio::test]
+    async fn in_flight_request_keeps_old_chain_after_swap() {
+        let chain1 = PipelineChain::new().add(Arc::new(PiiRedactPipeline::new()));
+        let layer = PipelineLayer::new(chain1);
+
+        // call 안에서 chain_swap을 비우고도 그 future가 잡고 있는 chain은 그대로.
+        let swap_handle = layer.chain_swap();
+        let snapshot = swap_handle.load_full();
+        assert_eq!(snapshot.len(), 1);
+
+        // 외부 swap.
+        layer.swap_chain(PipelineChain::new());
+        // snapshot은 여전히 1개 — Arc로 잡혀 있음.
+        assert_eq!(snapshot.len(), 1);
+        // 새 load는 빈 chain.
+        let new_load = swap_handle.load_full();
+        assert!(new_load.is_empty());
+    }
+
+    // ───────────────────────────────────────────────────────────────────
+    // Phase 8'.c.3 — Per-key Pipelines override (KeyPipelinesOverride)
+    // ───────────────────────────────────────────────────────────────────
+
+    /// `KeyPipelinesOverride(None)` extension이 있으면 전역 설정을 그대로 따라요.
+    #[tokio::test]
+    async fn key_override_none_uses_global_chain() {
+        use pipelines::PromptSanitizePipeline;
+        let chain = PipelineChain::new()
+            .add(Arc::new(PiiRedactPipeline::new()))
+            .add(Arc::new(PromptSanitizePipeline::new()));
+        let router = make_router(chain);
+
+        let mut req = Request::builder()
+            .method("POST")
+            .uri("/echo")
+            .header("content-type", "application/json")
+            .body(Body::from(
+                "{\"messages\":[{\"role\":\"user\",\"content\":\"alice@example.com x\u{200B}y\"}]}",
+            ))
+            .unwrap();
+        // None override = 전역 그대로.
+        req.extensions_mut().insert(KeyPipelinesOverride(None));
+        let resp = router.oneshot(req).await.unwrap();
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let v: Value = serde_json::from_slice(&body).unwrap();
+        let content = v["messages"][0]["content"].as_str().unwrap();
+        assert!(content.contains("[REDACTED-이메일]"));
+        // prompt-sanitize도 적용 — zero-width 제거.
+        assert!(!content.contains('\u{200B}'));
+    }
+
+    /// `KeyPipelinesOverride(Some(["pii-redact"]))` — PII redact만 적용, prompt-sanitize는 skip.
+    #[tokio::test]
+    async fn key_override_subset_only_applies_listed_pipelines() {
+        use pipelines::PromptSanitizePipeline;
+        let chain = PipelineChain::new()
+            .add(Arc::new(PiiRedactPipeline::new()))
+            .add(Arc::new(PromptSanitizePipeline::new()));
+        let router = make_router(chain);
+
+        let mut req = Request::builder()
+            .method("POST")
+            .uri("/echo")
+            .header("content-type", "application/json")
+            .body(Body::from(
+                "{\"messages\":[{\"role\":\"user\",\"content\":\"alice@example.com x\u{200B}y\"}]}",
+            ))
+            .unwrap();
+        req.extensions_mut()
+            .insert(KeyPipelinesOverride(Some(vec!["pii-redact".to_string()])));
+        let resp = router.oneshot(req).await.unwrap();
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let v: Value = serde_json::from_slice(&body).unwrap();
+        let content = v["messages"][0]["content"].as_str().unwrap();
+        // PII는 redact 됨.
+        assert!(content.contains("[REDACTED-이메일]"));
+        // prompt-sanitize는 skip — zero-width 살아있음.
+        assert!(
+            content.contains('\u{200B}'),
+            "prompt-sanitize는 화이트리스트에 없으므로 skip — ZWSP 유지: {content:?}"
+        );
+    }
+
+    /// `KeyPipelinesOverride(Some(빈 Vec))` — 모든 Pipeline 비활성. raw passthrough.
+    #[tokio::test]
+    async fn key_override_empty_disables_all_pipelines() {
+        let chain = PipelineChain::new().add(Arc::new(PiiRedactPipeline::new()));
+        let router = make_router(chain);
+
+        let mut req = Request::builder()
+            .method("POST")
+            .uri("/echo")
+            .header("content-type", "application/json")
+            .body(Body::from(
+                r#"{"messages":[{"role":"user","content":"alice@example.com"}]}"#,
+            ))
+            .unwrap();
+        req.extensions_mut()
+            .insert(KeyPipelinesOverride(Some(vec![])));
+        let resp = router.oneshot(req).await.unwrap();
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let v: Value = serde_json::from_slice(&body).unwrap();
+        // 모든 Pipeline 비활성 → 원본 그대로.
+        assert_eq!(v["messages"][0]["content"], "alice@example.com");
     }
 }

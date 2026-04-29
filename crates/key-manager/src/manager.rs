@@ -44,9 +44,17 @@ pub struct IssuedKey {
 }
 
 /// 검증 결과 — auth 미들웨어가 사용.
+///
+/// Phase 8'.c.3 (ADR-0029): `Allowed`에 `enabled_pipelines`가 추가되어 PipelineLayer가
+/// 키별 sub-chain 필터링에 사용해요. `None` = 전역 토글 따름.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AuthOutcome {
-    Allowed { id: String, alias: String },
+    Allowed {
+        id: String,
+        alias: String,
+        /// Phase 8'.c.3 (ADR-0029) — 키별 Pipeline 화이트리스트 (None = 전역 토글 따름).
+        enabled_pipelines: Option<Vec<String>>,
+    },
     InvalidKey,
     Revoked,
     Expired,
@@ -127,6 +135,19 @@ impl KeyManager {
             .revoke(id, OffsetDateTime::now_utc())?)
     }
 
+    /// Phase 8'.c.3 (ADR-0029) — `scope.enabled_pipelines`만 갱신.
+    pub fn update_enabled_pipelines(
+        &self,
+        id: &str,
+        enabled_pipelines: Option<Vec<String>>,
+    ) -> Result<(), KeyManagerError> {
+        Ok(self
+            .store
+            .lock()
+            .expect("KeyStore poisoned")
+            .update_enabled_pipelines(id, enabled_pipelines)?)
+    }
+
     /// Auth 미들웨어용 검증.
     ///
     /// `origin`이 `None`이면 origin 검증 스킵 (서버-사이드 호출 시나리오 — `Origin` 헤더 없음).
@@ -192,6 +213,7 @@ impl KeyManager {
             return Ok(AuthOutcome::Allowed {
                 id: row.id,
                 alias: row.alias,
+                enabled_pipelines: row.scope.enabled_pipelines.clone(),
             });
         }
         Ok(AuthOutcome::InvalidKey)
@@ -486,6 +508,100 @@ mod tests {
             )
             .unwrap();
         assert_eq!(r, AuthOutcome::Expired);
+    }
+
+    // ── Phase 8'.c.3 — verify가 enabled_pipelines를 outcome에 전달 ────────
+
+    #[test]
+    fn verify_propagates_enabled_pipelines_some() {
+        let m = KeyManager::open_memory().unwrap();
+        let mut scope = web_scope();
+        scope.enabled_pipelines = Some(vec!["pii-redact".into(), "prompt-sanitize".into()]);
+        let issued = m
+            .issue(IssueRequest {
+                alias: "pii-only".into(),
+                scope,
+            })
+            .unwrap();
+        let r = m
+            .verify(
+                &issued.plaintext_once,
+                Some("http://localhost:5173"),
+                "/v1/chat/completions",
+                Some("x"),
+                OffsetDateTime::now_utc(),
+            )
+            .unwrap();
+        match r {
+            AuthOutcome::Allowed {
+                enabled_pipelines, ..
+            } => {
+                assert_eq!(
+                    enabled_pipelines,
+                    Some(vec![
+                        "pii-redact".to_string(),
+                        "prompt-sanitize".to_string()
+                    ])
+                );
+            }
+            other => panic!("expected Allowed, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn verify_propagates_enabled_pipelines_none_for_default_key() {
+        // 기본 scope는 enabled_pipelines = None.
+        let m = KeyManager::open_memory().unwrap();
+        let issued = m
+            .issue(IssueRequest {
+                alias: "default".into(),
+                scope: web_scope(),
+            })
+            .unwrap();
+        let r = m
+            .verify(
+                &issued.plaintext_once,
+                Some("http://localhost:5173"),
+                "/v1/chat/completions",
+                Some("x"),
+                OffsetDateTime::now_utc(),
+            )
+            .unwrap();
+        match r {
+            AuthOutcome::Allowed {
+                enabled_pipelines, ..
+            } => assert!(enabled_pipelines.is_none(), "기본 키는 None 전파"),
+            other => panic!("expected Allowed, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn verify_propagates_empty_enabled_pipelines_vec() {
+        // Some(vec![]) = 모두 비활성. None과 분리 의미 보장.
+        let m = KeyManager::open_memory().unwrap();
+        let mut scope = web_scope();
+        scope.enabled_pipelines = Some(vec![]);
+        let issued = m
+            .issue(IssueRequest {
+                alias: "no-pipes".into(),
+                scope,
+            })
+            .unwrap();
+        let r = m
+            .verify(
+                &issued.plaintext_once,
+                Some("http://localhost:5173"),
+                "/v1/chat/completions",
+                Some("x"),
+                OffsetDateTime::now_utc(),
+            )
+            .unwrap();
+        match r {
+            AuthOutcome::Allowed {
+                enabled_pipelines, ..
+            } => assert_eq!(enabled_pipelines, Some(vec![])),
+            other => panic!("expected Allowed, got {other:?}"),
+        }
     }
 
     #[test]

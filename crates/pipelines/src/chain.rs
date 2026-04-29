@@ -48,6 +48,30 @@ impl PipelineChain {
         self.pipelines.len()
     }
 
+    /// Phase 8'.c.3 — 화이트리스트로 sub-chain 생성.
+    ///
+    /// 정책:
+    /// - `allowed_ids = None` → self를 clone (변화 없음, 전역 설정 유지).
+    /// - `allowed_ids = Some(slice)` → ID가 slice에 포함된 Pipeline만 골라 새 chain 빌드.
+    ///   순서는 원본 보존. 빈 slice면 빈 chain (모든 Pipeline 비활성).
+    /// - 본 함수는 cheap — `Arc<dyn Pipeline>`만 clone (실 객체는 공유).
+    pub fn filter_by_ids(&self, allowed_ids: Option<&[String]>) -> PipelineChain {
+        match allowed_ids {
+            None => self.clone(),
+            Some(allowed) => {
+                let allowed: std::collections::HashSet<&str> =
+                    allowed.iter().map(String::as_str).collect();
+                let pipelines = self
+                    .pipelines
+                    .iter()
+                    .filter(|p| allowed.contains(p.id()))
+                    .cloned()
+                    .collect();
+                PipelineChain { pipelines }
+            }
+        }
+    }
+
     /// request 단계 — forward 순으로 실행. 한 Pipeline이 Err 반환 시 즉시 중단.
     ///
     /// stage가 `Response`이면 skip. `Both` / `Request`는 호출.
@@ -266,6 +290,57 @@ mod tests {
             self.called_response.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
+    }
+
+    // ── Phase 8'.c.3 — filter_by_ids ─────────────────────────────────
+
+    #[tokio::test]
+    async fn filter_by_ids_none_returns_full_chain() {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let chain = PipelineChain::new()
+            .add(make("a", log.clone()))
+            .add(make("b", log.clone()))
+            .add(make("c", log.clone()));
+        let filtered = chain.filter_by_ids(None);
+        assert_eq!(filtered.len(), 3);
+        let ids: Vec<&str> = filtered.pipelines().iter().map(|p| p.id()).collect();
+        assert_eq!(ids, vec!["a", "b", "c"]);
+    }
+
+    #[tokio::test]
+    async fn filter_by_ids_with_subset_keeps_only_matching() {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let chain = PipelineChain::new()
+            .add(make("a", log.clone()))
+            .add(make("b", log.clone()))
+            .add(make("c", log.clone()));
+        let allowed = vec!["a".to_string(), "c".to_string()];
+        let filtered = chain.filter_by_ids(Some(&allowed));
+        assert_eq!(filtered.len(), 2);
+        let ids: Vec<&str> = filtered.pipelines().iter().map(|p| p.id()).collect();
+        assert_eq!(ids, vec!["a", "c"]);
+    }
+
+    #[tokio::test]
+    async fn filter_by_ids_with_empty_slice_returns_empty_chain() {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let chain = PipelineChain::new().add(make("a", log));
+        let filtered = chain.filter_by_ids(Some(&[]));
+        assert!(filtered.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_by_ids_preserves_original_order() {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let chain = PipelineChain::new()
+            .add(make("a", log.clone()))
+            .add(make("b", log.clone()))
+            .add(make("c", log.clone()));
+        // 입력 순서가 c, a, b여도 결과는 chain 순(a, c).
+        let allowed = vec!["c".to_string(), "a".to_string()];
+        let filtered = chain.filter_by_ids(Some(&allowed));
+        let ids: Vec<&str> = filtered.pipelines().iter().map(|p| p.id()).collect();
+        assert_eq!(ids, vec!["a", "c"], "원본 chain 순서가 보존돼야 해요");
     }
 
     #[tokio::test]

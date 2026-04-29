@@ -18,11 +18,18 @@ vi.mock("../ipc/knowledge", () => {
   return {
     isTerminalIngestEvent: (ev: { kind: string }) =>
       ev.kind === "done" || ev.kind === "failed" || ev.kind === "cancelled",
+    isTerminalEmbeddingDownloadEvent: (ev: { kind: string }) =>
+      ev.kind === "done" || ev.kind === "failed" || ev.kind === "cancelled",
     startIngest: vi.fn(),
     cancelIngest: vi.fn(),
     searchKnowledge: vi.fn(),
     listIngests: vi.fn(),
     workspaceStats: vi.fn(),
+    // Phase 9'.a — EmbeddingModelPanel이 사용하는 IPC. 빈 리스트 반환 stub.
+    listEmbeddingModels: vi.fn(async () => []),
+    setActiveEmbeddingModel: vi.fn(),
+    startEmbeddingDownload: vi.fn(),
+    cancelEmbeddingDownload: vi.fn(),
   };
 });
 

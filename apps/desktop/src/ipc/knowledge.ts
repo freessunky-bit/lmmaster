@@ -84,7 +84,56 @@ export type KnowledgeApiError =
   | { kind: "store-open"; message: string }
   | { kind: "start-failed"; message: string }
   | { kind: "search-failed"; message: string }
-  | { kind: "internal"; message: string };
+  | { kind: "internal"; message: string }
+  | { kind: "already-downloading"; kind: string }
+  | { kind: "unknown-embedding-model"; kind: string }
+  | { kind: "model-not-downloaded"; kind: string };
+
+// ── Phase 9'.a — Embedding model panel types ─────────────────────────
+
+/** Rust knowledge::EmbeddingModelInfo 미러. UI 카드 데이터 소스. */
+export interface EmbeddingModelInfo {
+  /** "bge-m3" / "kure-v1" / "multilingual-e5-small". */
+  kind: string;
+  dim: number;
+  approx_size_mb: number;
+  /** 0~1. UI는 hint chip 강도 매핑. */
+  korean_score: number;
+  downloaded: boolean;
+  active: boolean;
+}
+
+/** Rust embed_download::DownloadEvent 미러 — kind discriminated union. */
+export type EmbeddingDownloadEvent =
+  | {
+      kind: "started";
+      model_kind: string;
+      file: string;
+      total_bytes: number | null;
+    }
+  | {
+      kind: "progress";
+      model_kind: string;
+      file: string;
+      downloaded: number;
+      total: number | null;
+    }
+  | { kind: "verifying"; model_kind: string; file: string }
+  | {
+      kind: "done";
+      model_kind: string;
+      model_path: string;
+      tokenizer_path: string;
+    }
+  | { kind: "cancelled"; model_kind: string }
+  | { kind: "failed"; model_kind: string; error: string };
+
+/** terminal 이벤트 — 더 이상 progress 안 옴. */
+export function isTerminalEmbeddingDownloadEvent(
+  ev: EmbeddingDownloadEvent,
+): boolean {
+  return ev.kind === "done" || ev.kind === "failed" || ev.kind === "cancelled";
+}
 
 // ── helpers ───────────────────────────────────────────────────────────
 
@@ -167,4 +216,49 @@ export async function workspaceStats(
     workspaceId: workspace_id,
     storePath: store_path,
   });
+}
+
+// ── Phase 9'.a — Embedding model commands ────────────────────────────
+
+/** 사용 가능한 임베딩 모델 카탈로그. */
+export async function listEmbeddingModels(): Promise<EmbeddingModelInfo[]> {
+  return invoke<EmbeddingModelInfo[]>("list_embedding_models");
+}
+
+/** active 모델 변경 — 다운로드 안 된 모델은 backend가 거부. */
+export async function setActiveEmbeddingModel(kind: string): Promise<void> {
+  await invoke<void>("set_active_embedding_model", { kind });
+}
+
+export interface DownloadEmbeddingHandle {
+  /** kebab-case kind. cancel 키. */
+  kind: string;
+  /** 진행 중 cancel — idempotent. */
+  cancel: () => Promise<void>;
+}
+
+/**
+ * 임베딩 모델 다운로드 시작. Channel<EmbeddingDownloadEvent>로 진행 이벤트를 받아요.
+ *
+ * 동일 kind에 대해 이미 진행 중이면 invoke가 reject (AlreadyDownloading).
+ */
+export async function startEmbeddingDownload(
+  kind: string,
+  onEvent: (event: EmbeddingDownloadEvent) => void,
+): Promise<DownloadEmbeddingHandle> {
+  const channel = new Channel<EmbeddingDownloadEvent>();
+  channel.onmessage = onEvent;
+  const returned_kind = await invoke<string>("download_embedding_model", {
+    kind,
+    onEvent: channel,
+  });
+  return {
+    kind: returned_kind,
+    cancel: () => cancelEmbeddingDownload(returned_kind),
+  };
+}
+
+/** 진행 중 다운로드 cancel — idempotent. */
+export async function cancelEmbeddingDownload(kind: string): Promise<void> {
+  await invoke<void>("cancel_embedding_download", { kind });
 }

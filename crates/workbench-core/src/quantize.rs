@@ -1,12 +1,15 @@
-//! 양자화 CLI subprocess wrapper trait + v1 mock.
+//! 양자화 CLI subprocess wrapper trait + v1 mock + v1.b 실 binary.
 //!
-//! 정책 (phase-5p-workbench-decision.md §1.4, ADR-0023 §Decision 2):
-//! - 실 CLI는 `llama-quantize` (llama.cpp). v1.b에서 `LlamaQuantizer` subprocess + stdout 파싱.
+//! 정책 (phase-5p-workbench-decision.md §1.4, ADR-0023 §Decision 2, ADR-0043):
+//! - 실 CLI는 `llama-quantize` (llama.cpp). `LlamaQuantizer` subprocess + stdout 파싱.
 //! - `MockQuantizer`는 0/25/50/75/100% 5-step emit으로 IPC 구조 검증.
 //! - cancel 시 즉시 `WorkbenchError::Cancelled`.
+//! - 진행 streaming은 `run_streaming` (mpsc::Sender) 채널로 1라인당 1 emit.
+//! - 기존 `run`은 `run_streaming`을 buffered collector로 wrapping (호환성).
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 use crate::error::WorkbenchError;
@@ -29,11 +32,32 @@ pub struct QuantizeProgress {
 
 #[async_trait]
 pub trait Quantizer: Send + Sync {
+    /// 모든 progress를 `Vec`으로 모아 한 번에 반환 — 짧은 mock 흐름 / unit test 용.
     async fn run(
         &self,
         job: QuantizeJob,
         cancel: &CancellationToken,
     ) -> Result<Vec<QuantizeProgress>, WorkbenchError>;
+
+    /// progress를 `mpsc::Sender`로 streaming. 장시간 실행되는 실 binary는 이 메서드를 override.
+    /// 기본 구현은 `run`을 호출 후 결과를 forward — 짧은 작업/테스트 용.
+    ///
+    /// 실패 시 sender는 caller가 drop. cancel cooperative.
+    async fn run_streaming(
+        &self,
+        job: QuantizeJob,
+        progress: mpsc::Sender<QuantizeProgress>,
+        cancel: &CancellationToken,
+    ) -> Result<(), WorkbenchError> {
+        let items = self.run(job, cancel).await?;
+        for p in items {
+            // send 실패 = 수신자 drop → 무시하고 계속 진행 (워커가 결과를 더 이상 보지 않음).
+            if progress.send(p).await.is_err() {
+                break;
+            }
+        }
+        Ok(())
+    }
 }
 
 /// v1 mock — 실 subprocess 없이 5-step progress emit. cancel 협력.

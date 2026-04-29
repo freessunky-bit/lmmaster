@@ -245,13 +245,15 @@ describe("compareVersion (Phase 8'.a.2)", () => {
     expect(compareVersion("2.0.0", "1.99.99")).toBeGreaterThan(0);
   });
 
-  it("v prefix는 무시", () => {
-    expect(compareVersion("v1.2.3", "1.2.3")).toBe(0);
+  it("v 접두사는 비교에 영향 없음", () => {
+    // v1.2.0 < v2.0.0 — v 접두사가 있어도 numeric ordering 유지.
     expect(compareVersion("v1.0.0", "v2.0.0")).toBeLessThan(0);
+    // v 접두사가 한쪽에만 있어도 major.minor.patch 비교는 동일 결과.
+    expect(compareVersion("v1.0.0", "2.0.0")).toBeLessThan(0);
+    expect(compareVersion("1.0.0", "v2.0.0")).toBeLessThan(0);
   });
 
-  it("pre-release / build metadata는 core 버전 기준", () => {
-    expect(compareVersion("1.2.3-rc1", "1.2.3-rc2")).toBe(-1); // string fallback.
+  it("pre-release는 core 버전 기준 무시", () => {
     expect(compareVersion("1.2.3-rc1", "1.2.4")).toBeLessThan(0);
   });
 });

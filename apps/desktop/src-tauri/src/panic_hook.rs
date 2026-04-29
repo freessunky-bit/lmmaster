@@ -1,4 +1,4 @@
-//! Panic hook 설치 — Phase 8'.0.b (ADR-0036).
+//! Panic hook 설치 — Phase 8'.0.b (ADR-0036) + Phase 7'.b telemetry submit 통합.
 //!
 //! 정책:
 //! - `std::panic::set_hook` 한 번만 등록 (idempotent — 다중 호출 시 두 번째부터 무시).
@@ -7,12 +7,14 @@
 //!   1. `tracing::error!`로 panic info + backtrace 기록.
 //!   2. `crash/crash-<rfc3339>.txt` 파일 작성 — 사용자가 진단 화면에서 확인 가능.
 //!   3. (Tauri runtime up이면) MessageDialogBuilder로 한국어 해요체 알림. (별도 thread)
+//!   4. Phase 7'.b: TelemetryState가 등록돼 있고 opt-in 상태면 submit_event 호출 — endpoint 미설정
+//!      시 queue retention만, 설정 시 backon 3회 retry POST. opt-out 상태면 호출 자체 skip.
 //! - 한국어 메시지: "예기치 못한 오류가 발생했어요. 자세한 내용은 진단 화면에서 확인할 수 있어요."
 
 use std::panic::{self, AssertUnwindSafe, PanicHookInfo};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use time::format_description::well_known::Rfc3339;
 
@@ -27,6 +29,18 @@ static CRASH_DIR: Mutex<Option<PathBuf>> = Mutex::new(None);
 /// 보통은 default(stderr 출력)지만 다른 hook이 설치된 경우에도 chain 유지.
 type BoxedHook = Box<dyn Fn(&PanicHookInfo<'_>) + Sync + Send + 'static>;
 static PREV_HOOK: Mutex<Option<BoxedHook>> = Mutex::new(None);
+
+/// Phase 7'.b — TelemetryState (Arc로 공유). 등록 안 돼 있으면 None — submit skip.
+/// `attach_telemetry`로 lib.rs setup이 등록.
+static TELEMETRY: Mutex<Option<Arc<crate::telemetry::TelemetryState>>> = Mutex::new(None);
+
+/// Tauri builder가 TelemetryState를 manage한 후 호출 — panic hook이 telemetry submit을 시도하도록.
+/// idempotent: 두 번째 호출은 새 state로 교체 (테스트 친화).
+pub fn attach_telemetry(state: Arc<crate::telemetry::TelemetryState>) {
+    if let Ok(mut g) = TELEMETRY.lock() {
+        *g = Some(state);
+    }
+}
 
 /// 한국어 사용자 향 메시지.
 const KO_MESSAGE: &str =
@@ -97,6 +111,21 @@ fn handle_panic(info: &PanicHookInfo<'_>) {
     if let Some(prev) = PREV_HOOK.lock().expect("PREV_HOOK poisoned").as_ref() {
         // payload는 PanicHookInfo에서 다시 추출하므로 직접 호출.
         prev(info);
+    }
+
+    // 4. Phase 7'.b — TelemetryState가 attach돼 있으면 submit_event 시도. opt-out이면 NotEnabled로
+    //    조용히 거절되므로 분기 불필요. async submit은 별도 task에 위임 — panic hook 본체는 sync.
+    let telemetry = TELEMETRY.lock().ok().and_then(|g| g.as_ref().cloned());
+    if let Some(state) = telemetry {
+        let panic_message_text = format!("{payload} @ {location}");
+        // tauri::async_runtime::spawn은 setup 후에는 살아 있음. shutdown 도중에는 best-effort.
+        let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            tauri::async_runtime::spawn(async move {
+                let _ = state
+                    .submit_event(crate::telemetry::EventLevel::Error, panic_message_text)
+                    .await;
+            });
+        }));
     }
 }
 

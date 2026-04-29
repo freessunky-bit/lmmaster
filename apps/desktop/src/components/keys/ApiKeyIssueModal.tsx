@@ -13,8 +13,10 @@ import { useTranslation } from "react-i18next";
 import {
   createApiKey,
   defaultWebScope,
+  SEED_PIPELINE_IDS,
   type ApiKeyScope,
   type CreatedKey,
+  type SeedPipelineId,
 } from "../../ipc/keys";
 
 export interface ApiKeyIssueModalProps {
@@ -30,6 +32,16 @@ export function ApiKeyIssueModal({ onClose, onCreated }: ApiKeyIssueModalProps) 
   const [alias, setAlias] = useState("");
   const [origins, setOrigins] = useState<string[]>([""]);
   const [models, setModels] = useState("*");
+  // Phase 8'.c.3 — per-key Pipelines override.
+  const [useGlobalPipelines, setUseGlobalPipelines] = useState(true);
+  const [keyEnabledPipelines, setKeyEnabledPipelines] = useState<
+    Record<SeedPipelineId, boolean>
+  >({
+    "pii-redact": true,
+    "token-quota": true,
+    observability: true,
+    "prompt-sanitize": true,
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedKey | null>(null);
@@ -79,10 +91,17 @@ export function ApiKeyIssueModal({ onClose, onCreated }: ApiKeyIssueModalProps) 
       .split(",")
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
+    // Phase 8'.c.3 — per-key Pipelines override.
+    // useGlobalPipelines = true → null (전역 토글 따름).
+    // false → 체크된 ID만 화이트리스트.
+    const computedEnabledPipelines: string[] | null = useGlobalPipelines
+      ? null
+      : SEED_PIPELINE_IDS.filter((id) => keyEnabledPipelines[id]);
     const scope: ApiKeyScope = {
       ...defaultWebScope(cleanedOrigins[0]!),
       models: cleanedModels.length > 0 ? cleanedModels : ["*"],
       allowed_origins: cleanedOrigins,
+      enabled_pipelines: computedEnabledPipelines,
     };
     setSubmitting(true);
     try {
@@ -179,6 +198,71 @@ export function ApiKeyIssueModal({ onClose, onCreated }: ApiKeyIssueModalProps) 
               onChange={(e) => setModels(e.target.value)}
             />
           </label>
+
+          {/* Phase 8'.c.3 — per-key Pipelines override */}
+          <fieldset className="keys-field" data-testid="keys-pipelines-fieldset">
+            <legend className="keys-field-label">
+              {t("keys.modal.pipelines.legend")}
+            </legend>
+            <label className="keys-checkbox-row">
+              <input
+                type="checkbox"
+                checked={useGlobalPipelines}
+                onChange={(e) => setUseGlobalPipelines(e.target.checked)}
+                data-testid="keys-pipelines-use-global"
+              />
+              <span>{t("keys.modal.pipelines.useGlobal")}</span>
+            </label>
+            <p className="keys-field-hint">
+              {t("keys.modal.pipelines.useGlobalHint")}
+            </p>
+            <div
+              className={`keys-pipelines-grid${useGlobalPipelines ? " is-disabled" : ""}`}
+              aria-disabled={useGlobalPipelines}
+            >
+              {SEED_PIPELINE_IDS.map((id) => {
+                const i18nIdKey =
+                  id === "pii-redact"
+                    ? "piiRedact"
+                    : id === "token-quota"
+                      ? "tokenQuota"
+                      : id === "prompt-sanitize"
+                        ? "promptSanitize"
+                        : "observability";
+                return (
+                  <label
+                    key={id}
+                    className="keys-checkbox-row"
+                    data-testid={`keys-pipelines-cb-${id}`}
+                  >
+                    <input
+                      type="checkbox"
+                      disabled={useGlobalPipelines}
+                      checked={keyEnabledPipelines[id]}
+                      onChange={(e) =>
+                        setKeyEnabledPipelines((prev) => ({
+                          ...prev,
+                          [id]: e.target.checked,
+                        }))
+                      }
+                    />
+                    <span>{t(`keys.modal.pipelines.ids.${i18nIdKey}`)}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {!useGlobalPipelines &&
+              SEED_PIPELINE_IDS.every((id) => !keyEnabledPipelines[id]) && (
+                <p
+                  className="keys-field-warning"
+                  role="alert"
+                  data-testid="keys-pipelines-warn-empty"
+                >
+                  {t("keys.modal.pipelines.warningEmpty")}
+                </p>
+              )}
+          </fieldset>
+
           {error && (
             <p className="keys-error" role="alert">
               {error}

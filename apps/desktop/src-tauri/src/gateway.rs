@@ -160,13 +160,15 @@ pub async fn run(
     }
     let mut router = core_gateway::build_router(core_gateway::GatewayConfig::default(), state);
 
-    // Phase 6'.d — PipelinesState config 스냅샷으로 chain 빌드 + audit 채널 mount.
-    // PipelinesState가 아직 manage되지 않았다면 default config로 fallback (모두 ON).
-    let chain = build_chain_from_state(&app).await;
-    if !chain.is_empty() {
-        router = core_gateway::with_pipelines_audited(router, chain, audit_sender);
+    // Phase 6'.d / 8'.c.2 — PipelinesState chain_swap을 PipelineLayer에 mount.
+    // PipelinesState가 manage되지 않았다면 default config로 fallback chain을 만들어 자체 swap 보유.
+    if let Some(state) = app.try_state::<Arc<PipelinesState>>() {
+        let chain_swap = state.chain_swap();
+        // 빈 chain이어도 layer를 mount — 사용자가 토글 ON으로 바꾸면 즉시 hot-reload 적용.
+        router = core_gateway::with_pipelines_audited_swap(router, chain_swap, audit_sender);
+        tracing::info!("pipeline layer mounted with hot-reload chain_swap (Phase 8'.c.2)");
     } else {
-        tracing::info!("pipeline chain empty — gateway runs without filter middleware");
+        tracing::warn!("PipelinesState not yet managed — gateway runs without pipeline middleware");
     }
 
     if let Err(e) = core_gateway::serve_with_shutdown(listener, router, cancel).await {
@@ -181,31 +183,6 @@ pub async fn run(
     Ok(())
 }
 
-/// 현재 `PipelinesState` snapshot으로부터 `PipelineChain`을 빌드.
-///
-/// 정책 (Phase 6'.d):
-/// - state가 manage되어 있지 않으면 default config (3종 모두 ON)으로 fallback.
-/// - v1 시드 3종(pii-redact / token-quota / observability)을 enabled 토글에 따라 추가.
-/// - 사용자 토글 변경 시 동적 재구성은 Phase 6'.e — 본 페이즈는 시작 시점 스냅샷만 사용.
-async fn build_chain_from_state(app: &AppHandle) -> pipelines::PipelineChain {
-    use pipelines::{ObservabilityPipeline, PiiRedactPipeline, PipelineChain, TokenQuotaPipeline};
-
-    let cfg = if let Some(state) = app.try_state::<Arc<PipelinesState>>() {
-        state.snapshot_config().await
-    } else {
-        tracing::warn!("PipelinesState not yet managed — gateway uses default chain");
-        crate::pipelines::PipelinesConfig::default()
-    };
-
-    let mut chain = PipelineChain::new();
-    if cfg.pii_redact_enabled {
-        chain = chain.add(Arc::new(PiiRedactPipeline::new()));
-    }
-    if cfg.token_quota_enabled {
-        chain = chain.add(Arc::new(TokenQuotaPipeline::new()));
-    }
-    if cfg.observability_enabled {
-        chain = chain.add(Arc::new(ObservabilityPipeline::new()));
-    }
-    chain
-}
+// Phase 8'.c.2: chain 빌드는 `crate::pipelines::build_chain`으로 이동.
+//   gateway는 `PipelinesState::chain_swap()` 핸들을 PipelineLayer에 직접 mount해
+//   사용자 토글 시 hot-reload가 자동 작동.

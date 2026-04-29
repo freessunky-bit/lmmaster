@@ -311,3 +311,41 @@
   font-size: var(--fs-12);
   color: var(--text-muted);
 }
+
+/* Phase 8'.c.3 — per-key Pipelines override section. */
+
+.keys-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-13);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.keys-checkbox-row input[type="checkbox"] {
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.keys-pipelines-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.keys-pipelines-grid.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.keys-field-warning {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--warning-a-2);
+  color: var(--warning);
+  border-radius: var(--radius-2);
+  font-size: var(--fs-12);
+  line-height: var(--lh-loose);
+}

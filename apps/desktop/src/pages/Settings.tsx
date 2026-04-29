@@ -29,9 +29,12 @@ import {
   getEncryptDbHint,
   getNotifyOnPhase5,
   getScanInterval,
+  getUpdateChannel,
   setNotifyOnPhase5 as writeNotifyOnPhase5,
   setScanInterval as writeScanInterval,
+  setUpdateChannel as writeUpdateChannel,
   type ScanIntervalValue,
+  type UpdateChannel,
 } from "../ipc/settings";
 
 import {
@@ -79,6 +82,8 @@ const BUILD_COMMIT = "dev";
 
 /** 자동 갱신 — GitHub repo (외부 통신 0 정책 예외, ADR-0026 §1). */
 const UPDATE_REPO = "anthropics/lmmaster";
+/** Phase 7'.b — 베타 채널 별도 repo. 정식 release와 분리. */
+const UPDATE_REPO_BETA = "anthropics/lmmaster-beta";
 
 /** ADR-0026 §2: 1h~24h 허용 범위. UI는 4개 단계로 압축. */
 const INTERVAL_OPTIONS: { secs: number; key: "1h" | "6h" | "12h" | "24h" }[] = [
@@ -317,6 +322,7 @@ function AutoUpdatePanel() {
   const { t } = useTranslation();
   const [status, setStatus] = useState<PollerStatus | null>(null);
   const [intervalSecs, setIntervalSecs] = useState<number>(DEFAULT_INTERVAL_SECS);
+  const [channel, setChannel] = useState<UpdateChannel>("stable");
   const [busy, setBusy] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -325,6 +331,7 @@ function AutoUpdatePanel() {
   // 첫 마운트 시 상태 로드.
   useEffect(() => {
     let cancelled = false;
+    setChannel(getUpdateChannel());
     getAutoUpdateStatus()
       .then((s) => {
         if (cancelled) return;
@@ -342,6 +349,9 @@ function AutoUpdatePanel() {
     };
   }, []);
 
+  /** 현재 채널에 맞는 release repo. */
+  const activeRepo = channel === "beta" ? UPDATE_REPO_BETA : UPDATE_REPO;
+
   const handleEnable = useCallback(
     async (nextSecs: number) => {
       setBusy(true);
@@ -349,7 +359,7 @@ function AutoUpdatePanel() {
       setInfo(null);
       try {
         await startAutoUpdatePoller(
-          UPDATE_REPO,
+          activeRepo,
           APP_VERSION,
           nextSecs,
           (ev: UpdateEvent) => {
@@ -371,7 +381,7 @@ function AutoUpdatePanel() {
         setBusy(false);
       }
     },
-    [],
+    [activeRepo],
   );
 
   const handleDisable = useCallback(async () => {
@@ -409,7 +419,7 @@ function AutoUpdatePanel() {
           try {
             await stopAutoUpdatePoller();
             await startAutoUpdatePoller(
-              UPDATE_REPO,
+              activeRepo,
               APP_VERSION,
               next,
               (ev: UpdateEvent) => {
@@ -432,15 +442,52 @@ function AutoUpdatePanel() {
         })();
       }
     },
-    [status?.active],
+    [status?.active, activeRepo],
   );
+
+  /** 채널 토글: stable ↔ beta. 활성 폴러가 있으면 새 repo로 재시작. */
+  const handleChannelToggle = useCallback(() => {
+    const next: UpdateChannel = channel === "beta" ? "stable" : "beta";
+    setChannel(next);
+    writeUpdateChannel(next);
+    // 활성 상태면 새 repo로 폴러를 재시작.
+    if (status?.active) {
+      const nextRepo = next === "beta" ? UPDATE_REPO_BETA : UPDATE_REPO;
+      void (async () => {
+        setBusy(true);
+        try {
+          await stopAutoUpdatePoller();
+          await startAutoUpdatePoller(
+            nextRepo,
+            APP_VERSION,
+            intervalSecs,
+            (ev: UpdateEvent) => {
+              if (ev.kind === "outdated") {
+                setOutdated({
+                  release: ev.latest,
+                  currentVersion: ev.current_version,
+                });
+              }
+            },
+          );
+          const s = await getAutoUpdateStatus();
+          setStatus(s);
+        } catch (e) {
+          console.warn("channel switch failed:", e);
+          setError("screens.settings.autoUpdate.errorStart");
+        } finally {
+          setBusy(false);
+        }
+      })();
+    }
+  }, [channel, status?.active, intervalSecs]);
 
   const handleCheckNow = useCallback(async () => {
     setBusy(true);
     setError(null);
     setInfo(null);
     try {
-      await checkForUpdate(UPDATE_REPO, APP_VERSION, (ev: UpdateEvent) => {
+      await checkForUpdate(activeRepo, APP_VERSION, (ev: UpdateEvent) => {
         if (ev.kind === "outdated") {
           setOutdated({
             release: ev.latest,
@@ -458,7 +505,7 @@ function AutoUpdatePanel() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [activeRepo]);
 
   const isActive = status?.active ?? false;
   const lastChecked = status?.last_check_iso ?? null;
@@ -521,7 +568,28 @@ function AutoUpdatePanel() {
         <span style={{ color: "var(--text-muted)" }}>
           {t("screens.settings.autoUpdate.repoLabel")}:{" "}
         </span>
-        <code className="num">{UPDATE_REPO}</code>
+        <code className="num">{activeRepo}</code>
+      </p>
+
+      {/* Phase 7'.b — 베타 채널 토글. */}
+      <div
+        className="settings-toggle-row"
+        data-testid="settings-autoupdate-beta-row"
+      >
+        <ToggleSwitch
+          checked={channel === "beta"}
+          onChange={handleChannelToggle}
+          disabled={busy}
+          ariaLabel={t("screens.settings.autoUpdate.beta.toggleLabel")}
+        />
+        <span data-testid="settings-autoupdate-beta-status">
+          {channel === "beta"
+            ? t("screens.settings.autoUpdate.beta.statusOn")
+            : t("screens.settings.autoUpdate.beta.statusOff")}
+        </span>
+      </div>
+      <p className="settings-hint">
+        {t("screens.settings.autoUpdate.beta.description")}
       </p>
 
       <p className="settings-hint">

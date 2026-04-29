@@ -9,16 +9,33 @@ shared-types = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
+tokio-util = { workspace = true }
 async-trait = { workspace = true }
 thiserror = { workspace = true }
 rusqlite = { workspace = true }
 uuid = { workspace = true }
 time = { workspace = true }
-unicode-normalization = "0.1"
+unicode-normalization = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 tracing = { workspace = true }
 
+# Phase 9'.a — Real Embedder. 다운로드 인프라(reqwest + futures stream)는 항상 활성.
+# ort/tokenizers/ndarray는 `embed-onnx` feature가 켜졌을 때만 들어와 baseline build 부담 0.
+reqwest = { workspace = true }
+futures-util = { workspace = true }
+ort = { workspace = true, optional = true }
+tokenizers = { workspace = true, optional = true }
+ndarray = { workspace = true, optional = true }
+
 [dev-dependencies]
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+wiremock = { workspace = true }
+
+[features]
+default = []
+# 실 ONNX 임베더 활성. CI/사용자 PC에 ONNX Runtime 라이브러리가 있을 때만 의미가 있어요.
+# 이 feature가 꺼져 있으면 OnnxEmbedder는 빌드되지 않고 `default_embedder` helper는 자동으로
+# MockEmbedder를 fallback 사용해요 (RAG 자체는 동작, ranking 품질만 deterministic-mock).
+embed-onnx = ["dep:ort", "dep:tokenizers", "dep:ndarray"]

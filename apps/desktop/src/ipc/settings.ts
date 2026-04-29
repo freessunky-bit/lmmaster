@@ -59,3 +59,23 @@ export function setNotifyOnPhase5(v: boolean): void {
 export function getEncryptDbHint(): boolean {
   return false;
 }
+
+/**
+ * Phase 7'.b — 자동 갱신 채널 토글 (stable / beta).
+ *
+ * 정책 (phase-7p-release-prep-reinforcement.md §5.1, ADR-0027 §5):
+ * - 기본 stable. 사용자가 명시적으로 "베타 참여"를 켜면 beta.
+ * - tauri-plugin-updater는 endpoint 동적 변경 미지원 — frontend가 conditional 사용.
+ * - beta 사용자는 정식 release 나오면 안내(별도 toast — v1.x).
+ */
+export type UpdateChannel = "stable" | "beta";
+const DEFAULT_UPDATE_CHANNEL: UpdateChannel = "stable";
+
+export function getUpdateChannel(): UpdateChannel {
+  const v = safeRead(k("update", "channel"));
+  return v === "beta" ? "beta" : DEFAULT_UPDATE_CHANNEL;
+}
+
+export function setUpdateChannel(channel: UpdateChannel): void {
+  safeWrite(k("update", "channel"), channel);
+}

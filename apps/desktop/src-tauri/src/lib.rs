@@ -33,7 +33,7 @@ use tracing_subscriber::EnvFilter;
 use bench::registry::BenchRegistry;
 use commands::{CatalogState, LastScanCache};
 use install::registry::InstallRegistry;
-use knowledge::KnowledgeRegistry;
+use knowledge::{EmbeddingState, KnowledgeRegistry};
 use presets::commands::PresetCache;
 use updater::{PollerState, UpdaterRegistry};
 use workbench::WorkbenchRegistry;
@@ -90,6 +90,7 @@ pub fn run() {
             keys::commands::create_api_key,
             keys::commands::list_api_keys,
             keys::commands::revoke_api_key,
+            keys::commands::update_api_key_pipelines,
             workspace::commands::get_workspace_fingerprint,
             workspace::commands::check_workspace_repair,
             workspace::portable::start_workspace_export,
@@ -109,11 +110,18 @@ pub fn run() {
             workbench::list_custom_models,
             workbench::get_artifact_stats,
             workbench::cleanup_artifacts_now,
+            workbench::workbench_real_status,
+            workbench::lora_bootstrap_venv,
+            workbench::cancel_lora_bootstrap,
             knowledge::ingest_path,
             knowledge::cancel_ingest,
             knowledge::search_knowledge,
             knowledge::list_ingests,
             knowledge::knowledge_workspace_stats,
+            knowledge::list_embedding_models,
+            knowledge::set_active_embedding_model,
+            knowledge::download_embedding_model,
+            knowledge::cancel_embedding_download,
             updater::check_for_update,
             updater::cancel_update_check,
             updater::start_auto_update_poller,
@@ -124,8 +132,9 @@ pub fn run() {
             pipelines::get_pipelines_config,
             pipelines::get_audit_log,
             pipelines::clear_audit_log,
-            telemetry::get_telemetry_config,
-            telemetry::set_telemetry_enabled,
+            telemetry::state::get_telemetry_config,
+            telemetry::state::set_telemetry_enabled,
+            telemetry::state::submit_telemetry_event,
             registry_fetcher::refresh_catalog_now,
             registry_fetcher::get_last_catalog_refresh,
             workspaces::list_workspaces,
@@ -232,6 +241,11 @@ pub fn run() {
             let workbench_registry: Arc<WorkbenchRegistry> = Arc::new(WorkbenchRegistry::new());
             app.manage(workbench_registry);
 
+            // 9.a. LoraBootstrapRegistry — Phase 9'.b. venv 부트스트랩 cancel 토큰.
+            let lora_bootstrap_registry: Arc<workbench::LoraBootstrapRegistry> =
+                Arc::new(workbench::LoraBootstrapRegistry::new());
+            app.manage(lora_bootstrap_registry);
+
             // 9.b. ModelRegistry (custom-models) — Phase 5'.d. Workbench output 영속화.
             //      app_data_dir/registry/custom-models.json — 실패 시 in-memory 폴백.
             let custom_model_registry: Arc<model_registry::ModelRegistry> = match app
@@ -249,6 +263,11 @@ pub fn run() {
             // 10. KnowledgeRegistry — Phase 4.5'.b. workspace 단위 직렬화 (workspace_id 키).
             let knowledge_registry: Arc<KnowledgeRegistry> = Arc::new(KnowledgeRegistry::new());
             app.manage(knowledge_registry);
+
+            // 10.a. EmbeddingState — Phase 9'.a. 사용자 향 임베딩 모델 카탈로그 + 활성 모델 영속.
+            //       app_data_dir/embed/active.json에 active kind를 영속, models/ 하위에 ONNX 파일 저장.
+            let embedding_state: Arc<EmbeddingState> = knowledge::provision_embedding_state(app.handle());
+            app.manage(Arc::clone(&embedding_state));
 
             // 10.b. WorkspacesState — Phase 8'.1. 사용자 향 workspace 관리 IPC.
             //       app_data_dir/workspaces/index.json — atomic rename 영속 + 첫 실행 시 default 자동 시드.
@@ -275,9 +294,12 @@ pub fn run() {
 
             // 13. TelemetryState — Phase 7'.a. 기본 비활성, 사용자 명시 opt-in.
             //     영속 위치: app_data_dir/telemetry/config.json.
+            //     Phase 7'.b: panic_hook attach — opt-in 시 panic 발생하면 GlitchTip POST 시도(DSN
+            //     env 미설정 시 queue retention만).
             let telemetry_state: Arc<telemetry::TelemetryState> = Arc::new(
                 telemetry::TelemetryState::new(app.path().app_data_dir().ok()),
             );
+            panic_hook::attach_telemetry(Arc::clone(&telemetry_state));
             app.manage(telemetry_state);
 
             // 13.b. RegistryFetcherService — Phase 1'. 6시간 cron + 수동 트리거.
@@ -426,6 +448,13 @@ pub fn run() {
             if let Some(registry) = app_handle.try_state::<Arc<KnowledgeRegistry>>() {
                 tracing::info!("ExitRequested received, cancelling all in-flight ingests");
                 registry.cancel_all_blocking();
+            }
+            // In-flight embedding download cancel — Phase 9'.a.
+            if let Some(state) = app_handle.try_state::<Arc<EmbeddingState>>() {
+                tracing::info!(
+                    "ExitRequested received, cancelling all in-flight embedding downloads"
+                );
+                state.cancel_all_blocking();
             }
             // In-flight portable export/import cancel — Phase 11'.
             if let Some(registry) = app_handle.try_state::<Arc<PortableRegistry>>() {

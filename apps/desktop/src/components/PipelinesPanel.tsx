@@ -22,12 +22,17 @@ import {
 import "./pipelinesPanel.css";
 
 /** 알려진 pipeline id — i18n 키 분기에 사용. */
-type KnownPipelineId = "pii-redact" | "token-quota" | "observability";
+type KnownPipelineId =
+  | "pii-redact"
+  | "token-quota"
+  | "observability"
+  | "prompt-sanitize";
 
 const KNOWN_IDS: KnownPipelineId[] = [
   "pii-redact",
   "token-quota",
   "observability",
+  "prompt-sanitize",
 ];
 
 function isKnownId(id: string): id is KnownPipelineId {
@@ -35,7 +40,9 @@ function isKnownId(id: string): id is KnownPipelineId {
 }
 
 /** 알려진 pipeline id에 매핑되는 i18n 서브키 ("piiRedact" 등) — JSON 키 친화 형태. */
-function i18nIdKey(id: KnownPipelineId): "piiRedact" | "tokenQuota" | "observability" {
+function i18nIdKey(
+  id: KnownPipelineId,
+): "piiRedact" | "tokenQuota" | "observability" | "promptSanitize" {
   switch (id) {
     case "pii-redact":
       return "piiRedact";
@@ -43,6 +50,8 @@ function i18nIdKey(id: KnownPipelineId): "piiRedact" | "tokenQuota" | "observabi
       return "tokenQuota";
     case "observability":
       return "observability";
+    case "prompt-sanitize":
+      return "promptSanitize";
   }
 }
 

@@ -9,7 +9,11 @@
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
-/// 5차원 권한 — `ApiKey.scope` 필드.
+/// 권한 — `ApiKey.scope` 필드.
+///
+/// Phase 8'.c.3 (ADR-0029): `enabled_pipelines`로 per-key Pipelines override를 추가했어요.
+/// `None` = 전역 토글을 그대로 따름. `Some(Vec)` = 명시 화이트리스트로 글로벌 토글을 덮어써요.
+/// `Some(빈 Vec)` = 모든 Pipeline 비활성 (이 키만 raw passthrough).
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Scope {
     /// glob 패턴. 빈 vec = 거부 (어떤 모델도 호출 불가).
@@ -24,6 +28,11 @@ pub struct Scope {
     pub project_id: Option<String>,
     /// schema만 — enforce v1.1.
     pub rate_limit: Option<RateLimit>,
+    /// Phase 8'.c.3 — 이 키에만 적용할 Pipeline ID 화이트리스트.
+    /// `None` (default) = 전역 설정 따름. `Some(Vec)` = 명시 override.
+    /// `serde(default)`로 기존 직렬화된 키와 호환 — 누락된 필드는 None으로 deserialize.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled_pipelines: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -210,5 +219,64 @@ mod tests {
             ..Default::default()
         };
         assert!(s.is_expired(OffsetDateTime::now_utc()));
+    }
+
+    // ── Phase 8'.c.3 — enabled_pipelines per-key override ──────────────
+
+    #[test]
+    fn enabled_pipelines_default_is_none() {
+        let s = Scope::default();
+        assert!(s.enabled_pipelines.is_none());
+    }
+
+    #[test]
+    fn enabled_pipelines_serde_round_trip_with_some() {
+        let s = Scope {
+            enabled_pipelines: Some(vec!["pii-redact".into(), "token-quota".into()]),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&s).unwrap();
+        assert!(json.contains("enabled_pipelines"));
+        let back: Scope = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            back.enabled_pipelines,
+            Some(vec!["pii-redact".to_string(), "token-quota".to_string()])
+        );
+    }
+
+    #[test]
+    fn enabled_pipelines_serde_round_trip_with_empty_vec() {
+        // 빈 vec = 모든 pipeline 비활성. 기존 None과 다른 의미.
+        let s = Scope {
+            enabled_pipelines: Some(vec![]),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&s).unwrap();
+        let back: Scope = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.enabled_pipelines, Some(vec![]));
+    }
+
+    #[test]
+    fn enabled_pipelines_omitted_in_legacy_json_deserializes_none() {
+        // 기존 v1 데이터 호환 — JSON에 필드 자체가 없을 때 None으로.
+        let legacy =
+            r#"{"models":["*"],"endpoints":["/v1/*"],"allowed_origins":["http://localhost:5173"]}"#;
+        let s: Scope = serde_json::from_str(legacy).unwrap();
+        assert!(s.enabled_pipelines.is_none());
+        assert_eq!(s.models, vec!["*"]);
+    }
+
+    #[test]
+    fn enabled_pipelines_none_is_skipped_in_serialize() {
+        // skip_serializing_if = "Option::is_none" → JSON 출력에 필드 자체가 없어요.
+        let s = Scope {
+            models: vec!["*".into()],
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&s).unwrap();
+        assert!(
+            !json.contains("enabled_pipelines"),
+            "None은 직렬화에서 제외돼야 해요: {json}"
+        );
     }
 }

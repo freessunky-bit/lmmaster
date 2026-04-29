@@ -18,8 +18,10 @@ pub mod eval;
 pub mod flow;
 pub mod jsonl;
 pub mod lora;
+pub mod lora_real;
 pub mod modelfile;
 pub mod quantize;
+pub mod quantize_real;
 
 pub use artifact_retention::{
     cleanup as cleanup_artifacts, stats as artifact_stats, ArtifactStats, CleanupReport,
@@ -33,5 +35,10 @@ pub use eval::{
 pub use flow::{RunStatus, WorkbenchConfig, WorkbenchRun, WorkbenchStep};
 pub use jsonl::{parse_jsonl, parse_line, to_jsonl_line, write_jsonl, ChatExample, ChatMessage};
 pub use lora::{LoRAJob, LoRATrainer, MockLoRATrainer};
+pub use lora_real::{
+    BootstrapEvent, LlamaFactoryTrainer, DEFAULT_BOOTSTRAP_TIMEOUT_SECS, DEFAULT_LORA_TIMEOUT_SECS,
+    PYTHON_PATH_ENV, UV_PATH_ENV,
+};
 pub use modelfile::{escape_system_prompt, render, ModelfileSpec};
 pub use quantize::{MockQuantizer, QuantizeJob, QuantizeProgress, Quantizer};
+pub use quantize_real::{LlamaQuantizer, DEFAULT_QUANTIZE_TIMEOUT_SECS, LLAMA_QUANTIZE_ENV};

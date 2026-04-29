@@ -188,6 +188,48 @@
           "searchFailed": "Search failed. Retry?",
           "statsFailed": "Couldn't load workspace stats."
         }
+      },
+      "embeddingModels": {
+        "title": "Embedding models",
+        "subtitle": "Download a model for better search accuracy. We recommend models that work well with Korean.",
+        "loading": "Loading models…",
+        "empty": "No models available.",
+        "koreanScore": "Korean fit {{percent}}%",
+        "cards": {
+          "bge-m3": {
+            "name": "bge-m3 (multilingual)",
+            "description": "1024-dim multilingual embedder. Great for mixed Korean/English content."
+          },
+          "kure-v1": {
+            "name": "KURE-v1 (Korean specialized)",
+            "description": "768-dim Korean-specialized model. Best for Korean-heavy content."
+          },
+          "multilingual-e5-small": {
+            "name": "multilingual-e5-small (lightweight)",
+            "description": "384-dim lightweight model. For fast indexing or low-end PCs."
+          }
+        },
+        "actions": {
+          "download": "Download",
+          "cancel": "Cancel",
+          "activate": "Use this model",
+          "activeBadge": "Active"
+        },
+        "progress": {
+          "starting": "Starting download…",
+          "downloading": "Downloading",
+          "fileStarting": "Starting {{file}}",
+          "fileDownloading": "Downloading {{file}}",
+          "verifying": "Verifying integrity…",
+          "done": "Download complete",
+          "cancelled": "Download cancelled",
+          "aria": "Model download progress"
+        },
+        "errors": {
+          "loadFailed": "Couldn't load models. Retry?",
+          "downloadFailed": "Download failed. Retry?",
+          "activateFailed": "Couldn't activate model. Retry?"
+        }
       }
     },
     "projects": {
@@ -295,7 +337,13 @@
         "errorStatus": "Could not load auto-update status",
         "errorStart": "Could not start auto-update. Retry?",
         "errorStop": "Could not stop auto-update",
-        "errorCheck": "Update check failed"
+        "errorCheck": "Update check failed",
+        "beta": {
+          "toggleLabel": "Join the beta channel",
+          "statusOn": "On the beta channel",
+          "statusOff": "Stable channel only",
+          "description": "The beta channel ships new features earlier but may be less stable. You can switch back to stable any time."
+        }
       },
       "pipelines": {
         "title": "Pipelines (gateway filters)",
@@ -317,6 +365,10 @@
           "observability": {
             "name": "Observability log",
             "desc": "Records request/response metadata in the diagnostics log."
+          },
+          "promptSanitize": {
+            "name": "Prompt sanitization",
+            "desc": "Removes invisible control characters (zero-width / RTL overrides) from prompts."
           }
         },
         "audit": {
@@ -935,7 +987,19 @@
       "revealCopy": "Copy",
       "revealCopied": "Copied",
       "revealClose": "Close",
-      "revealAutomask": "Auto-masking in {{seconds}}s"
+      "revealAutomask": "Auto-masking in {{seconds}}s",
+      "pipelines": {
+        "legend": "Filters for this key only",
+        "useGlobal": "Follow global settings",
+        "useGlobalHint": "Checked: this key inherits the Settings → Pipelines toggles. Unchecked: the boxes below become an explicit allowlist.",
+        "ids": {
+          "piiRedact": "PII redaction",
+          "tokenQuota": "Token quota",
+          "observability": "Observability log",
+          "promptSanitize": "Prompt sanitization"
+        },
+        "warningEmpty": "Disabling all checkboxes means no filters are applied to calls from this key. Not recommended for production."
+      }
     },
     "errors": {
       "emptyAlias": "Enter an alias.",

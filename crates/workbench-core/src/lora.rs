@@ -1,13 +1,15 @@
-//! LoRA CLI subprocess wrapper trait + v1 mock.
+//! LoRA CLI subprocess wrapper trait + v1 mock + v1.c 실 CLI.
 //!
-//! 정책 (phase-5p-workbench-decision.md §1.5, ADR-0023 §Decision 3):
-//! - 실 CLI는 LLaMA-Factory `llamafactory-cli train`. v1.c에서 subprocess wrapper.
+//! 정책 (phase-5p-workbench-decision.md §1.5, ADR-0023 §Decision 3, ADR-0043):
+//! - 실 CLI는 LLaMA-Factory `llamafactory-cli train`. `LlamaFactoryTrainer` Python venv 부트스트랩 + spawn.
 //! - `MockLoRATrainer`는 mock progress emit. korean_preset = true 시 alpaca-ko 명시.
 //! - cancel 시 즉시 `WorkbenchError::Cancelled`.
 //! - 진행률 shape는 `QuantizeProgress` 재활용 (UI도 동일 progress pill 재사용).
+//! - streaming 변형 `run_streaming`은 mpsc::Sender — 장시간 학습 진행 이벤트 즉시 emit.
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 use crate::error::WorkbenchError;
@@ -26,11 +28,29 @@ pub struct LoRAJob {
 
 #[async_trait]
 pub trait LoRATrainer: Send + Sync {
+    /// 모든 progress를 `Vec`으로 모아 반환 — mock / 짧은 흐름.
     async fn run(
         &self,
         job: LoRAJob,
         cancel: &CancellationToken,
     ) -> Result<Vec<QuantizeProgress>, WorkbenchError>;
+
+    /// progress streaming. 실 CLI는 이 메서드를 override해 epoch 단위 emit.
+    /// 기본 구현은 `run` 결과를 forward — 짧은 작업/테스트용.
+    async fn run_streaming(
+        &self,
+        job: LoRAJob,
+        progress: mpsc::Sender<QuantizeProgress>,
+        cancel: &CancellationToken,
+    ) -> Result<(), WorkbenchError> {
+        let items = self.run(job, cancel).await?;
+        for p in items {
+            if progress.send(p).await.is_err() {
+                break;
+            }
+        }
+        Ok(())
+    }
 }
 
 /// v1 mock — 실 subprocess 없이 5-step progress emit. cancel 협력.
