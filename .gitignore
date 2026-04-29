@@ -62,3 +62,6 @@ minisign.local.key.pwd
 # Build artifacts
 *.log
 *.tmp
+
+# Release notes (자동 업로드용 임시 파일)
+release-notes-*.md
