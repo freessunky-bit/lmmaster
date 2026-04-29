@@ -16,6 +16,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-updater = "2"
+# Phase 7'.b — GlitchTip telemetry POST scaffold (DSN 미설정 시 비활성).
+reqwest.workspace = true
 # Phase 8'.0.b — 단일 인스턴스 보장 + 부팅 신호 forwarding.
 tauri-plugin-single-instance = "2"
 # Phase 8'.b.2 — 외부 URL 오픈 (ToastUpdate 등). capability scope `https://**` 강제.
@@ -52,6 +54,9 @@ knowledge-stack.workspace = true
 auto-updater.workspace = true
 pipelines.workspace = true
 registry-fetcher.workspace = true
+
+# Phase 8'.c.2 — Pipelines hot-reload chain swap handle.
+arc-swap.workspace = true
 
 # scheduler — registry-fetcher 6h cron + scanner 6h cron 공용.
 tokio-cron-scheduler.workspace = true

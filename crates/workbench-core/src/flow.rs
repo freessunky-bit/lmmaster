@@ -49,6 +49,13 @@ pub struct WorkbenchConfig {
     /// None이면 base_model_id를 그대로 씀.
     #[serde(default)]
     pub responder_model_id: Option<String>,
+    /// Phase 9'.b — 실 `llama-quantize` binary 사용. false면 MockQuantizer (기본).
+    #[serde(default)]
+    pub use_real_quantizer: bool,
+    /// Phase 9'.b — 실 LLaMA-Factory CLI 사용. false면 MockLoRATrainer (기본).
+    /// 미부트스트랩이면 caller가 사전 동의 후 `LlamaFactoryTrainer::bootstrap_or_open` 호출 필수.
+    #[serde(default)]
+    pub use_real_trainer: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -2,7 +2,7 @@
 
 > 1-page 진행도. 자세한 시간순 이력은 `docs/CHANGELOG.md`, 페이즈 전략은 `docs/PHASES.md`, 인계 노트는 `docs/RESUME.md`.
 
-**마지막 갱신**: 2026-04-29 (Phase 8'.0 + 8'.1 + 11' + 12' 완료 — **v1 ship 전 권장 코드 작업 100%**. 사용자 결정 6건 + Phase 7'.b 자동화만 남음.)
+**마지막 갱신**: 2026-04-29 (Phase 8'.a/.b/Env'.a 추가 완료 + GitHub repo push 완료 + minisign 발급 완료. cargo 696 + vitest 382 = **1078 tests / 0 failed**.)
 
 ## 6 Pillar (제품 약속) 상태
 

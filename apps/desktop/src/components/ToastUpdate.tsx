@@ -36,38 +36,43 @@ function persistSkip(version: string): void {
   }
 }
 
+/** v 또는 V 접두사 제거 — semver 비교 전 정규화. */
+function stripVersionPrefix(s: string): string {
+  return s.startsWith("v") || s.startsWith("V") ? s.slice(1) : s;
+}
+
 /**
  * 간이 semver compare — `major.minor.patch[-prerelease]`.
  *
- * Phase 8'.a.2 LRU cleanup용. v 부착 / pre-release / build metadata는 무시(prefix `v` 한정 strip).
- * 잘못된 형식은 NaN 처리 후 fallback string compare.
+ * Phase 8'.a.2 LRU cleanup용. v 접두사 / pre-release / build metadata는 strip 후 비교.
  *
  * 반환: a < b → 음수, a == b → 0, a > b → 양수.
  */
 export function compareVersion(a: string, b: string): number {
-  const stripV = (s: string) => (s.startsWith("v") || s.startsWith("V") ? s.slice(1) : s);
+  const normA = stripVersionPrefix(a);
+  const normB = stripVersionPrefix(b);
   // pre-release / build 메타 무시 — `1.2.3-rc1+build` → `1.2.3`.
-  const core = (s: string) => stripV(s).split(/[-+]/)[0] ?? "";
+  const coreA = normA.split(/[-+]/)[0] ?? "";
+  const coreB = normB.split(/[-+]/)[0] ?? "";
   const partsOf = (s: string): [number, number, number] => {
-    const segs = core(s).split(".");
+    const segs = s.split(".");
     const part = (i: number): number => {
       const n = Number(segs[i] ?? "0");
       return Number.isFinite(n) ? n : 0;
     };
     return [part(0), part(1), part(2)];
   };
-  const pa = partsOf(a);
-  const pb = partsOf(b);
+  const pa = partsOf(coreA);
+  const pb = partsOf(coreB);
   for (let i = 0; i < 3; i++) {
     const da = pa[i] as number;
     const db = pb[i] as number;
     if (da !== db) return da - db;
   }
-  // major.minor.patch가 동률이면 stripV된 string으로 fallback compare
+  // major.minor.patch가 동률이면 stripV된 string으로 fallback compare.
   // (pre-release 등 차이를 안정적으로 정렬). v 접두사는 정렬 영향 없음.
-  const sa = stripV(a);
-  const sb = stripV(b);
-  return sa === sb ? 0 : sa < sb ? -1 : 1;
+  if (normA === normB) return 0;
+  return normA < normB ? -1 : 1;
 }
 
 /**

@@ -1,0 +1,207 @@
+# Release pipeline — Phase 7'.b.
+#
+# 트리거:
+#   1) push tag `v*` (예: v0.1.0, v1.0.0-rc.1) — 정식 릴리스 빌드.
+#   2) workflow_dispatch — 사용자 수동 실행 (디버그 / dry run).
+#
+# 산출물:
+#   - Windows NSIS .exe + minisign .sig + latest.json (tauri-action 자동 생성).
+#   - macOS .dmg + minisign .sig (notarize 미수행 — Apple Developer 인증서 미보유).
+#   - Linux AppImage + minisign .sig.
+#   - GitHub Release (draft) — 사용자가 수동으로 publish 해서 안전 게이트 1번 더 확보.
+#
+# Authenticode (Windows OV) / Apple notarytool은 *추후 추가* — 현재는 인증서 미보유로 unsigned ship.
+# 첫 다운로드 시 SmartScreen / Gatekeeper 경고 가능 (README에서 한국어 안내).
+#
+# secrets (자세한 가이드는 .github/SECRETS_SETUP.md):
+#   - TAURI_SIGNING_PRIVATE_KEY            : minisign 비밀키 (`~/.tauri/lmmaster.key` 내용).
+#   - TAURI_SIGNING_PRIVATE_KEY_PASSWORD   : 비밀키 패스워드.
+#   - (옵션 v1.x) WINDOWS_CERTIFICATE / WINDOWS_CERTIFICATE_PASSWORD — Authenticode pfx + pwd.
+#   - (옵션 v1.x) APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID / APPLE_CERTIFICATE / APPLE_CERTIFICATE_PASSWORD.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '수동 실행 시 사용할 tag (예: v0.1.0). 비우면 dry-run.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write   # gh release create / asset upload 용.
+
+env:
+  PNPM_VERSION: '9'
+  NODE_VERSION: '20'
+
+jobs:
+  build-and-release:
+    name: Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows 필수 — NSIS .exe + latest.json + .sig.
+          - platform: windows-x86_64
+            os: windows-latest
+            target: ''
+            args: ''
+          # macOS Apple Silicon (옵션) — .dmg unsigned.
+          - platform: darwin-aarch64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            args: '--target aarch64-apple-darwin'
+          # macOS Intel (옵션).
+          - platform: darwin-x86_64
+            os: macos-latest
+            target: x86_64-apple-darwin
+            args: '--target x86_64-apple-darwin'
+          # Linux AppImage (옵션).
+          - platform: linux-x86_64
+            os: ubuntu-22.04
+            target: ''
+            args: ''
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: '. -> target'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Tauri prerequisites (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libsoup-3.0-dev \
+            patchelf
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Pre-flight Rust checks
+        # Phase 7'.b §3 빌드 검증 — desktop crate는 Windows cdylib 테스트 entrypoint 이슈로 제외 (CLAUDE.md §3).
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace --exclude lmmaster-desktop
+        shell: bash
+
+      - name: Frontend type-check
+        run: pnpm --filter @lmmaster/desktop exec tsc -b
+        shell: bash
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${{ github.ref_name }}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Resolved tag: $tag"
+
+      - name: Build & sign Tauri bundle
+        uses: tauri-apps/tauri-action@v0
+        env:
+          # Tauri v2 minisign signing — 비밀키 + password.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # NOTE: Authenticode / Apple Developer ID 인증서는 v1 미발급. 추후 발급 시 아래 secrets를
+          #       추가하고 tauri.conf.json windows.certificateThumbprint / macOS.signingIdentity를 채워주세요.
+          # WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          # WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          # tauri-action이 Tauri 빌드 + GitHub Release(draft) 자동 작성.
+          projectPath: apps/desktop
+          tagName: ${{ steps.tag.outputs.tag }}
+          releaseName: 'LMmaster ${{ steps.tag.outputs.tag }}'
+          releaseBody: |
+            ## 한국어
+            새 LMmaster 릴리스가 도착했어요. 자세한 변경 내역은 곧 채워질 예정이에요.
+
+            **설치 안내**:
+            - Windows: `.exe` 파일을 받아 실행해 주세요. SmartScreen 경고가 나오면 "추가 정보" → "실행"을 눌러 주세요.
+            - macOS: `.dmg`를 받아 Applications로 옮겨 주세요. 첫 실행 시 우클릭 → "열기"로 Gatekeeper를 통과해 주세요.
+            - Linux: `.AppImage`에 실행 권한(`chmod +x`)을 부여한 뒤 실행해 주세요.
+
+            ## English
+            A new LMmaster release is available. Detailed changelog will be filled in shortly.
+
+            **Install notes**:
+            - Windows: Download the `.exe`. If SmartScreen warns, click "More info" → "Run anyway".
+            - macOS: Download the `.dmg`, move to Applications, and right-click → "Open" on first launch to pass Gatekeeper.
+            - Linux: `chmod +x` the `.AppImage` and run it.
+          releaseDraft: true       # 사용자가 수동 publish — 안전 게이트.
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      - name: Compute SHA256 + sizes (job summary)
+        if: always()
+        shell: bash
+        run: |
+          set -e
+          summary="$GITHUB_STEP_SUMMARY"
+          {
+            echo "## ${{ matrix.platform }} 빌드 산출물"
+            echo ""
+            echo "| 파일 | 크기 | SHA256 |"
+            echo "|---|---|---|"
+            # tauri-action은 보통 src-tauri/target/<target>/release/bundle/ 아래 생성.
+            roots=(
+              "apps/desktop/src-tauri/target/release/bundle"
+              "apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle"
+            )
+            for root in "${roots[@]}"; do
+              [ -d "$root" ] || continue
+              while IFS= read -r f; do
+                size=$(wc -c < "$f")
+                if command -v sha256sum >/dev/null; then
+                  sha=$(sha256sum "$f" | awk '{print $1}')
+                else
+                  sha=$(shasum -a 256 "$f" | awk '{print $1}')
+                fi
+                echo "| \`$(basename "$f")\` | $size | \`$sha\` |"
+              done < <(find "$root" -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.tar.gz' -o -name '*.sig' -o -name 'latest.json' \))
+            done
+          } >> "$summary"

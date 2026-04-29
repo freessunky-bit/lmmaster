@@ -609,6 +609,77 @@ describe("Settings — 자동 갱신 (Phase 6'.b)", () => {
   });
 });
 
+describe("Settings — 베타 채널 토글 (Phase 7'.b)", () => {
+  it("기본은 stable 채널 — 베타 토글 OFF + statusOff 라벨", async () => {
+    render(<Settings />);
+    await waitFor(() => {
+      expect(getAutoUpdateStatus).toHaveBeenCalled();
+    });
+    const row = screen.getByTestId("settings-autoupdate-beta-row");
+    expect(row).toBeTruthy();
+    const toggle = within(row).getByRole("switch");
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    expect(
+      screen.getByTestId("settings-autoupdate-beta-status").textContent,
+    ).toContain("screens.settings.autoUpdate.beta.statusOff");
+  });
+
+  it("베타 토글 ON → localStorage 갱신 + 안내 텍스트", async () => {
+    const user = userEvent.setup();
+    render(<Settings />);
+    await waitFor(() => {
+      expect(getAutoUpdateStatus).toHaveBeenCalled();
+    });
+    const row = screen.getByTestId("settings-autoupdate-beta-row");
+    const toggle = within(row).getByRole("switch");
+    await user.click(toggle);
+    await waitFor(() => {
+      expect(toggle.getAttribute("aria-checked")).toBe("true");
+    });
+    expect(
+      globalThis.localStorage.getItem("lmmaster.settings.update.channel"),
+    ).toBe("beta");
+    // 설명 텍스트 i18n 키 노출.
+    expect(
+      screen.getByText("screens.settings.autoUpdate.beta.description"),
+    ).toBeTruthy();
+  });
+
+  it("active 폴러 + 채널 전환 → stop + start with beta repo", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getAutoUpdateStatus).mockResolvedValue(ACTIVE_POLLER);
+    render(<Settings />);
+    await waitFor(() => {
+      expect(getAutoUpdateStatus).toHaveBeenCalled();
+    });
+    const row = screen.getByTestId("settings-autoupdate-beta-row");
+    const toggle = within(row).getByRole("switch");
+    await user.click(toggle);
+    await waitFor(() => {
+      expect(stopAutoUpdatePoller).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(startAutoUpdatePoller).toHaveBeenCalled();
+    });
+    // 새 repo는 beta.
+    const lastCall = vi.mocked(startAutoUpdatePoller).mock.calls.at(-1);
+    expect(lastCall?.[0]).toBe("anthropics/lmmaster-beta");
+  });
+
+  it("localStorage에 beta 저장돼 있으면 첫 마운트에 ON 상태", async () => {
+    globalThis.localStorage.setItem("lmmaster.settings.update.channel", "beta");
+    render(<Settings />);
+    await waitFor(() => {
+      expect(getAutoUpdateStatus).toHaveBeenCalled();
+    });
+    const row = screen.getByTestId("settings-autoupdate-beta-row");
+    const toggle = within(row).getByRole("switch");
+    await waitFor(() => {
+      expect(toggle.getAttribute("aria-checked")).toBe("true");
+    });
+  });
+});
+
 describe("Settings — Pipelines 섹션 (Phase 6'.c)", () => {
   it("일반 패널에 PipelinesPanel 렌더 + 3종 토글 노출", async () => {
     render(<Settings />);

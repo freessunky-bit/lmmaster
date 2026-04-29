@@ -64,6 +64,12 @@ pub struct PipelineContext {
     /// 누적 토큰 — `TokenQuotaPipeline`이 매 호출마다 증가시킴.
     pub tokens_used: u64,
     pub audit_log: Vec<AuditEntry>,
+    /// Phase 8'.c.3 (ADR-0029) — 인증된 키의 Pipeline 화이트리스트.
+    ///
+    /// `None` = 전역 토글을 그대로 따름. `Some(Vec)` = 명시 override
+    /// (해당 ID에 포함된 Pipeline만 chain에 반영). `Some(빈 Vec)` = 모든 Pipeline 비활성.
+    /// `PipelineLayer`가 chain.apply_request 전에 sub-chain으로 필터링.
+    pub principal_key_pipelines: Option<Vec<String>>,
 }
 
 impl PipelineContext {

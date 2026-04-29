@@ -15,6 +15,8 @@ tokio.workspace = true
 tokio-util.workspace = true
 uuid.workspace = true
 time.workspace = true
+# Phase 9'.b — llama-quantize / python binary auto-detect on PATH.
+which.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

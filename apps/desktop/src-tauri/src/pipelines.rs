@@ -12,7 +12,11 @@ use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use pipelines::AuditEntry;
+use arc_swap::ArcSwap;
+use pipelines::{
+    AuditEntry, ObservabilityPipeline, PiiRedactPipeline, PipelineChain, PromptSanitizePipeline,
+    TokenQuotaPipeline,
+};
 use serde::{Deserialize, Serialize};
 use tauri::async_runtime::JoinHandle;
 use tauri::State;
@@ -23,10 +27,20 @@ use tokio::sync::{mpsc, Mutex as AsyncMutex};
 // 정책 상수
 // ───────────────────────────────────────────────────────────────────
 
-/// v1 시드 3종 — backend가 검증하는 화이트리스트.
+/// v1 시드 4종 — backend가 검증하는 화이트리스트 (Phase 8'.c.1에 prompt-sanitize 합류).
 const PII_REDACT_ID: &str = "pii-redact";
 const TOKEN_QUOTA_ID: &str = "token-quota";
 const OBSERVABILITY_ID: &str = "observability";
+const PROMPT_SANITIZE_ID: &str = "prompt-sanitize";
+
+/// Phase 8'.c.3 (ADR-0029) — 프론트엔드 / Scope 직렬화에 노출되는 v1 시드 ID 화이트리스트.
+/// per-key Pipelines 토글 UI에 그대로 사용 + 잘못된 ID 검증에 활용.
+pub const SEED_PIPELINE_IDS: &[&str] = &[
+    PII_REDACT_ID,
+    TOKEN_QUOTA_ID,
+    OBSERVABILITY_ID,
+    PROMPT_SANITIZE_ID,
+];
 
 /// 감사 로그 ring buffer cap. 200 초과 시 가장 오래된 entry 제거.
 pub const AUDIT_LOG_CAP: usize = 200;
@@ -65,11 +79,22 @@ pub struct PipelineDescriptor {
 }
 
 /// 활성/비활성 토글 설정 — 영속 대상.
+///
+/// Phase 8'.c.1 (ADR-0030): 4종 시드 모두 default ON.
+/// `prompt_sanitize_enabled`는 `serde(default)`로 기존 영속 파일과 호환 — legacy 3-field
+/// 파일을 deserialize하면 이 필드는 default 값(true)으로 채워져요.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PipelinesConfig {
     pub pii_redact_enabled: bool,
     pub token_quota_enabled: bool,
     pub observability_enabled: bool,
+    /// Phase 8'.c.1 — 4번째 v1 시드. 기존 config.json에 필드 누락이면 default ON으로.
+    #[serde(default = "default_true")]
+    pub prompt_sanitize_enabled: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Default for PipelinesConfig {
@@ -79,8 +104,32 @@ impl Default for PipelinesConfig {
             pii_redact_enabled: true,
             token_quota_enabled: true,
             observability_enabled: true,
+            prompt_sanitize_enabled: true,
         }
     }
+}
+
+/// `PipelinesConfig`로부터 `PipelineChain`을 빌드 — Phase 8'.c.2 hot-reload swap 대상.
+///
+/// 정책 (ADR-0028):
+/// - 본 함수는 deterministic — 동일 config면 항상 같은 chain 구성.
+/// - chain 순서: prompt-sanitize → pii-redact → token-quota → observability.
+///   (sanitize → redact → quota → observe — request 흐름의 자연스러운 순서)
+pub fn build_chain(config: &PipelinesConfig) -> PipelineChain {
+    let mut chain = PipelineChain::new();
+    if config.prompt_sanitize_enabled {
+        chain = chain.add(Arc::new(PromptSanitizePipeline::new()));
+    }
+    if config.pii_redact_enabled {
+        chain = chain.add(Arc::new(PiiRedactPipeline::new()));
+    }
+    if config.token_quota_enabled {
+        chain = chain.add(Arc::new(TokenQuotaPipeline::new()));
+    }
+    if config.observability_enabled {
+        chain = chain.add(Arc::new(ObservabilityPipeline::new()));
+    }
+    chain
 }
 
 /// 감사 로그 entry — frontend 미러. timestamp는 RFC3339 string.
@@ -144,7 +193,7 @@ fn now_iso() -> String {
 #[derive(Debug, Error, Serialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum PipelinesApiError {
-    #[error("알 수 없는 필터예요: {pipeline_id}. 허용 ID는 pii-redact / token-quota / observability 예요.")]
+    #[error("알 수 없는 필터예요: {pipeline_id}. 허용 ID는 pii-redact / token-quota / observability / prompt-sanitize 예요.")]
     UnknownPipeline { pipeline_id: String },
 
     #[error("필터 설정을 저장하지 못했어요: {message}")]
@@ -248,6 +297,9 @@ fn write_config_to_disk(base: &Path, config: &PipelinesConfig) -> Result<(), std
 ///
 /// Phase 6'.d — audit_task는 game gateway → AuditEntry → AuditEntryDto 변환 receiver task.
 /// `with_audit_channel`을 호출하면 spawn되며, 다시 호출하면 이전 task abort 후 새 task spawn.
+///
+/// Phase 8'.c.2 (ADR-0028) — `chain_swap`이 추가됨. 사용자가 토글을 바꾸면 `apply_set`이
+/// `build_chain`으로 새 chain을 만들어 ArcSwap에 store. 게이트웨이는 다음 요청부터 새 chain 적용.
 pub struct PipelinesState {
     config: Arc<AsyncMutex<PipelinesConfig>>,
     audit_log: Arc<AsyncMutex<RingBuffer<AuditEntryDto>>>,
@@ -255,26 +307,38 @@ pub struct PipelinesState {
     app_data_dir: Option<PathBuf>,
     /// audit receiver task — `with_audit_channel`이 spawn. 재호출 시 이전 task abort.
     audit_task: Arc<std::sync::Mutex<Option<JoinHandle<()>>>>,
+    /// Phase 8'.c.2 — 게이트웨이가 mount한 PipelineLayer와 공유하는 chain swap.
+    chain_swap: Arc<ArcSwap<PipelineChain>>,
 }
 
 impl PipelinesState {
     /// 새 state — `app_data_dir`가 있으면 disk에서 config 로드 시도, 없거나 실패하면 default.
+    ///
+    /// `chain_swap`은 disk config에 따라 초기화 — 게이트웨이가 부팅 시 동일 swap을 mount해
+    /// hot-reload가 즉시 동작.
     pub fn new(app_data_dir: Option<PathBuf>) -> Self {
         let initial = app_data_dir
             .as_deref()
             .and_then(read_config_from_disk)
             .unwrap_or_default();
+        let chain = build_chain(&initial);
         Self {
             config: Arc::new(AsyncMutex::new(initial)),
             audit_log: Arc::new(AsyncMutex::new(RingBuffer::new(AUDIT_LOG_CAP))),
             app_data_dir,
             audit_task: Arc::new(std::sync::Mutex::new(None)),
+            chain_swap: Arc::new(ArcSwap::new(Arc::new(chain))),
         }
     }
 
     /// 메모리 전용 (테스트용 + disk 폴백).
     pub fn in_memory() -> Self {
         Self::new(None)
+    }
+
+    /// Phase 8'.c.2 — 게이트웨이가 PipelineLayer mount 시 공유할 chain swap handle.
+    pub fn chain_swap(&self) -> Arc<ArcSwap<PipelineChain>> {
+        Arc::clone(&self.chain_swap)
     }
 
     /// 현재 config snapshot.
@@ -360,16 +424,29 @@ impl PipelinesState {
                 description_ko: "요청·응답 메타를 진단 로그에 남겨드려요.".to_string(),
                 enabled: cfg.observability_enabled,
             },
+            PipelineDescriptor {
+                id: PROMPT_SANITIZE_ID.to_string(),
+                display_name_ko: "프롬프트 정리".to_string(),
+                description_ko: "보이지 않는 제어 문자(zero-width / RTL 등)를 자동으로 제거해요."
+                    .to_string(),
+                enabled: cfg.prompt_sanitize_enabled,
+            },
         ]
     }
 
-    /// 토글 적용 + 디스크 영속.
+    /// 토글 적용 + 디스크 영속 + Phase 8'.c.2 chain swap.
+    ///
+    /// 정책 (ADR-0028):
+    /// - 토글 변경 → config 갱신 → `build_chain(new_config)` → `chain_swap.store(new_chain)`.
+    /// - swap은 atomic이라 진행 중 요청은 옛 chain 그대로 안전히 끝나고, 다음 요청부터 새 chain.
+    /// - 영속 실패해도 메모리 + chain swap은 갱신 (사용자가 즉시 효과 보도록).
     async fn apply_set(&self, pipeline_id: &str, enabled: bool) -> Result<(), PipelinesApiError> {
         let mut g = self.config.lock().await;
         match pipeline_id {
             PII_REDACT_ID => g.pii_redact_enabled = enabled,
             TOKEN_QUOTA_ID => g.token_quota_enabled = enabled,
             OBSERVABILITY_ID => g.observability_enabled = enabled,
+            PROMPT_SANITIZE_ID => g.prompt_sanitize_enabled = enabled,
             other => {
                 return Err(PipelinesApiError::UnknownPipeline {
                     pipeline_id: other.to_string(),
@@ -379,10 +456,14 @@ impl PipelinesState {
         let snapshot = *g;
         drop(g); // disk write 동안 락 보유 X.
 
+        // Phase 8'.c.2 — chain hot-reload. 영속 전에 swap (사용자에게 즉시 반영).
+        let new_chain = build_chain(&snapshot);
+        self.chain_swap.store(Arc::new(new_chain));
+
         if let Some(base) = self.app_data_dir.as_deref() {
             if let Err(e) = write_config_to_disk(base, &snapshot) {
-                // 영속 실패는 사용자에게 알리되 메모리 상태는 유지.
-                tracing::warn!(error = %e, "pipelines config 영속 실패 — 메모리만 갱신");
+                // 영속 실패는 사용자에게 알리되 메모리 + chain swap은 유지.
+                tracing::warn!(error = %e, "pipelines config 영속 실패 — 메모리/chain만 갱신");
                 return Err(PipelinesApiError::PersistFailed {
                     message: format!("{e}"),
                 });
@@ -475,6 +556,7 @@ mod tests {
         assert!(cfg.pii_redact_enabled);
         assert!(cfg.token_quota_enabled);
         assert!(cfg.observability_enabled);
+        assert!(cfg.prompt_sanitize_enabled);
     }
 
     #[test]
@@ -483,10 +565,29 @@ mod tests {
             pii_redact_enabled: false,
             token_quota_enabled: true,
             observability_enabled: false,
+            prompt_sanitize_enabled: true,
         };
         let json = serde_json::to_string(&cfg).expect("serialize");
         let back: PipelinesConfig = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(cfg, back);
+    }
+
+    /// 기존 v1 영속 파일은 prompt_sanitize_enabled 필드가 없음 — `serde(default)`로 복구.
+    #[test]
+    fn pipelines_config_legacy_3field_json_loads_with_default_true() {
+        let legacy = r#"{
+            "pii_redact_enabled": false,
+            "token_quota_enabled": true,
+            "observability_enabled": false
+        }"#;
+        let cfg: PipelinesConfig = serde_json::from_str(legacy).expect("deserialize legacy");
+        assert!(!cfg.pii_redact_enabled);
+        assert!(cfg.token_quota_enabled);
+        assert!(!cfg.observability_enabled);
+        assert!(
+            cfg.prompt_sanitize_enabled,
+            "legacy JSON에는 prompt-sanitize 필드 없음 → default true"
+        );
     }
 
     // ── Disk persist round-trip + missing-dir fallback ───────────────
@@ -498,6 +599,7 @@ mod tests {
             pii_redact_enabled: false,
             token_quota_enabled: true,
             observability_enabled: true,
+            prompt_sanitize_enabled: false,
         };
         write_config_to_disk(td.path(), &cfg).unwrap();
         let back = read_config_from_disk(td.path()).expect("read");
@@ -527,6 +629,7 @@ mod tests {
             pii_redact_enabled: false,
             token_quota_enabled: false,
             observability_enabled: true,
+            prompt_sanitize_enabled: true,
         };
         write_config_to_disk(td.path(), &stored).unwrap();
 
@@ -608,14 +711,15 @@ mod tests {
     // ── descriptors — 3종 시드 + i18n-friendly ───────────────────────
 
     #[tokio::test]
-    async fn descriptors_returns_three_seeds_with_default_enabled() {
+    async fn descriptors_returns_four_seeds_with_default_enabled() {
         let s = PipelinesState::in_memory();
         let descs = s.descriptors().await;
-        assert_eq!(descs.len(), 3);
+        assert_eq!(descs.len(), 4);
         let ids: Vec<&str> = descs.iter().map(|d| d.id.as_str()).collect();
         assert!(ids.contains(&PII_REDACT_ID));
         assert!(ids.contains(&TOKEN_QUOTA_ID));
         assert!(ids.contains(&OBSERVABILITY_ID));
+        assert!(ids.contains(&PROMPT_SANITIZE_ID));
         assert!(descs.iter().all(|d| d.enabled));
         // 한국어 fallback 라벨 모두 비어있지 않음.
         assert!(descs.iter().all(|d| !d.display_name_ko.is_empty()));
@@ -1006,6 +1110,80 @@ mod tests {
             }
         }
         panic!("10개 entry가 timeout 안에 처리되지 않았어요");
+    }
+
+    // ───────────────────────────────────────────────────────────────────
+    // Phase 8'.c.2 — chain_swap hot-reload integration
+    // ───────────────────────────────────────────────────────────────────
+
+    /// 시작 시 default config (4종 모두 ON) → chain length 4.
+    #[tokio::test]
+    async fn initial_chain_swap_reflects_default_config() {
+        let s = PipelinesState::in_memory();
+        let chain = s.chain_swap().load_full();
+        assert_eq!(chain.len(), 4, "default config는 4종 시드 모두 활성");
+    }
+
+    /// 토글 OFF 후 chain length 감소.
+    #[tokio::test]
+    async fn apply_set_off_swaps_chain_to_shorter() {
+        let s = PipelinesState::in_memory();
+        s.apply_set(PII_REDACT_ID, false).await.unwrap();
+        let chain = s.chain_swap().load_full();
+        assert_eq!(chain.len(), 3);
+        let ids: Vec<&str> = chain.pipelines().iter().map(|p| p.id()).collect();
+        assert!(!ids.contains(&"pii-redact"));
+    }
+
+    /// 모든 시드 OFF 후 chain 빈.
+    #[tokio::test]
+    async fn apply_set_all_off_results_in_empty_chain() {
+        let s = PipelinesState::in_memory();
+        s.apply_set(PII_REDACT_ID, false).await.unwrap();
+        s.apply_set(TOKEN_QUOTA_ID, false).await.unwrap();
+        s.apply_set(OBSERVABILITY_ID, false).await.unwrap();
+        s.apply_set(PROMPT_SANITIZE_ID, false).await.unwrap();
+        let chain = s.chain_swap().load_full();
+        assert!(chain.is_empty());
+    }
+
+    /// chain_swap handle을 외부에서 보유해도 swap 내용이 동일하게 보여요.
+    #[tokio::test]
+    async fn chain_swap_handle_shared_externally() {
+        let s = PipelinesState::in_memory();
+        let external = s.chain_swap();
+        // 시작.
+        assert_eq!(external.load_full().len(), 4);
+        // 내부 토글.
+        s.apply_set(PII_REDACT_ID, false).await.unwrap();
+        // 외부도 동기화 — 동일 ArcSwap 공유.
+        assert_eq!(external.load_full().len(), 3);
+    }
+
+    /// 동시성 — 다중 toggle이 race-free.
+    #[tokio::test]
+    async fn concurrent_apply_sets_do_not_corrupt_chain() {
+        let s = Arc::new(PipelinesState::in_memory());
+        let mut handles = Vec::new();
+        for i in 0..30 {
+            let s_clone = Arc::clone(&s);
+            handles.push(tokio::spawn(async move {
+                let id = match i % 4 {
+                    0 => PII_REDACT_ID,
+                    1 => TOKEN_QUOTA_ID,
+                    2 => OBSERVABILITY_ID,
+                    _ => PROMPT_SANITIZE_ID,
+                };
+                let on = i % 2 == 0;
+                let _ = s_clone.apply_set(id, on).await;
+            }));
+        }
+        for h in handles {
+            h.await.unwrap();
+        }
+        // chain 자체는 corrupt 없이 0..=4 길이.
+        let chain = s.chain_swap().load_full();
+        assert!((0..=4).contains(&chain.len()));
     }
 
     /// concurrent push (channel + record_audit) — Mutex 정합성.

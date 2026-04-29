@@ -10,9 +10,13 @@
 //!   2. digest를 dim개 f32로 펼치되, byte를 [-1, 1] 범위로 매핑.
 //!   3. 결과 벡터를 L2 normalize — cosine similarity 안정.
 
+use std::path::Path;
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use sha2::{Digest, Sha256};
 
+use crate::embed_download::{is_downloaded, OnnxModelKind};
 use crate::error::KnowledgeError;
 
 /// Embedder trait. caller가 워크스페이스마다 inject.
@@ -93,9 +97,77 @@ fn mock_vector(text: &str, dim: usize) -> Vec<f32> {
     vec
 }
 
+/// 사용자 활성 모델로 `Embedder`를 만들어요. 모델 파일이 없거나 ONNX feature가 꺼져 있으면
+/// `fallback_to_mock`에 따라 `MockEmbedder`로 fallback하거나 명확한 에러를 돌려줘요.
+///
+/// 정책 (ADR-0042 §Decision):
+/// - 사용자 PC에 ONNX Runtime 동적 라이브러리가 없거나 모델 파일이 없으면 RAG 자체는 동작해야 해요
+///   (mock fallback). ranking 품질만 deterministic-mock이라 사용자에게 "정확도 낮음" 안내가 의무.
+/// - `embed-onnx` feature가 꺼진 빌드(예: CI smoke build)도 동일 동작 — Mock 사용.
+pub async fn default_embedder(
+    target_dir: &Path,
+    preferred_kind: Option<OnnxModelKind>,
+    fallback_to_mock: bool,
+) -> Result<Arc<dyn Embedder>, KnowledgeError> {
+    if let Some(kind) = preferred_kind {
+        if is_downloaded(target_dir, kind) {
+            #[cfg(feature = "embed-onnx")]
+            {
+                match crate::embed_onnx::try_load_from_dir(target_dir, kind) {
+                    Ok(emb) => {
+                        // Warmup은 비용 있어 caller (Tauri setup)가 별도 호출 가능. 여기선 skip.
+                        return Ok(Arc::new(emb));
+                    }
+                    Err(e) => {
+                        if fallback_to_mock {
+                            tracing::warn!(error = %e, "ONNX embedder 로드 실패 — mock으로 폴백");
+                            return Ok(Arc::new(MockEmbedder::new(kind.dim())));
+                        }
+                        return Err(e);
+                    }
+                }
+            }
+            #[cfg(not(feature = "embed-onnx"))]
+            {
+                if fallback_to_mock {
+                    tracing::warn!(
+                        kind = kind.as_kebab(),
+                        "embed-onnx feature가 꺼져 있어 ONNX embedder를 만들지 못했어요 — mock fallback",
+                    );
+                    return Ok(Arc::new(MockEmbedder::new(kind.dim())));
+                }
+                return Err(KnowledgeError::EmbeddingFailed(format!(
+                    "embed-onnx feature 없이 빌드돼 {} 모델을 사용할 수 없어요",
+                    kind.as_kebab()
+                )));
+            }
+        }
+        if fallback_to_mock {
+            tracing::info!(
+                kind = kind.as_kebab(),
+                "임베딩 모델이 다운로드되지 않았어요 — mock 사용",
+            );
+            return Ok(Arc::new(MockEmbedder::new(kind.dim())));
+        }
+        return Err(KnowledgeError::EmbeddingFailed(format!(
+            "{} 모델 파일이 디스크에 없어요. 먼저 다운로드해 주세요",
+            kind.as_kebab()
+        )));
+    }
+    // preferred_kind 없음 — fallback 분기.
+    if fallback_to_mock {
+        Ok(Arc::new(MockEmbedder::default()))
+    } else {
+        Err(KnowledgeError::EmbeddingFailed(
+            "사용할 임베딩 모델을 지정해 주세요".to_string(),
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn deterministic_output() {
@@ -175,5 +247,38 @@ mod tests {
         let norm: f32 = v[0].iter().map(|x| x * x).sum::<f32>().sqrt();
         // L2 normalize 후 norm은 1.0 근처 (float 오차 허용).
         assert!((norm - 1.0).abs() < 1e-3, "expected ||v||≈1, got {norm}");
+    }
+
+    // ── default_embedder helper ──────────────────────────────────────
+
+    #[tokio::test]
+    async fn default_embedder_returns_mock_when_no_files_with_fallback() {
+        let dir = TempDir::new().unwrap();
+        let emb = default_embedder(dir.path(), Some(OnnxModelKind::BgeM3), true)
+            .await
+            .unwrap();
+        assert_eq!(emb.dim(), OnnxModelKind::BgeM3.dim());
+    }
+
+    #[tokio::test]
+    async fn default_embedder_errors_when_no_files_no_fallback() {
+        let dir = TempDir::new().unwrap();
+        let res = default_embedder(dir.path(), Some(OnnxModelKind::KureV1), false).await;
+        assert!(matches!(res, Err(KnowledgeError::EmbeddingFailed(_))));
+    }
+
+    #[tokio::test]
+    async fn default_embedder_returns_default_mock_when_kind_none_with_fallback() {
+        let dir = TempDir::new().unwrap();
+        let emb = default_embedder(dir.path(), None, true).await.unwrap();
+        // default Mock = 384.
+        assert_eq!(emb.dim(), 384);
+    }
+
+    #[tokio::test]
+    async fn default_embedder_errors_when_kind_none_no_fallback() {
+        let dir = TempDir::new().unwrap();
+        let res = default_embedder(dir.path(), None, false).await;
+        assert!(matches!(res, Err(KnowledgeError::EmbeddingFailed(_))));
     }
 }

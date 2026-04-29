@@ -188,6 +188,48 @@
           "searchFailed": "검색에 실패했어요. 잠시 뒤 다시 시도해 볼래요?",
           "statsFailed": "워크스페이스 통계를 가져오지 못했어요"
         }
+      },
+      "embeddingModels": {
+        "title": "임베딩 모델",
+        "subtitle": "검색 정확도를 위해 모델을 받아주세요. 한국어에 잘 맞는 모델을 추천해 드려요.",
+        "loading": "모델 목록을 불러오고 있어요…",
+        "empty": "사용 가능한 모델이 없어요.",
+        "koreanScore": "한국어 적합도 {{percent}}%",
+        "cards": {
+          "bge-m3": {
+            "name": "bge-m3 (다국어 강력)",
+            "description": "1024차원 다국어 임베딩이에요. 한국어 + 영어 혼합 자료에 잘 맞아요."
+          },
+          "kure-v1": {
+            "name": "KURE-v1 (한국어 특화)",
+            "description": "768차원 한국어 특화 모델이에요. 한국어 비중이 높은 자료에 가장 잘 맞아요."
+          },
+          "multilingual-e5-small": {
+            "name": "multilingual-e5-small (가벼움)",
+            "description": "384차원 가벼운 모델이에요. 빠른 인덱싱이 필요하거나 PC가 약할 때 추천해요."
+          }
+        },
+        "actions": {
+          "download": "이 모델 받을게요",
+          "cancel": "그만 받을래요",
+          "activate": "이 모델 쓸래요",
+          "activeBadge": "사용 중이에요"
+        },
+        "progress": {
+          "starting": "다운로드를 시작하고 있어요…",
+          "downloading": "받고 있어요",
+          "fileStarting": "{{file}} 받기 시작했어요",
+          "fileDownloading": "{{file}} 받고 있어요",
+          "verifying": "무결성을 확인하고 있어요…",
+          "done": "다 받았어요",
+          "cancelled": "다운로드를 취소했어요",
+          "aria": "모델 다운로드 진행률"
+        },
+        "errors": {
+          "loadFailed": "모델 목록을 가져오지 못했어요. 잠시 뒤 다시 시도해 볼래요?",
+          "downloadFailed": "다운로드에 실패했어요. 잠시 뒤 다시 시도해 볼래요?",
+          "activateFailed": "모델 활성화에 실패했어요. 잠시 뒤 다시 시도해 볼래요?"
+        }
       }
     },
     "projects": {
@@ -295,7 +337,13 @@
         "errorStatus": "자동 갱신 상태를 가져오지 못했어요",
         "errorStart": "자동 갱신을 시작하지 못했어요. 다시 시도해 볼래요?",
         "errorStop": "자동 갱신을 중단하지 못했어요",
-        "errorCheck": "업데이트 확인에 실패했어요"
+        "errorCheck": "업데이트 확인에 실패했어요",
+        "beta": {
+          "toggleLabel": "베타 채널에 참여할게요",
+          "statusOn": "베타 채널에 참여하고 있어요",
+          "statusOff": "정식 채널만 받고 있어요",
+          "description": "베타 채널은 새 기능을 먼저 받지만 안정성이 떨어질 수 있어요. 언제든 끄고 정식 채널로 돌아올 수 있어요."
+        }
       },
       "pipelines": {
         "title": "Pipelines (게이트웨이 필터)",
@@ -317,6 +365,10 @@
           "observability": {
             "name": "관찰성 로그",
             "desc": "요청·응답 메타를 진단 로그에 남겨드려요."
+          },
+          "promptSanitize": {
+            "name": "프롬프트 정리",
+            "desc": "보이지 않는 제어 문자(zero-width / RTL 등)를 자동으로 제거해요."
           }
         },
         "audit": {
@@ -935,7 +987,19 @@
       "revealCopy": "복사할게요",
       "revealCopied": "복사했어요",
       "revealClose": "닫을게요",
-      "revealAutomask": "{{seconds}}초 뒤에 자동으로 가려요"
+      "revealAutomask": "{{seconds}}초 뒤에 자동으로 가려요",
+      "pipelines": {
+        "legend": "이 키에만 적용할 필터",
+        "useGlobal": "전역 설정 따르기",
+        "useGlobalHint": "체크하면 Settings의 Pipelines 토글을 그대로 따라요. 끄면 아래 체크박스로 명시 화이트리스트가 됩니다.",
+        "ids": {
+          "piiRedact": "개인정보 보호 필터",
+          "tokenQuota": "토큰 한도 관리",
+          "observability": "관찰성 로그",
+          "promptSanitize": "프롬프트 정리"
+        },
+        "warningEmpty": "체크박스를 모두 끄면 이 키 호출에는 어떤 필터도 적용되지 않아요. 보안 정책상 권장하지 않아요."
+      }
     },
     "errors": {
       "emptyAlias": "별칭을 입력해 주세요",

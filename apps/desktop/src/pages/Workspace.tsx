@@ -19,6 +19,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { HelpButton } from "../components/HelpButton";
+import { EmbeddingModelPanel } from "../components/workspace/EmbeddingModelPanel";
 import { useActiveWorkspaceOptional } from "../contexts/ActiveWorkspaceContext";
 import {
   cancelIngest,
@@ -406,6 +407,9 @@ function KnowledgeTab({ workspaceId, storePath }: KnowledgeTabProps) {
           {statsError}
         </p>
       )}
+
+      {/* Phase 9'.a — 임베딩 모델 패널을 stats 위에 노출 — 사용자가 active 모델을 먼저 받도록 유도. */}
+      <EmbeddingModelPanel />
 
       <dl
         className="workspace-stats num"

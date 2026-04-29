@@ -24,11 +24,12 @@ use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Instant;
 
 use knowledge_stack::{
-    Embedder, IngestProgress, IngestService, IngestStage, KnowledgeStore, MockEmbedder,
+    is_downloaded, DownloadEvent, Embedder, IngestProgress, IngestService, IngestStage,
+    KnowledgeStore, MockEmbedder, ModelDownloader, OnnxModelKind,
 };
 use serde::{Deserialize, Serialize};
 use tauri::ipc::Channel;
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 use thiserror::Error;
 use tokio::sync::{mpsc, Mutex as AsyncMutex};
 use tokio_util::sync::CancellationToken;
@@ -182,6 +183,15 @@ pub enum KnowledgeApiError {
 
     #[error("내부 오류가 났어요: {message}")]
     Internal { message: String },
+
+    #[error("이미 같은 임베딩 모델을 받고 있어요. 끝나면 다시 시도해 주세요. ({model_kind})")]
+    AlreadyDownloading { model_kind: String },
+
+    #[error("알 수 없는 임베딩 모델이에요: {model_kind}")]
+    UnknownEmbeddingModel { model_kind: String },
+
+    #[error("모델을 먼저 받아야 활성화할 수 있어요: {model_kind}")]
+    ModelNotDownloaded { model_kind: String },
 }
 
 // ───────────────────────────────────────────────────────────────────
@@ -336,6 +346,9 @@ fn emit_or_cancel(
 /// - bridge task는 receiver가 None을 받으면(=sender drop) 자연 종료.
 /// - 본 task가 종료되면 channel은 closed (Tauri Channel은 strong ref counted).
 /// - cancel 트리거 → IngestService가 cooperative atomic flag를 검사 → KnowledgeError::Cancelled 반환.
+///
+/// `embedder` 인자: caller가 active OnnxModelKind 기반으로 미리 해결 (setup phase). None이면
+/// MockEmbedder default — 테스트/dev fallback.
 pub async fn run_ingest(
     config: IngestConfig,
     ingest_id: String,
@@ -343,6 +356,7 @@ pub async fn run_ingest(
     cancel: CancellationToken,
     atomic_cancel: Arc<AtomicBool>,
     channel: Channel<IngestEvent>,
+    embedder: Arc<dyn Embedder>,
 ) {
     let start = Instant::now();
     let workspace_id = config.workspace_id.clone();
@@ -378,9 +392,8 @@ pub async fn run_ingest(
         }
     };
 
-    // 3. Embedder — v1은 MockEmbedder.
-    let embedder: Arc<dyn Embedder> = Arc::new(MockEmbedder::default());
-    let service = IngestService::new(store, embedder);
+    // 3. Embedder — caller가 미리 해결해 inject (Phase 9'.a). active model 미설정 시 MockEmbedder.
+    let service = IngestService::new(store, Arc::clone(&embedder));
 
     // 4. mpsc 채널 + bridge task — IngestProgress → IngestEvent forward.
     let (tx, mut rx) = mpsc::channel::<IngestProgress>(64);
@@ -522,11 +535,16 @@ pub async fn ingest_path(
     config: IngestConfig,
     on_event: Channel<IngestEvent>,
     registry: State<'_, Arc<KnowledgeRegistry>>,
+    embedding_state: State<'_, Arc<EmbeddingState>>,
 ) -> Result<String, KnowledgeApiError> {
     let workspace_id = config.workspace_id.clone();
     let (ingest_id, cancel, atomic_cancel) = registry.register(&workspace_id).await?;
     let registry_arc: Arc<KnowledgeRegistry> = registry.inner().clone();
     let id_for_return = ingest_id.clone();
+
+    // Phase 9'.a — active 모델로 embedder를 해결. 미설정 / 미다운로드 / ONNX feature off →
+    // MockEmbedder fallback (RAG 자체는 동작, ranking 품질만 deterministic-mock).
+    let embedder = resolve_active_embedder(embedding_state.inner()).await;
 
     // Tauri 2 정책: tauri::async_runtime::spawn 사용 (tokio::spawn 금지 — Tauri가 자체 runtime 소유).
     tauri::async_runtime::spawn(async move {
@@ -537,11 +555,24 @@ pub async fn ingest_path(
             cancel,
             atomic_cancel,
             on_event,
+            embedder,
         )
         .await;
     });
 
     Ok(id_for_return)
+}
+
+/// active OnnxModelKind 기반 임베더. fallback_to_mock=true.
+async fn resolve_active_embedder(state: &Arc<EmbeddingState>) -> Arc<dyn Embedder> {
+    let kind = state.active().await;
+    match knowledge_stack::default_embedder(state.target_dir(), kind, true).await {
+        Ok(emb) => emb,
+        Err(e) => {
+            tracing::warn!(error = %e, "default_embedder 실패 — MockEmbedder default fallback");
+            Arc::new(MockEmbedder::default())
+        }
+    }
 }
 
 /// 진행 중 ingest를 cancel — idempotent. workspace_id 기반.
@@ -562,7 +593,7 @@ pub async fn list_ingests(
     Ok(registry.list().await)
 }
 
-/// 동기 검색 RPC. 임베더는 on-demand로 생성 (v1은 MockEmbedder).
+/// 동기 검색 RPC. 임베더는 active OnnxModelKind 기반으로 on-demand 생성 (Phase 9'.a).
 /// k는 max 50으로 cap (DoS 회피 + cosine brute-force 비용 제한).
 #[tauri::command]
 pub async fn search_knowledge(
@@ -570,6 +601,19 @@ pub async fn search_knowledge(
     query: String,
     k: usize,
     store_path: String,
+    embedding_state: State<'_, Arc<EmbeddingState>>,
+) -> Result<Vec<SearchHit>, KnowledgeApiError> {
+    let embedder = resolve_active_embedder(embedding_state.inner()).await;
+    search_knowledge_with_embedder(workspace_id, query, k, store_path, embedder).await
+}
+
+/// `search_knowledge`의 embedder-injectable 버전 — 단위 테스트가 직접 호출 가능.
+pub async fn search_knowledge_with_embedder(
+    workspace_id: String,
+    query: String,
+    k: usize,
+    store_path: String,
+    embedder: Arc<dyn Embedder>,
 ) -> Result<Vec<SearchHit>, KnowledgeApiError> {
     let k = k.min(50);
     if query.trim().is_empty() || k == 0 {
@@ -595,8 +639,7 @@ pub async fn search_knowledge(
         }
     }
 
-    // 쿼리 임베딩 — MockEmbedder.
-    let embedder = MockEmbedder::default();
+    // 쿼리 임베딩.
     let texts = std::slice::from_ref(&query);
     let q_vec = embedder
         .embed(texts)
@@ -698,6 +741,280 @@ pub async fn knowledge_workspace_stats(
         documents,
         chunks,
     })
+}
+
+// ───────────────────────────────────────────────────────────────────
+// Phase 9'.a — Embedding model panel (download / list / set active)
+// ───────────────────────────────────────────────────────────────────
+
+/// 3-카드 노출용 모델 정보 (한국어 친화도 + 사이즈 + 다운로드 여부 + 활성 여부).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EmbeddingModelInfo {
+    /// kebab-case kind ("bge-m3" 등). UI는 이 키로 라벨 lookup.
+    pub kind: String,
+    pub dim: usize,
+    pub approx_size_mb: u32,
+    /// 0.0 ~ 1.0. UI는 hint chip 강도 매핑.
+    pub korean_score: f32,
+    pub downloaded: bool,
+    pub active: bool,
+}
+
+/// 진행 중 다운로드 등록부 — kind 단위 직렬화.
+struct DownloadEntry {
+    cancel: CancellationToken,
+}
+
+/// Active 모델 영속 + active 다운로드 등록부.
+///
+/// 정책:
+/// - active 모델 kind은 `<app_data_dir>/embed/active.json`에 영속. 첫 실행은 None.
+/// - 다운로드 등록부 키 = `OnnxModelKind` — 같은 kind에 대해 동시 다운로드는 거부 (즉시 `AlreadyDownloading`).
+pub struct EmbeddingState {
+    target_dir: PathBuf,
+    config_path: PathBuf,
+    active: AsyncMutex<Option<OnnxModelKind>>,
+    downloads: AsyncMutex<HashMap<OnnxModelKind, DownloadEntry>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct EmbeddingActiveConfig {
+    /// kebab-case kind. 비어 있으면 None.
+    #[serde(default)]
+    active_kind: Option<String>,
+}
+
+impl EmbeddingState {
+    /// `<app_data_dir>/embed`를 base로 잡아요. parent 디렉터리는 lazy 생성.
+    pub fn new(app_data_dir: PathBuf) -> Self {
+        let target_dir = app_data_dir.join("embed").join("models");
+        let config_path = app_data_dir.join("embed").join("active.json");
+        let initial_active = read_active_from_disk(&config_path);
+        Self {
+            target_dir,
+            config_path,
+            active: AsyncMutex::new(initial_active),
+            downloads: AsyncMutex::new(HashMap::new()),
+        }
+    }
+
+    /// 모델 다운로드 디렉터리 — `<app_data_dir>/embed/models`.
+    pub fn target_dir(&self) -> &Path {
+        &self.target_dir
+    }
+
+    /// 현재 active kind (영속 반영).
+    pub async fn active(&self) -> Option<OnnxModelKind> {
+        *self.active.lock().await
+    }
+
+    /// active 변경 + atomic 영속.
+    pub async fn set_active(&self, kind: Option<OnnxModelKind>) -> Result<(), KnowledgeApiError> {
+        {
+            let mut g = self.active.lock().await;
+            *g = kind;
+        }
+        // 영속.
+        if let Some(parent) = self.config_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let cfg = EmbeddingActiveConfig {
+            active_kind: kind.map(|k| k.as_kebab().to_string()),
+        };
+        let json = serde_json::to_string_pretty(&cfg).map_err(|e| KnowledgeApiError::Internal {
+            message: format!("active 설정 직렬화 실패: {e}"),
+        })?;
+        // .tmp 후 rename.
+        let tmp = self.config_path.with_extension("json.tmp");
+        std::fs::write(&tmp, json).map_err(|e| KnowledgeApiError::Internal {
+            message: format!("active 설정 임시 파일 쓰기 실패: {e}"),
+        })?;
+        std::fs::rename(&tmp, &self.config_path).map_err(|e| KnowledgeApiError::Internal {
+            message: format!("active 설정 영속 실패: {e}"),
+        })?;
+        Ok(())
+    }
+
+    /// 다운로드 등록 — 동일 kind 동시 진행은 거부.
+    async fn register_download(
+        &self,
+        kind: OnnxModelKind,
+    ) -> Result<CancellationToken, KnowledgeApiError> {
+        let mut g = self.downloads.lock().await;
+        if g.contains_key(&kind) {
+            return Err(KnowledgeApiError::AlreadyDownloading {
+                model_kind: kind.as_kebab().to_string(),
+            });
+        }
+        let token = CancellationToken::new();
+        g.insert(
+            kind,
+            DownloadEntry {
+                cancel: token.clone(),
+            },
+        );
+        Ok(token)
+    }
+
+    /// 다운로드 해제 — 정상 / 실패 / cancel 모두에서 호출.
+    async fn finish_download(&self, kind: OnnxModelKind) {
+        self.downloads.lock().await.remove(&kind);
+    }
+
+    /// 외부에서 cancel — idempotent. 미존재 = no-op.
+    pub async fn cancel_download(&self, kind: OnnxModelKind) {
+        let g = self.downloads.lock().await;
+        if let Some(entry) = g.get(&kind) {
+            entry.cancel.cancel();
+        }
+    }
+
+    /// 앱 종료 시 모든 active 다운로드 cancel — sync 컨텍스트 (RunEvent::ExitRequested) best-effort.
+    pub fn cancel_all_blocking(&self) {
+        if let Ok(g) = self.downloads.try_lock() {
+            for entry in g.values() {
+                entry.cancel.cancel();
+            }
+        }
+    }
+
+    /// 현재 카탈로그 (3개 모델).
+    pub async fn list_models(&self) -> Vec<EmbeddingModelInfo> {
+        let active = self.active().await;
+        [
+            OnnxModelKind::BgeM3,
+            OnnxModelKind::KureV1,
+            OnnxModelKind::MultilingualE5Small,
+        ]
+        .into_iter()
+        .map(|kind| EmbeddingModelInfo {
+            kind: kind.as_kebab().to_string(),
+            dim: kind.dim(),
+            approx_size_mb: kind.approx_size_mb(),
+            korean_score: kind.korean_score(),
+            downloaded: is_downloaded(&self.target_dir, kind),
+            active: active == Some(kind),
+        })
+        .collect()
+    }
+}
+
+fn read_active_from_disk(config_path: &Path) -> Option<OnnxModelKind> {
+    let raw = std::fs::read_to_string(config_path).ok()?;
+    let cfg: EmbeddingActiveConfig = serde_json::from_str(&raw).ok()?;
+    cfg.active_kind
+        .as_deref()
+        .and_then(OnnxModelKind::from_kebab)
+}
+
+/// IPC: 사용 가능한 임베딩 모델 목록.
+#[tauri::command]
+pub async fn list_embedding_models(
+    state: State<'_, Arc<EmbeddingState>>,
+) -> Result<Vec<EmbeddingModelInfo>, KnowledgeApiError> {
+    Ok(state.list_models().await)
+}
+
+/// IPC: active 임베딩 모델 변경 (영속).
+#[tauri::command]
+pub async fn set_active_embedding_model(
+    kind: String,
+    state: State<'_, Arc<EmbeddingState>>,
+) -> Result<(), KnowledgeApiError> {
+    let parsed = OnnxModelKind::from_kebab(&kind).ok_or_else(|| {
+        KnowledgeApiError::UnknownEmbeddingModel {
+            model_kind: kind.clone(),
+        }
+    })?;
+    // 다운로드 안 된 모델로 active 전환은 거부 — UI가 순서 강제.
+    if !is_downloaded(state.target_dir(), parsed) {
+        return Err(KnowledgeApiError::ModelNotDownloaded {
+            model_kind: kind.clone(),
+        });
+    }
+    state.set_active(Some(parsed)).await?;
+    Ok(())
+}
+
+/// IPC: 임베딩 모델 다운로드 시작. 진행 이벤트는 `on_event` Channel로 흘려보내요.
+///
+/// 동일 kind에 대해 이미 진행 중이면 `AlreadyDownloading` 반환.
+#[tauri::command]
+pub async fn download_embedding_model(
+    kind: String,
+    on_event: Channel<DownloadEvent>,
+    state: State<'_, Arc<EmbeddingState>>,
+) -> Result<String, KnowledgeApiError> {
+    let parsed = OnnxModelKind::from_kebab(&kind).ok_or_else(|| {
+        KnowledgeApiError::UnknownEmbeddingModel {
+            model_kind: kind.clone(),
+        }
+    })?;
+    let cancel = state.register_download(parsed).await?;
+    let state_arc: Arc<EmbeddingState> = state.inner().clone();
+
+    // bridge mpsc → Channel.
+    let (tx, mut rx) = mpsc::channel::<DownloadEvent>(64);
+    let channel_for_bridge = on_event.clone();
+    tauri::async_runtime::spawn(async move {
+        while let Some(ev) = rx.recv().await {
+            if channel_for_bridge.send(ev).is_err() {
+                tracing::debug!("download channel send failed; closing bridge");
+                break;
+            }
+        }
+    });
+
+    let target_dir = state_arc.target_dir().to_path_buf();
+    let cancel_for_task = cancel.clone();
+    let state_for_task = Arc::clone(&state_arc);
+    tauri::async_runtime::spawn(async move {
+        if let Some(parent) = target_dir.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let downloader = match ModelDownloader::new(target_dir.clone()) {
+            Ok(d) => d,
+            Err(e) => {
+                let _ = tx
+                    .send(DownloadEvent::Failed {
+                        model_kind: parsed.as_kebab().to_string(),
+                        error: format!("{e}"),
+                    })
+                    .await;
+                state_for_task.finish_download(parsed).await;
+                return;
+            }
+        };
+        let _ = downloader.download_model(parsed, tx, cancel_for_task).await;
+        state_for_task.finish_download(parsed).await;
+    });
+
+    Ok(parsed.as_kebab().to_string())
+}
+
+/// IPC: 진행 중 다운로드 cancel — idempotent.
+#[tauri::command]
+pub async fn cancel_embedding_download(
+    kind: String,
+    state: State<'_, Arc<EmbeddingState>>,
+) -> Result<(), KnowledgeApiError> {
+    if let Some(parsed) = OnnxModelKind::from_kebab(&kind) {
+        state.cancel_download(parsed).await;
+    }
+    Ok(())
+}
+
+// ───────────────────────────────────────────────────────────────────
+// EmbeddingState 부트스트랩 — Tauri setup에서 호출.
+// ───────────────────────────────────────────────────────────────────
+
+/// 앱 부팅 시 EmbeddingState를 생성한다. app_data_dir 미접근 시 임시 디렉터리에 fallback.
+pub fn provision_embedding_state(app: &AppHandle) -> Arc<EmbeddingState> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .unwrap_or_else(|_| std::env::temp_dir().join("lmmaster"));
+    Arc::new(EmbeddingState::new(dir))
 }
 
 // ───────────────────────────────────────────────────────────────────
@@ -1025,7 +1342,17 @@ mod tests {
             store_path: store_file.to_string_lossy().to_string(),
         };
 
-        run_ingest(config, ingest_id, registry.clone(), cancel, atomic, ch).await;
+        let embedder: Arc<dyn Embedder> = Arc::new(MockEmbedder::default());
+        run_ingest(
+            config,
+            ingest_id,
+            registry.clone(),
+            cancel,
+            atomic,
+            ch,
+            embedder,
+        )
+        .await;
 
         (count, registry)
     }
@@ -1097,11 +1424,12 @@ mod tests {
             ws.id
         };
 
-        let hits = search_knowledge(
+        let hits = search_knowledge_with_embedder(
             ws_id.clone(),
             "apple".to_string(),
             3,
             store_file.to_string_lossy().to_string(),
+            Arc::new(MockEmbedder::default()),
         )
         .await
         .unwrap();
@@ -1128,11 +1456,12 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let store_file = dir.path().join("k.db");
         let _ = KnowledgeStore::open(&store_file).unwrap();
-        let hits = search_knowledge(
+        let hits = search_knowledge_with_embedder(
             "ws".to_string(),
             "   ".to_string(),
             5,
             store_file.to_string_lossy().to_string(),
+            Arc::new(MockEmbedder::default()),
         )
         .await
         .unwrap();
@@ -1144,11 +1473,12 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let store_file = dir.path().join("k.db");
         let _ = KnowledgeStore::open(&store_file).unwrap();
-        let err = search_knowledge(
+        let err = search_knowledge_with_embedder(
             "missing-ws".to_string(),
             "hello".to_string(),
             3,
             store_file.to_string_lossy().to_string(),
+            Arc::new(MockEmbedder::default()),
         )
         .await
         .unwrap_err();
@@ -1188,21 +1518,23 @@ mod tests {
             (ws_a.id, ws_b.id)
         };
 
-        let hits_a = search_knowledge(
+        let hits_a = search_knowledge_with_embedder(
             ws_a_id.clone(),
             "alpha".to_string(),
             5,
             store_file.to_string_lossy().to_string(),
+            Arc::new(MockEmbedder::default()),
         )
         .await
         .unwrap();
         assert_eq!(hits_a.len(), 1);
         assert_eq!(hits_a[0].content, "alpha-only");
-        let hits_b = search_knowledge(
+        let hits_b = search_knowledge_with_embedder(
             ws_b_id.clone(),
             "beta".to_string(),
             5,
             store_file.to_string_lossy().to_string(),
+            Arc::new(MockEmbedder::default()),
         )
         .await
         .unwrap();
@@ -1278,5 +1610,176 @@ mod tests {
         assert_eq!(cfg.target_chunk_size, 1000);
         assert_eq!(cfg.overlap, 200);
         assert_eq!(cfg.store_path, "");
+    }
+
+    // ── Phase 9'.a — EmbeddingState ──────────────────────────────
+
+    #[tokio::test]
+    async fn embedding_state_lists_three_models_with_no_active_initially() {
+        let dir = TempDir::new().unwrap();
+        let state = EmbeddingState::new(dir.path().to_path_buf());
+        let models = state.list_models().await;
+        assert_eq!(models.len(), 3);
+        // 첫 실행 — 아무도 active 아니고 아무도 다운로드 안 됨.
+        for m in &models {
+            assert!(!m.active);
+            assert!(!m.downloaded);
+        }
+    }
+
+    #[tokio::test]
+    async fn embedding_state_set_active_persists_to_disk() {
+        let dir = TempDir::new().unwrap();
+        // 이미 다운로드된 상태로 가정 — 모델 디렉터리 + 파일 시뮬레이션.
+        let kind = OnnxModelKind::BgeM3;
+        let kind_dir = dir
+            .path()
+            .join("embed")
+            .join("models")
+            .join(kind.as_kebab());
+        std::fs::create_dir_all(&kind_dir).unwrap();
+        std::fs::write(kind_dir.join("model.onnx"), b"fake").unwrap();
+        std::fs::write(kind_dir.join("tokenizer.json"), b"fake").unwrap();
+
+        let state = EmbeddingState::new(dir.path().to_path_buf());
+        state.set_active(Some(kind)).await.unwrap();
+        assert_eq!(state.active().await, Some(kind));
+
+        // 다른 EmbeddingState로 다시 불러오면 영속이 보여야 해요.
+        let state2 = EmbeddingState::new(dir.path().to_path_buf());
+        assert_eq!(state2.active().await, Some(kind));
+    }
+
+    #[tokio::test]
+    async fn embedding_state_already_downloading_rejects_duplicate() {
+        let dir = TempDir::new().unwrap();
+        let state = EmbeddingState::new(dir.path().to_path_buf());
+        let _t1 = state.register_download(OnnxModelKind::BgeM3).await.unwrap();
+        let res = state.register_download(OnnxModelKind::BgeM3).await;
+        match res {
+            Err(KnowledgeApiError::AlreadyDownloading { model_kind }) => {
+                assert_eq!(model_kind, "bge-m3");
+            }
+            other => panic!("expected AlreadyDownloading, got {other:?}"),
+        }
+        // 다른 kind는 충돌 없음.
+        let _t2 = state
+            .register_download(OnnxModelKind::KureV1)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn embedding_state_finish_releases_slot() {
+        let dir = TempDir::new().unwrap();
+        let state = EmbeddingState::new(dir.path().to_path_buf());
+        let _ = state
+            .register_download(OnnxModelKind::KureV1)
+            .await
+            .unwrap();
+        state.finish_download(OnnxModelKind::KureV1).await;
+        // 이제 다시 등록 가능.
+        let _ = state
+            .register_download(OnnxModelKind::KureV1)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn embedding_state_cancel_unknown_is_noop() {
+        let dir = TempDir::new().unwrap();
+        let state = EmbeddingState::new(dir.path().to_path_buf());
+        // 등록 안 한 kind cancel — panic 없이 통과.
+        state
+            .cancel_download(OnnxModelKind::MultilingualE5Small)
+            .await;
+    }
+
+    #[tokio::test]
+    async fn embedding_state_cancel_marks_token() {
+        let dir = TempDir::new().unwrap();
+        let state = EmbeddingState::new(dir.path().to_path_buf());
+        let token = state.register_download(OnnxModelKind::BgeM3).await.unwrap();
+        state.cancel_download(OnnxModelKind::BgeM3).await;
+        assert!(token.is_cancelled(), "cancel 후 token이 cancel되어야 해요");
+    }
+
+    #[tokio::test]
+    async fn list_models_marks_downloaded_when_files_present() {
+        let dir = TempDir::new().unwrap();
+        // bge-m3 다운로드된 상태 흉내.
+        let kind = OnnxModelKind::BgeM3;
+        let kind_dir = dir
+            .path()
+            .join("embed")
+            .join("models")
+            .join(kind.as_kebab());
+        std::fs::create_dir_all(&kind_dir).unwrap();
+        std::fs::write(kind_dir.join("model.onnx"), b"fake").unwrap();
+        std::fs::write(kind_dir.join("tokenizer.json"), b"fake").unwrap();
+
+        let state = EmbeddingState::new(dir.path().to_path_buf());
+        let models = state.list_models().await;
+        let bge = models
+            .iter()
+            .find(|m| m.kind == "bge-m3")
+            .expect("bge-m3 in list");
+        assert!(bge.downloaded);
+    }
+
+    #[tokio::test]
+    async fn embedding_state_set_active_unknown_kind_is_unaffected() {
+        // EmbeddingState::set_active는 OnnxModelKind를 직접 받아 unknown 입력은 컴파일 단에서 차단.
+        // IPC 레이어 (set_active_embedding_model) 가 from_kebab을 사용해 검증 — 여기서는 None 클리어 동작 확인.
+        let dir = TempDir::new().unwrap();
+        let state = EmbeddingState::new(dir.path().to_path_buf());
+        state.set_active(None).await.unwrap();
+        assert_eq!(state.active().await, None);
+    }
+
+    #[test]
+    fn embedding_model_info_serializes_with_kebab_kind() {
+        let info = EmbeddingModelInfo {
+            kind: "bge-m3".into(),
+            dim: 1024,
+            approx_size_mb: 580,
+            korean_score: 0.85,
+            downloaded: false,
+            active: false,
+        };
+        let v = serde_json::to_value(&info).unwrap();
+        assert_eq!(v["kind"], "bge-m3");
+        assert_eq!(v["dim"], 1024);
+        assert_eq!(v["approx_size_mb"], 580);
+    }
+
+    #[test]
+    fn knowledge_api_error_already_downloading_kebab() {
+        let e = KnowledgeApiError::AlreadyDownloading {
+            model_kind: "bge-m3".into(),
+        };
+        let v = serde_json::to_value(&e).unwrap();
+        assert_eq!(v["kind"], "already-downloading");
+        assert!(format!("{e}").contains("받고 있어요"));
+    }
+
+    #[test]
+    fn knowledge_api_error_unknown_model_kebab() {
+        let e = KnowledgeApiError::UnknownEmbeddingModel {
+            model_kind: "unknown".into(),
+        };
+        let v = serde_json::to_value(&e).unwrap();
+        assert_eq!(v["kind"], "unknown-embedding-model");
+        assert!(format!("{e}").contains("알 수 없는"));
+    }
+
+    #[test]
+    fn knowledge_api_error_model_not_downloaded_kebab() {
+        let e = KnowledgeApiError::ModelNotDownloaded {
+            model_kind: "kure-v1".into(),
+        };
+        let v = serde_json::to_value(&e).unwrap();
+        assert_eq!(v["kind"], "model-not-downloaded");
+        assert!(format!("{e}").contains("받아야"));
     }
 }

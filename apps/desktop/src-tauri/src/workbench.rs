@@ -12,6 +12,7 @@
 //! Phase 1A.3.c (install) + Phase 2'.c.2 (bench)와 동일 패턴.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -22,6 +23,7 @@ use tauri::State;
 use thiserror::Error;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+use tokio::sync::mpsc;
 use tokio::sync::Mutex as AsyncMutex;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -30,10 +32,11 @@ use bench_harness::{ResponderRuntimeKind, WorkbenchResponder};
 use model_registry::{CustomModel, ModelRegistry as CustomModelRegistry, ModelRegistryError};
 
 use workbench_core::{
-    baseline_korean_eval_cases, parse_jsonl, render, run_eval_suite, write_jsonl, ChatExample,
-    EvalReport, LoRAJob, LoRATrainer, MockLoRATrainer, MockQuantizer, ModelfileSpec, QuantizeJob,
-    QuantizeProgress, Quantizer, Responder, WorkbenchConfig, WorkbenchError, WorkbenchRun,
-    WorkbenchStep,
+    baseline_korean_eval_cases, parse_jsonl, render, run_eval_suite, write_jsonl, BootstrapEvent,
+    ChatExample, EvalReport, LlamaFactoryTrainer, LlamaQuantizer, LoRAJob, LoRATrainer,
+    MockLoRATrainer, MockQuantizer, ModelfileSpec, QuantizeJob, QuantizeProgress, Quantizer,
+    Responder, WorkbenchConfig, WorkbenchError, WorkbenchRun, WorkbenchStep,
+    DEFAULT_BOOTSTRAP_TIMEOUT_SECS, DEFAULT_LORA_TIMEOUT_SECS, DEFAULT_QUANTIZE_TIMEOUT_SECS,
 };
 
 // ───────────────────────────────────────────────────────────────────
@@ -342,15 +345,26 @@ pub async fn run_workbench(
     artifact_paths.push(quant_output.clone());
     run.advance_to(WorkbenchStep::Quantize);
     registry.set_stage(&run_id, WorkbenchStep::Quantize).await;
-    if !run_stage_quantize(
-        &run,
-        &config,
-        &quant_output,
-        &cancel,
-        &channel,
-        &MockQuantizer,
-    )
-    .await
+    // Phase 9'.b: use_real_quantizer = true이면 LlamaQuantizer (PATH/env detect),
+    // 미발견 시 즉시 한국어 안내 후 Failed. false면 Mock(기존 동작).
+    let quantizer: Box<dyn Quantizer> = match build_quantizer(&config) {
+        Ok(q) => q,
+        Err(e) => {
+            emit_or_cancel(
+                &channel,
+                &cancel,
+                WorkbenchEvent::Failed {
+                    run_id: run_id.clone(),
+                    error: format!("{e}"),
+                },
+            );
+            registry.finish(&run_id).await;
+            run.mark_failed();
+            return run;
+        }
+    };
+    if !run_stage_quantize(&run, &config, &quant_output, &cancel, &channel, quantizer.as_ref())
+        .await
     {
         registry.finish(&run_id).await;
         if cancel.is_cancelled() {
@@ -366,16 +380,25 @@ pub async fn run_workbench(
     artifact_paths.push(lora_output.clone());
     run.advance_to(WorkbenchStep::Lora);
     registry.set_stage(&run_id, WorkbenchStep::Lora).await;
-    if !run_stage_lora(
-        &run,
-        &config,
-        &lora_output,
-        &cancel,
-        &channel,
-        &MockLoRATrainer,
-    )
-    .await
-    {
+    // Phase 9'.b: use_real_trainer = true이면 LlamaFactoryTrainer 기대 (사전 부트스트랩 필수).
+    // 미부트스트랩이면 한국어 안내. false면 Mock.
+    let trainer: Box<dyn LoRATrainer> = match build_trainer(&config) {
+        Ok(t) => t,
+        Err(e) => {
+            emit_or_cancel(
+                &channel,
+                &cancel,
+                WorkbenchEvent::Failed {
+                    run_id: run_id.clone(),
+                    error: format!("{e}"),
+                },
+            );
+            registry.finish(&run_id).await;
+            run.mark_failed();
+            return run;
+        }
+    };
+    if !run_stage_lora(&run, &config, &lora_output, &cancel, &channel, trainer.as_ref()).await {
         registry.finish(&run_id).await;
         if cancel.is_cancelled() {
             run.mark_cancelled();
@@ -548,7 +571,10 @@ async fn run_stage_data(
     true
 }
 
-/// Step 2 — Quantize. Quantizer trait 호출 + progress forward.
+/// Step 2 — Quantize. Quantizer trait `run_streaming` 호출 + progress live forward.
+///
+/// Phase 9'.b: streaming 변형으로 업그레이드 — 실 binary 30분 작업 중에도 매 stdout 라인이
+/// 즉시 UI에 emit. Mock은 default impl이 `run` 결과를 forward하므로 호환.
 async fn run_stage_quantize(
     run: &WorkbenchRun,
     config: &WorkbenchConfig,
@@ -580,8 +606,36 @@ async fn run_stage_quantize(
         output_gguf: output_path.to_string(),
         quant_type: config.quant_type.clone(),
     };
-    let progress_list = match quantizer.run(job, cancel).await {
-        Ok(p) => p,
+
+    let (tx, mut rx) = mpsc::channel::<QuantizeProgress>(64);
+    let runner = quantizer.run_streaming(job, tx, cancel);
+    tokio::pin!(runner);
+    let outcome = loop {
+        tokio::select! {
+            biased;
+            res = &mut runner => break res,
+            Some(p) = rx.recv() => {
+                forward_progress_event(run, channel, cancel, WorkbenchStep::Quantize, &p);
+            }
+        }
+    };
+    // sender drop 후 남은 progress drain.
+    while let Some(p) = rx.recv().await {
+        forward_progress_event(run, channel, cancel, WorkbenchStep::Quantize, &p);
+    }
+
+    match outcome {
+        Ok(()) => {
+            emit_or_cancel(
+                channel,
+                cancel,
+                WorkbenchEvent::StageCompleted {
+                    run_id: run.id.clone(),
+                    stage: WorkbenchStep::Quantize,
+                },
+            );
+            true
+        }
         Err(WorkbenchError::Cancelled) => {
             emit_or_cancel(
                 channel,
@@ -590,7 +644,7 @@ async fn run_stage_quantize(
                     run_id: run.id.clone(),
                 },
             );
-            return false;
+            false
         }
         Err(e) => {
             emit_or_cancel(
@@ -601,24 +655,12 @@ async fn run_stage_quantize(
                     error: format!("{e}"),
                 },
             );
-            return false;
+            false
         }
-    };
-    for p in progress_list {
-        forward_progress_event(run, channel, cancel, WorkbenchStep::Quantize, &p);
     }
-    emit_or_cancel(
-        channel,
-        cancel,
-        WorkbenchEvent::StageCompleted {
-            run_id: run.id.clone(),
-            stage: WorkbenchStep::Quantize,
-        },
-    );
-    true
 }
 
-/// Step 3 — LoRA. LoRATrainer trait 호출.
+/// Step 3 — LoRA. LoRATrainer trait `run_streaming` 호출 + progress live forward.
 async fn run_stage_lora(
     run: &WorkbenchRun,
     config: &WorkbenchConfig,
@@ -653,8 +695,35 @@ async fn run_stage_lora(
         lr: 0.0002,
         korean_preset: config.korean_preset,
     };
-    let progress_list = match trainer.run(job, cancel).await {
-        Ok(p) => p,
+
+    let (tx, mut rx) = mpsc::channel::<QuantizeProgress>(64);
+    let runner = trainer.run_streaming(job, tx, cancel);
+    tokio::pin!(runner);
+    let outcome = loop {
+        tokio::select! {
+            biased;
+            res = &mut runner => break res,
+            Some(p) = rx.recv() => {
+                forward_progress_event(run, channel, cancel, WorkbenchStep::Lora, &p);
+            }
+        }
+    };
+    while let Some(p) = rx.recv().await {
+        forward_progress_event(run, channel, cancel, WorkbenchStep::Lora, &p);
+    }
+
+    match outcome {
+        Ok(()) => {
+            emit_or_cancel(
+                channel,
+                cancel,
+                WorkbenchEvent::StageCompleted {
+                    run_id: run.id.clone(),
+                    stage: WorkbenchStep::Lora,
+                },
+            );
+            true
+        }
         Err(WorkbenchError::Cancelled) => {
             emit_or_cancel(
                 channel,
@@ -663,7 +732,7 @@ async fn run_stage_lora(
                     run_id: run.id.clone(),
                 },
             );
-            return false;
+            false
         }
         Err(e) => {
             emit_or_cancel(
@@ -674,21 +743,9 @@ async fn run_stage_lora(
                     error: format!("{e}"),
                 },
             );
-            return false;
+            false
         }
-    };
-    for p in progress_list {
-        forward_progress_event(run, channel, cancel, WorkbenchStep::Lora, &p);
     }
-    emit_or_cancel(
-        channel,
-        cancel,
-        WorkbenchEvent::StageCompleted {
-            run_id: run.id.clone(),
-            stage: WorkbenchStep::Lora,
-        },
-    );
-    true
 }
 
 /// Step 4 — Validate. baseline 10 case를 Responder로 평가 후 EvalCompleted publish.
@@ -1040,6 +1097,68 @@ pub(crate) fn build_responder(config: &WorkbenchConfig) -> WorkbenchResponder {
                 .unwrap_or_else(|| config.base_model_id.clone());
             WorkbenchResponder::new(ResponderRuntimeKind::LmStudio, model_id, base_url)
         }
+    }
+}
+
+/// Phase 9'.b — Quantizer dispatch (실 binary vs mock).
+///
+/// `use_real_quantizer = true`이면 PATH 또는 `LMMASTER_LLAMA_QUANTIZE_PATH` env로
+/// `llama-quantize`를 detect. 미발견 시 한국어 `WorkbenchError::ToolMissing`. false면 Mock.
+pub(crate) fn build_quantizer(
+    config: &WorkbenchConfig,
+) -> Result<Box<dyn Quantizer>, WorkbenchError> {
+    if config.use_real_quantizer {
+        let timeout = Duration::from_secs(DEFAULT_QUANTIZE_TIMEOUT_SECS);
+        let q = LlamaQuantizer::from_environment(timeout)?;
+        Ok(Box::new(q))
+    } else {
+        Ok(Box::new(MockQuantizer))
+    }
+}
+
+/// Phase 9'.b — LoRATrainer dispatch.
+///
+/// `use_real_trainer = true`이면 사용자 명시 동의 후 부트스트랩 완료된 venv 경로를 기대.
+/// 미부트스트랩 시 한국어 안내 — caller(UI)가 `lora_bootstrap_venv` 명령으로 사전 부트스트랩.
+pub(crate) fn build_trainer(
+    config: &WorkbenchConfig,
+) -> Result<Box<dyn LoRATrainer>, WorkbenchError> {
+    if config.use_real_trainer {
+        let venv_dir = lora_venv_dir();
+        let python = lora_venv_python(&venv_dir);
+        if !python.exists() {
+            return Err(WorkbenchError::ToolMissing {
+                tool: "LLaMA-Factory venv가 아직 만들어지지 않았어요. \
+                       LoRA 화면에서 '실 모드 venv 만들기' 버튼을 눌러 부트스트랩한 뒤 다시 시도해 주세요."
+                    .into(),
+            });
+        }
+        let timeout = Duration::from_secs(DEFAULT_LORA_TIMEOUT_SECS);
+        Ok(Box::new(LlamaFactoryTrainer::with_paths(
+            venv_dir, python, timeout,
+        )))
+    } else {
+        Ok(Box::new(MockLoRATrainer))
+    }
+}
+
+/// venv 디렉터리 — temp_dir 기반. Phase 9'.b는 OS별 cache_dir로 v1.x에 이동 예정.
+pub(crate) fn lora_venv_dir() -> PathBuf {
+    if let Ok(p) = std::env::var("LMMASTER_LORA_VENV_DIR") {
+        return PathBuf::from(p);
+    }
+    std::env::temp_dir().join("lmmaster-lora").join("venv")
+}
+
+/// venv 안 python 실행 파일 경로.
+pub(crate) fn lora_venv_python(venv_dir: &std::path::Path) -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        venv_dir.join("Scripts").join("python.exe")
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        venv_dir.join("bin").join("python")
     }
 }
 
@@ -1497,6 +1616,138 @@ pub async fn workbench_serialize_examples(
     write_jsonl(&examples).map_err(|e| WorkbenchApiError::StartFailed {
         message: format!("{e}"),
     })
+}
+
+// ───────────────────────────────────────────────────────────────────
+// Phase 9'.b — 실 모드 진단 + venv 부트스트랩 IPC
+// ───────────────────────────────────────────────────────────────────
+
+/// 실 모드 진단 결과 — frontend가 사용자 동의 dialog 전 상태 확인.
+#[derive(Debug, Clone, Serialize)]
+pub struct WorkbenchRealStatus {
+    /// `llama-quantize` 발견 여부 (PATH 또는 env).
+    pub quantize_binary_found: bool,
+    /// 발견된 binary 절대 경로 (있으면).
+    pub quantize_binary_path: Option<String>,
+    /// LLaMA-Factory venv가 부트스트랩 완료되었는지 (python 실행 파일 존재).
+    pub trainer_venv_ready: bool,
+    /// venv 디렉터리 절대 경로.
+    pub trainer_venv_dir: String,
+}
+
+/// 실 모드 사용 가능 여부 진단 — 사용자 동의 dialog 직전 호출.
+#[tauri::command]
+pub async fn workbench_real_status() -> Result<WorkbenchRealStatus, WorkbenchApiError> {
+    let timeout = Duration::from_secs(DEFAULT_QUANTIZE_TIMEOUT_SECS);
+    let (quantize_binary_found, quantize_binary_path) =
+        match LlamaQuantizer::from_environment(timeout) {
+            Ok(q) => (true, Some(q.binary_path().display().to_string())),
+            Err(_) => (false, None),
+        };
+    let venv_dir = lora_venv_dir();
+    let python = lora_venv_python(&venv_dir);
+    Ok(WorkbenchRealStatus {
+        quantize_binary_found,
+        quantize_binary_path,
+        trainer_venv_ready: python.exists(),
+        trainer_venv_dir: venv_dir.display().to_string(),
+    })
+}
+
+/// LLaMA-Factory venv 부트스트랩 IPC — 사용자 명시 동의 후 호출.
+///
+/// 5~10GB 다운로드 + 부트스트랩 진행 이벤트를 `Channel<BootstrapEvent>`로 emit.
+/// Cancel은 별도 명령(`cancel_workbench_run`과 분리)으로 가능 (`cancel_lora_bootstrap`).
+#[tauri::command]
+pub async fn lora_bootstrap_venv(
+    on_event: Channel<BootstrapEvent>,
+    bootstrap_registry: State<'_, Arc<LoraBootstrapRegistry>>,
+) -> Result<String, WorkbenchApiError> {
+    let venv_dir = lora_venv_dir();
+    let token_id = Uuid::new_v4().to_string();
+    let cancel = bootstrap_registry.register(&token_id).await;
+    let (tx, mut rx) = mpsc::channel::<BootstrapEvent>(64);
+
+    // forward task — rx에서 받아서 frontend channel로 emit + 종료 시점에 cleanup.
+    let on_event_clone = on_event.clone();
+    let token_id_for_cleanup = token_id.clone();
+    let bootstrap_registry_clone: Arc<LoraBootstrapRegistry> = bootstrap_registry.inner().clone();
+    tauri::async_runtime::spawn(async move {
+        while let Some(ev) = rx.recv().await {
+            if on_event_clone.send(ev).is_err() {
+                break;
+            }
+        }
+        bootstrap_registry_clone.finish(&token_id_for_cleanup).await;
+    });
+
+    // 부트스트랩은 백그라운드 task로 — caller가 즉시 token_id를 받고 cancel 가능.
+    let cancel_for_task = cancel.clone();
+    tauri::async_runtime::spawn(async move {
+        match LlamaFactoryTrainer::bootstrap_or_open(
+            venv_dir,
+            Duration::from_secs(DEFAULT_BOOTSTRAP_TIMEOUT_SECS),
+            tx.clone(),
+            cancel_for_task,
+        )
+        .await
+        {
+            Ok(_) => {
+                // Done은 이미 bootstrap_or_open 안에서 emit됨.
+            }
+            Err(e) => {
+                let _ = tx
+                    .send(BootstrapEvent::Failed {
+                        error: format!("{e}"),
+                    })
+                    .await;
+            }
+        }
+        // tx drop으로 forward task가 종료.
+    });
+
+    Ok(token_id)
+}
+
+/// 부트스트랩 cancel — idempotent.
+#[tauri::command]
+pub async fn cancel_lora_bootstrap(
+    token_id: String,
+    bootstrap_registry: State<'_, Arc<LoraBootstrapRegistry>>,
+) -> Result<(), WorkbenchApiError> {
+    bootstrap_registry.cancel(&token_id).await;
+    Ok(())
+}
+
+/// venv 부트스트랩 in-flight tokens — cancel용 registry.
+#[derive(Default)]
+pub struct LoraBootstrapRegistry {
+    inner: AsyncMutex<HashMap<String, CancellationToken>>,
+}
+
+impl LoraBootstrapRegistry {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub async fn register(&self, id: &str) -> CancellationToken {
+        let mut g = self.inner.lock().await;
+        let tok = CancellationToken::new();
+        g.insert(id.to_string(), tok.clone());
+        tok
+    }
+
+    pub async fn cancel(&self, id: &str) {
+        let g = self.inner.lock().await;
+        if let Some(t) = g.get(id) {
+            t.cancel();
+        }
+    }
+
+    pub async fn finish(&self, id: &str) {
+        let mut g = self.inner.lock().await;
+        g.remove(id);
+    }
 }
 
 // ───────────────────────────────────────────────────────────────────

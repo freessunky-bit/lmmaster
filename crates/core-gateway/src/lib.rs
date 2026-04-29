@@ -28,6 +28,7 @@ pub mod openai_error;
 pub mod pipeline_layer;
 pub mod routes;
 pub mod shutdown;
+pub mod sse_chunk;
 pub mod state;
 pub mod upstream;
 pub mod usage_log;
@@ -105,6 +106,22 @@ pub fn with_pipelines_audited(
     audit_sender: tokio::sync::mpsc::Sender<pipelines::AuditEntry>,
 ) -> Router {
     router.layer(pipeline_layer::PipelineLayer::new(chain).with_audit_channel(audit_sender))
+}
+
+/// Phase 8'.c.2 — hot-reload 가능한 chain swap을 외부와 공유하는 빌더.
+///
+/// 정책:
+/// - 호출자가 `Arc<ArcSwap<PipelineChain>>`을 미리 만들어 보유 (예: Tauri PipelinesState).
+/// - 사용자가 토글을 바꾸면 호출자가 그 swap에 store(new_chain) — gateway 다음 요청부터 적용.
+/// - audit_sender는 동일 의미 (capacity는 호출자 결정).
+pub fn with_pipelines_audited_swap(
+    router: Router,
+    chain_swap: std::sync::Arc<arc_swap::ArcSwap<pipelines::PipelineChain>>,
+    audit_sender: tokio::sync::mpsc::Sender<pipelines::AuditEntry>,
+) -> Router {
+    router.layer(
+        pipeline_layer::PipelineLayer::from_swap(chain_swap).with_audit_channel(audit_sender),
+    )
 }
 
 /// listener에서 gateway를 동작시키고 cancellation 신호를 받으면 graceful shutdown.

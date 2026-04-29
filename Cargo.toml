@@ -107,6 +107,21 @@ wiremock = "0.6"
 anyhow = "1"
 thiserror = "1"
 
+# Unicode normalization (NFC) — knowledge-stack chunker + pipelines/prompt-sanitize 공유.
+unicode-normalization = "0.1"
+
+# Lock-free Arc swap — Phase 8'.c.2 Pipelines hot-reload.
+arc-swap = "1"
+
+# Phase 9'.a — Real Embedder (bge-m3 / KURE-v1 / multilingual-e5 cascade).
+# ort = ONNX Runtime의 Rust 바인딩. `load-dynamic` feature로 ONNX Runtime 라이브러리를 동적 로드해
+# Tauri bundle에 정적 링크 부담 없이 동작 (사용자 PC에 ORT 미설치면 graceful 에러 노출).
+# tokenizers = HuggingFace Rust tokenizer (BPE / WordPiece / SentencePiece 모두 지원).
+# ndarray = ort 텐서 입출력 — 2D 배치 텐서.
+ort = { version = "2.0.0-rc.10", default-features = false, features = ["load-dynamic"] }
+tokenizers = { version = "0.20", default-features = false, features = ["onig"] }
+ndarray = "0.16"
+
 # semver (Phase 6'.a — auto-updater 버전 비교)
 semver = "1"
 

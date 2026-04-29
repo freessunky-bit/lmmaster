@@ -234,6 +234,33 @@ impl KeyStore {
         Ok(())
     }
 
+    /// Phase 8'.c.3 (ADR-0029) — `scope.enabled_pipelines`만 갱신하는 부분 업데이트.
+    ///
+    /// 정책:
+    /// - 기존 row가 없으면 `NotFound`.
+    /// - row가 revoked 상태여도 갱신 허용 (UI에서 회수된 키도 편집 가능 — 단 검증에는 영향 X).
+    /// - 다른 scope 필드는 보존 (models / origins / endpoints 등).
+    pub fn update_enabled_pipelines(
+        &self,
+        id: &str,
+        enabled_pipelines: Option<Vec<String>>,
+    ) -> Result<(), StoreError> {
+        let row = self
+            .find_by_id(id)?
+            .ok_or_else(|| StoreError::NotFound(id.to_string()))?;
+        let mut new_scope = row.scope;
+        new_scope.enabled_pipelines = enabled_pipelines;
+        let scope_json = serde_json::to_string(&new_scope)?;
+        let n = self.conn.execute(
+            "UPDATE api_keys SET scope_json = ?1 WHERE id = ?2",
+            params![scope_json, id],
+        )?;
+        if n == 0 {
+            return Err(StoreError::NotFound(id.to_string()));
+        }
+        Ok(())
+    }
+
     /// 회수 — idempotent. 이미 revoked면 no-op (revoked_at 유지).
     pub fn revoke(&self, id: &str, at: OffsetDateTime) -> Result<(), StoreError> {
         let s = format_dt(&at)?;
@@ -551,5 +578,117 @@ mod tests {
         let s = KeyStore::open_unencrypted(&path).unwrap();
         let mode = s.journal_mode().unwrap();
         assert_eq!(mode.to_lowercase(), "wal");
+    }
+
+    // ── Phase 8'.c.3 — enabled_pipelines per-key override ──────────────
+
+    /// scope_json round-trip이 enabled_pipelines를 보존해야 해요.
+    /// scope는 JSON column이라 schema 변경 없이도 자동 호환 — 본 테스트는 회귀 가드.
+    #[test]
+    fn scope_round_trips_enabled_pipelines_some() {
+        let s = KeyStore::open_memory().unwrap();
+        let mut row = make_row("a", "lm-x", "alias");
+        row.scope.enabled_pipelines = Some(vec!["pii-redact".into(), "prompt-sanitize".into()]);
+        s.insert(&row).unwrap();
+        let r = s.find_by_id("a").unwrap().unwrap();
+        assert_eq!(
+            r.scope.enabled_pipelines,
+            Some(vec![
+                "pii-redact".to_string(),
+                "prompt-sanitize".to_string()
+            ])
+        );
+    }
+
+    #[test]
+    fn scope_round_trips_enabled_pipelines_empty_vec() {
+        // 빈 vec은 "모두 비활성" 의미 — None과 분리.
+        let s = KeyStore::open_memory().unwrap();
+        let mut row = make_row("a", "lm-x", "alias");
+        row.scope.enabled_pipelines = Some(vec![]);
+        s.insert(&row).unwrap();
+        let r = s.find_by_id("a").unwrap().unwrap();
+        assert_eq!(r.scope.enabled_pipelines, Some(vec![]));
+    }
+
+    #[test]
+    fn scope_round_trips_enabled_pipelines_none() {
+        let s = KeyStore::open_memory().unwrap();
+        let row = make_row("a", "lm-x", "alias");
+        // make_row는 기본값(None) 사용.
+        assert!(row.scope.enabled_pipelines.is_none());
+        s.insert(&row).unwrap();
+        let r = s.find_by_id("a").unwrap().unwrap();
+        assert!(r.scope.enabled_pipelines.is_none());
+    }
+
+    #[test]
+    fn update_enabled_pipelines_persists_some_to_none() {
+        let s = KeyStore::open_memory().unwrap();
+        let mut row = make_row("a", "lm-x", "alias");
+        row.scope.enabled_pipelines = Some(vec!["pii-redact".into()]);
+        s.insert(&row).unwrap();
+        // None으로 갱신.
+        s.update_enabled_pipelines("a", None).unwrap();
+        let r = s.find_by_id("a").unwrap().unwrap();
+        assert!(r.scope.enabled_pipelines.is_none());
+    }
+
+    #[test]
+    fn update_enabled_pipelines_persists_to_some() {
+        let s = KeyStore::open_memory().unwrap();
+        let row = make_row("a", "lm-x", "alias");
+        s.insert(&row).unwrap();
+        s.update_enabled_pipelines(
+            "a",
+            Some(vec!["pii-redact".into(), "prompt-sanitize".into()]),
+        )
+        .unwrap();
+        let r = s.find_by_id("a").unwrap().unwrap();
+        assert_eq!(
+            r.scope.enabled_pipelines,
+            Some(vec![
+                "pii-redact".to_string(),
+                "prompt-sanitize".to_string()
+            ])
+        );
+        // 다른 scope 필드는 보존.
+        assert_eq!(r.scope.models, vec!["*"]);
+    }
+
+    #[test]
+    fn update_enabled_pipelines_unknown_id_returns_not_found() {
+        let s = KeyStore::open_memory().unwrap();
+        let r = s.update_enabled_pipelines("missing", Some(vec!["pii-redact".into()]));
+        assert!(matches!(r, Err(StoreError::NotFound(_))));
+    }
+
+    /// 기존 평문 (legacy) JSON column을 가진 row가 새 코드에서도 deserialize 되어야 해요.
+    /// 본 테스트는 DB에 직접 INSERT하여 enabled_pipelines가 누락된 scope_json을 시뮬레이션.
+    #[test]
+    fn legacy_scope_json_without_enabled_pipelines_loads_with_none() {
+        let s = KeyStore::open_memory().unwrap();
+        // enabled_pipelines 필드가 없는 legacy JSON.
+        let legacy_scope =
+            r#"{"models":["*"],"endpoints":["/v1/*"],"allowed_origins":["http://localhost:5173"]}"#;
+        s.conn
+            .execute(
+                "INSERT INTO api_keys (id, alias, key_prefix, key_hash, scope_json, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                rusqlite::params![
+                    "legacy-id",
+                    "legacy-alias",
+                    "lm-legacy",
+                    "$argon2id$dummy",
+                    legacy_scope,
+                    "2026-04-27T00:00:00Z",
+                ],
+            )
+            .unwrap();
+        let r = s.find_by_id("legacy-id").unwrap().unwrap();
+        assert!(
+            r.scope.enabled_pipelines.is_none(),
+            "legacy row는 None으로 deserialize 되어야 해요 (마이그레이션 안전)"
+        );
     }
 }

@@ -8,7 +8,7 @@
 - Section: Status / Context / Decision / Consequences / Alternatives considered / References.
 - 새 ADR 작성 시 본 README 인덱스 표를 갱신한다.
 
-## 인덱스 (33건, 2026-04-29 현재)
+## 인덱스 (36건, 2026-04-28 현재)
 
 ### Foundation (Phase α)
 
@@ -93,11 +93,47 @@
 |---|---|---|
 | 0040 | In-app guide system — NAV 가이드 + 8 섹션 + ? 도움말 + F1 단축키 + first-run toast | Accepted |
 
+### Phase 7'.b — CI 자동화 (2026-04-29)
+
+| 번호 | 제목 | Status |
+|---|---|---|
+| 0041 | GlitchTip self-hosted telemetry endpoint | Accepted |
+
+### Phase 8'.c — Pipelines extension (2026-04-29)
+
+| 번호 | 제목 | Status |
+|---|---|---|
+| 0028 | Pipelines hot-reload via ArcSwap | Accepted |
+| 0029 | Per-key Pipelines override matrix | Accepted |
+| 0030 | SSE chunk transformation policy (supersedes ADR-0025 §감내한 트레이드오프) | Accepted |
+
+### Phase 9' — Real ML wiring (2026-04-29)
+
+| 번호 | 제목 | Status |
+|---|---|---|
+| 0042 | Real Embedder ONNX cascade (bge-m3 / KURE-v1 / multilingual-e5-small) | Accepted |
+| 0043 | Real Workbench — llama-quantize binary + LLaMA-Factory CLI | Accepted |
+
+### Phase 8'.c — Pipelines 확장 (2026-04-28)
+
+| 번호 | 제목 | Status |
+|---|---|---|
+| 0028 | Pipelines hot-reload via ArcSwap (사용자 토글 즉시 반영) | Accepted |
+| 0029 | Per-key Pipelines override (`Scope.enabled_pipelines` 화이트리스트) | Accepted |
+| 0030 | SSE chunk transformation (streaming 응답에 PII redact 적용; supersedes ADR-0025 §감내한 트레이드오프) | Accepted (supersedes ADR-0025 §"감내한 트레이드오프" 일부) |
+
+### Phase 9' — Real ML wiring (2026-04-28)
+
+| 번호 | 제목 | Status |
+|---|---|---|
+| 0042 | Real Embedder cascade — ort + bge-m3 / KURE-v1 / multilingual-e5-small + HuggingFace 다운로드 | Accepted |
+
 ## Supersede / Modify 그래프
 
 ```
 0005 (llama.cpp primary) ──superseded──> 0016 (wrap-not-replace)
 0012 (Python sidecar) ──modified──> 0018 (Workbench v1 core)
+0025 §"감내한 트레이드오프"(SSE byte-perfect) ──partial-supersede──> 0030 (SSE chunk transformation)
 ```
 
 ## 다음 후보 (Phase 7'.b 이후)

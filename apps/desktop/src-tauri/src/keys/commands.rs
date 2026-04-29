@@ -43,6 +43,17 @@ pub struct CreateKeyRequest {
     pub scope: Scope,
 }
 
+/// Phase 8'.c.3 (ADR-0029) — frontend가 ApiKeyEditPanel에서 보내는 부분 업데이트.
+///
+/// 정책: scope 전체를 갈아치우는 대신 *Pipelines 화이트리스트*만 갱신해요. 다른 필드(models /
+/// origins / endpoints 등)는 v1.x에서 별도 update API로 추가 (현재는 회수 후 재발급).
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateKeyPipelinesRequest {
+    pub id: String,
+    /// `None` = 전역 토글 따름. `Some(Vec)` = 명시 화이트리스트 (빈 vec은 모두 비활성).
+    pub enabled_pipelines: Option<Vec<String>>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct CreatedKey {
     pub id: String,
@@ -116,6 +127,21 @@ pub fn revoke_api_key(
     id: String,
 ) -> Result<(), KeyApiError> {
     km.revoke(&id)?;
+    Ok(())
+}
+
+/// Phase 8'.c.3 (ADR-0029) — 키별 Pipeline 화이트리스트 부분 업데이트.
+///
+/// 정책:
+/// - `enabled_pipelines = None` → 전역 토글 따름.
+/// - `enabled_pipelines = Some(Vec)` → 명시 화이트리스트 (빈 vec은 모두 비활성).
+/// - 다른 scope 필드는 보존 — 회수 / 재발급 없이 안전한 부분 갱신.
+#[tauri::command]
+pub fn update_api_key_pipelines(
+    km: tauri::State<'_, Arc<KeyManager>>,
+    req: UpdateKeyPipelinesRequest,
+) -> Result<(), KeyApiError> {
+    km.update_enabled_pipelines(&req.id, req.enabled_pipelines)?;
     Ok(())
 }
 

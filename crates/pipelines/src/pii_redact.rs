@@ -98,21 +98,38 @@ fn redact_messages(messages: &mut [Value]) -> usize {
     count
 }
 
-/// `choices[].message.content`를 mutate (OpenAI shape).
+/// `choices[].message.content` (full response shape) +
+/// `choices[].delta.content` (SSE streaming chunk shape, Phase 8'.c.4)를 mutate.
 fn redact_choices(choices: &mut [Value]) -> usize {
     let mut count = 0usize;
     for choice in choices.iter_mut() {
-        let content = choice
+        // 1) message.content (non-streaming).
+        let msg_content = choice
             .get("message")
             .and_then(|m| m.get("content"))
             .and_then(|c| c.as_str())
             .map(|s| s.to_string());
-
-        if let Some(content) = content {
+        if let Some(content) = msg_content {
             let (redacted, c) = redact_text(&content);
             if c > 0 {
                 if let Some(message) = choice.get_mut("message").and_then(|m| m.as_object_mut()) {
                     message.insert("content".into(), Value::String(redacted));
+                }
+                count += c;
+            }
+        }
+
+        // 2) delta.content (SSE chunk).
+        let delta_content = choice
+            .get("delta")
+            .and_then(|d| d.get("content"))
+            .and_then(|c| c.as_str())
+            .map(|s| s.to_string());
+        if let Some(content) = delta_content {
+            let (redacted, c) = redact_text(&content);
+            if c > 0 {
+                if let Some(delta) = choice.get_mut("delta").and_then(|d| d.as_object_mut()) {
+                    delta.insert("content".into(), Value::String(redacted));
                 }
                 count += c;
             }
@@ -329,5 +346,24 @@ mod tests {
         p.apply_request(&mut c, &mut body).await.unwrap();
         assert_eq!(body, snapshot);
         assert!(c.audit_log.is_empty());
+    }
+
+    /// Phase 8'.c.4 — SSE streaming chunk shape: `choices[].delta.content`도 redact 되어야.
+    #[tokio::test]
+    async fn redacts_streaming_delta_content() {
+        let p = PiiRedactPipeline::new();
+        let mut c = ctx();
+        let mut body = json!({
+            "choices":[
+                {"index":0, "delta":{"role":"assistant","content":"전화 010-1234-5678 으로"}}
+            ]
+        });
+        p.apply_response(&mut c, &mut body).await.unwrap();
+        let s = body["choices"][0]["delta"]["content"].as_str().unwrap();
+        assert!(
+            s.contains("[REDACTED-휴대폰]"),
+            "delta.content가 redact 되어야 해요: {s}"
+        );
+        assert!(!s.contains("010-1234-5678"));
     }
 }

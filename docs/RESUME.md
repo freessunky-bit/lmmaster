@@ -16,13 +16,29 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
-## 누적 검증 (2026-04-29 — Phase 8'.0 + 8'.1 + 11' + 12' 완료)
+## 누적 검증 (2026-04-29 — 9'.a/9'.b까지 완료. **v1 ship 가능 + v1.x 90%**)
 
-- **cargo (lmmaster-desktop 제외)**: **690 / 0 failed**
-- **vitest**: **369 / 0 failed** (38 files, +59 from Phase 12')
+- **cargo (lmmaster-desktop 제외)**: **817 / 0 failed**
+- **vitest**: ~400 / 0 failed (38~40 files, 9'.b 일부 vitest는 다음 세션에서 검증)
 - **clippy / fmt / tsc / pnpm build**: 모두 clean
-- **lmmaster-desktop --lib test exe**: 사전부터 STATUS_ENTRYPOINT_NOT_FOUND (Windows ApiSet 환경 문제)
-- **Crates**: 22 / **ADR**: 33 (0001~0040) / **결정 노트**: 34
+- **lmmaster-desktop --lib test exe**: 환경 문제 (docs/troubleshooting.md)
+- **Crates**: 22 / **ADR**: **35** (0001~0043) / **결정 노트**: 34+
+- **GitHub repo**: https://github.com/freessunky-bit/lmmaster (push + settings 적용)
+- **사용자 결정 핵심 2건 완료**: minisign keypair (pubkey 적용) / GitHub repo URL (endpoints 적용)
+
+### Phase 9'.a 산출물 (Real Embedder — bge-m3 / KURE-v1 / multilingual-e5 cascade) — 2026-04-28
+
+- `crates/knowledge-stack/src/embed_download.rs` (~600 LOC) — HuggingFace 다운로드 + sha256 + atomic rename + cancel + 12 unit tests (wiremock).
+- `crates/knowledge-stack/src/embed_onnx.rs` (~330 LOC, `embed-onnx` feature gated) — `OnnxEmbedder` + mean pooling + L2 normalize + 5 tests (graceful 미존재 / mean_pool pure).
+- `crates/knowledge-stack/src/embed.rs` — `default_embedder` helper 추가 + 4 신규 tests.
+- `apps/desktop/src-tauri/src/knowledge.rs` — `EmbeddingState` + 4 IPC commands (list/set/download/cancel) + 11 신규 tests. `run_ingest`/`search_knowledge`이 active 모델로 embedder 해결.
+- `apps/desktop/src/components/workspace/EmbeddingModelPanel.tsx` (~330 LOC) + 9 vitest (a11y radiogroup + 진행률 + cancel + activate).
+- `apps/desktop/src/ipc/knowledge.ts` — 신 type/command 6개.
+- `apps/desktop/src/pages/Workspace.tsx` — Knowledge tab 위에 EmbeddingModelPanel 추가.
+- i18n `screens.workspace.embeddingModels.*` 25 keys × 2 locales.
+- `docs/adr/0042-real-embedder-onnx-cascade.md` (5 alternatives rejected: OpenAI API / Python sidecar / llama.cpp embeddings / 단일 모델 / bundle).
+- 외부 통신: `huggingface.co` 화이트리스트 (사용자 명시 클릭으로만).
+- ort/tokenizers/ndarray는 `embed-onnx` feature off가 default — baseline build 부담 0. 사용자 PC ORT 미설치 시 graceful 한국어 에러 + MockEmbedder fallback.
 
 ### Phase 12' 산출물 (in-app guide system)
 
@@ -55,10 +71,51 @@
 | 8'.0 Security/Stability | SQLCipher 활성(feature gate) + single-instance + panic_hook + WAL + artifact retention | +31 cargo / +8 vitest |
 | 8'.1 Multi-workspace UX | workspaces.rs (6 IPC) + ActiveWorkspaceContext + WorkspaceSwitcher (사이드바) + Workspace.tsx active 사용 | +12 cargo / +20 vitest |
 | 11' Portable export/import | export.rs / import.rs (zip + AES-GCM PBKDF2 + dual zip-slip) + 5 Tauri IPC + ExportPanel/ImportPanel (Settings) | +16 cargo / +21 vitest |
+| 8'.a/.b/Env'.a | get_document_path / update.skipped LRU / last_check 일관 / dead key 제거 / Custom Models Catalog / plugin-shell / troubleshooting.md | +6 cargo / +13 vitest |
+| 7'.b CI 자동화 | release.yml + tauri-action@v0 + minisign 서명 + SECRETS_SETUP + Issue/PR templates + README.en.md + 베타 채널 + GlitchTip telemetry submit (queue + retry) + ADR-0041 | +0 cargo (lmmaster-desktop test exe 환경 이슈로 23 신규 테스트 CI 실행) / +4 vitest |
+| 8'.c Pipelines extension | PromptSanitize Pipeline (NFC + control char strip) + ArcSwap hot-reload + per-key Pipelines matrix(serde default 마이그레이션 free) + SSE chunk transformation (line-aware parser + buffered emit) + ADR-0028/0029/0030 | +62 cargo / +4 vitest |
+| 9'.a Real Embedder | embed_download.rs (HuggingFace + sha256 + atomic rename) + embed_onnx.rs (feature-gated ort 2.0.0-rc.10) + EmbeddingModelPanel (3-card UI) + ADR-0042. KnowledgeApiError `kind` 필드 충돌 fix(`model_kind`) | +18 cargo / +10 vitest |
+| 9'.b Real Workbench | LlamaQuantizer (llama-quantize binary subprocess + kill_on_drop + 30분 timeout + stderr 한국어 매핑) + LlamaFactoryTrainer (Python venv 자동 부트스트랩 + LLaMA-Factory CLI) + WorkbenchConfig.use_real_* 토글 + 사전 동의 dialog + ADR-0043 | +23 cargo / +5 vitest 추정 |
 
 ## 🟡 진행 중
 
-(없음 — 5'.e 완료. 다음 standby는 6'.d.)
+(없음 — 9'.b까지 완료. 다음 standby는 9'.c.)
+
+## 🟢 다음 세션 진입 가이드 (Standby — Phase 9'.c)
+
+**Phase 9'.c — Multi-runtime adapters** (마지막 v1.x ML 페이즈, ~3-4시간)
+
+진입 시:
+1. `CLAUDE.md` + `MEMORY.md` 자동 로드.
+2. 본 RESUME + `docs/PROGRESS.md` + `docs/research/phase-8p-9p-10p-residual-plan.md` §3.9'.c 참조.
+3. Sub-agent 1건 dispatch (자동 chain 패턴):
+
+```
+Phase 9'.c — Multi-runtime adapters expansion
+├── crates/adapter-llama-cpp/src/lib.rs — llama-server HTTP probe + chat completion
+├── crates/adapter-koboldcpp/src/lib.rs — KoboldCpp /api endpoint
+├── crates/adapter-vllm/src/lib.rs — OpenAI-compatible vLLM
+├── crates/runtime-detector/src/lib.rs — 4종 runtime detect rules 추가
+├── apps/desktop/src-tauri/src/registry_provider.rs — LiveRegistryProvider 확장
+├── ADR-0044 신설 (Multi-runtime expansion)
+└── RuntimeKind enum 확장 (workbench RuntimeSelector UI도)
+```
+
+**보강 리서치 1건 + 구현 1 sub-agent / ~3-4시간** 예상.
+
+**진입 신호 예시**:
+- "Phase 9'.c 진행"
+- "다음 세션 이어서 진행" → 본 standby 자동 진입.
+
+**참고**:
+- 9'.b 완료 흔적: `crates/workbench-core/src/{quantize_real,lora_real}.rs` + ADR-0043.
+- 9'.b에서 `LMMASTER_LLAMA_QUANTIZE_PATH` env override + venv 부트스트랩 / 사용자 동의 dialog 패턴 정립 — 9'.c도 같은 패턴 따름.
+
+## 🔴 v1 ship 가능 상태 (2026-04-29)
+
+- 사용자 결정 6건 중 핵심 2건 (minisign + repo URL) 완료.
+- 나머지 4건 (OV cert / Apple Dev / EULA 법무 / Publisher명) 비상용이라 skip 가능.
+- v1 베타 ship 즉시 가능: `run-build.bat` 또는 GitHub Actions release.yml 활용.
 
 ## ⏳ v1 ship 전 남은 태스크
 

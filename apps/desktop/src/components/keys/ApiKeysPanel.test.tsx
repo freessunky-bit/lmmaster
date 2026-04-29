@@ -19,6 +19,7 @@ vi.mock("../../ipc/keys", () => ({
   listApiKeys: vi.fn(),
   revokeApiKey: vi.fn(),
   createApiKey: vi.fn(),
+  updateApiKeyPipelines: vi.fn(),
   defaultWebScope: (origin: string) => ({
     models: ["*"],
     endpoints: ["/v1/*"],
@@ -26,7 +27,14 @@ vi.mock("../../ipc/keys", () => ({
     expires_at: null,
     project_id: null,
     rate_limit: null,
+    enabled_pipelines: null,
   }),
+  SEED_PIPELINE_IDS: [
+    "pii-redact",
+    "token-quota",
+    "observability",
+    "prompt-sanitize",
+  ],
 }));
 
 import {
@@ -179,6 +187,105 @@ describe("ApiKeysPanel", () => {
         models: ["*"],
       }),
     });
+  });
+
+  // ── Phase 8'.c.3 — per-key Pipelines override fieldset ─────────
+
+  it("modal — pipelines fieldset 노출 + 'use global' 기본 체크", async () => {
+    const user = userEvent.setup();
+    render(<ApiKeysPanel />);
+    await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
+    await user.click(screen.getByRole("button", { name: "keys.create" }));
+
+    expect(screen.getByTestId("keys-pipelines-fieldset")).toBeTruthy();
+    const useGlobal = screen.getByTestId("keys-pipelines-use-global") as HTMLInputElement;
+    expect(useGlobal.checked).toBe(true);
+    // 4종 시드 체크박스 모두 노출.
+    expect(screen.getByTestId("keys-pipelines-cb-pii-redact")).toBeTruthy();
+    expect(screen.getByTestId("keys-pipelines-cb-token-quota")).toBeTruthy();
+    expect(screen.getByTestId("keys-pipelines-cb-observability")).toBeTruthy();
+    expect(screen.getByTestId("keys-pipelines-cb-prompt-sanitize")).toBeTruthy();
+  });
+
+  it("'use global' 체크 시 enabled_pipelines = null로 발급", async () => {
+    const user = userEvent.setup();
+    vi.mocked(createApiKey).mockResolvedValueOnce({
+      id: "id1",
+      alias: "x",
+      key_prefix: "lm-x",
+      plaintext_once: "lm-x000000000000000000000000",
+      created_at: "2026-04-28T00:00:00Z",
+    });
+    render(<ApiKeysPanel />);
+    await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
+    await user.click(screen.getByRole("button", { name: "keys.create" }));
+
+    const dialog = screen.getByRole("dialog");
+    await user.type(within(dialog).getAllByRole("textbox")[0]!, "x");
+    await user.type(within(dialog).getAllByRole("textbox")[1]!, "https://x.com");
+    await user.click(screen.getByRole("button", { name: "keys.modal.submit" }));
+
+    await waitFor(() => {
+      expect(createApiKey).toHaveBeenCalled();
+    });
+    const callArg = vi.mocked(createApiKey).mock.calls[0]?.[0];
+    expect(callArg?.scope.enabled_pipelines).toBeNull();
+  });
+
+  it("'use global' 해제 후 일부 끄면 enabled_pipelines가 화이트리스트로 발급", async () => {
+    const user = userEvent.setup();
+    vi.mocked(createApiKey).mockResolvedValueOnce({
+      id: "id2",
+      alias: "x",
+      key_prefix: "lm-x",
+      plaintext_once: "lm-x000000000000000000000000",
+      created_at: "2026-04-28T00:00:00Z",
+    });
+    render(<ApiKeysPanel />);
+    await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
+    await user.click(screen.getByRole("button", { name: "keys.create" }));
+
+    const dialog = screen.getByRole("dialog");
+    await user.type(within(dialog).getAllByRole("textbox")[0]!, "x");
+    await user.type(within(dialog).getAllByRole("textbox")[1]!, "https://x.com");
+
+    // use-global 해제.
+    await user.click(screen.getByTestId("keys-pipelines-use-global"));
+    // observability 체크박스 해제 (default ON).
+    await user.click(screen.getByTestId("keys-pipelines-cb-observability"));
+    // token-quota도 해제.
+    await user.click(screen.getByTestId("keys-pipelines-cb-token-quota"));
+
+    await user.click(screen.getByRole("button", { name: "keys.modal.submit" }));
+
+    await waitFor(() => {
+      expect(createApiKey).toHaveBeenCalled();
+    });
+    const callArg = vi.mocked(createApiKey).mock.calls[0]?.[0];
+    // pii-redact + prompt-sanitize만 남음.
+    expect(callArg?.scope.enabled_pipelines).toEqual([
+      "pii-redact",
+      "prompt-sanitize",
+    ]);
+  });
+
+  it("모든 체크 해제 시 빈 vec 경고 노출", async () => {
+    const user = userEvent.setup();
+    render(<ApiKeysPanel />);
+    await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
+    await user.click(screen.getByRole("button", { name: "keys.create" }));
+    // use-global 해제.
+    await user.click(screen.getByTestId("keys-pipelines-use-global"));
+    // 4 체크박스 모두 해제.
+    for (const id of [
+      "pii-redact",
+      "token-quota",
+      "observability",
+      "prompt-sanitize",
+    ]) {
+      await user.click(screen.getByTestId(`keys-pipelines-cb-${id}`));
+    }
+    expect(screen.getByTestId("keys-pipelines-warn-empty")).toBeTruthy();
   });
 
   it("발급 실패 시 에러 메시지 표시", async () => {

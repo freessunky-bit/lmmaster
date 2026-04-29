@@ -107,8 +107,18 @@ pub async fn require_api_key(
     };
 
     match outcome {
-        AuthOutcome::Allowed { id, alias } => {
+        AuthOutcome::Allowed {
+            id,
+            alias,
+            enabled_pipelines,
+        } => {
             req.extensions_mut().insert(Principal { id, alias });
+            // Phase 8'.c.3 (ADR-0029) — 키별 Pipeline 화이트리스트를 PipelineLayer에 전달.
+            // 현재 키에 override가 있으면 PipelineLayer가 chain.filter_by_ids로 좁혀요.
+            req.extensions_mut()
+                .insert(crate::pipeline_layer::KeyPipelinesOverride(
+                    enabled_pipelines,
+                ));
 
             // CORS 응답 헤더 — 요청 origin이 키의 whitelist에 있을 때만 echo back.
             // (CORS preflight는 OPTIONS에서 별도 처리. 여기는 actual request 응답 갱신.)

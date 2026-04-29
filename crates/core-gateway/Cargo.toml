@@ -31,6 +31,9 @@ time.workspace = true
 pipelines.workspace = true
 http-body-util = "0.1"
 
+# Phase 8'.c.2 — Pipelines hot-reload via lock-free Arc swap.
+arc-swap.workspace = true
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt", "test-util"] }
 http-body-util = "0.1"
