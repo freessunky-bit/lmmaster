@@ -1,0 +1,10 @@
+import { jsx as _jsx } from "react/jsx-runtime";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import "@lmmaster/design-system/tokens.css";
+import "@lmmaster/design-system/base.css";
+import "@lmmaster/design-system/components.css";
+import "@lmmaster/design-system/react/pill.css";
+import App from "./App";
+import "./i18n/init";
+ReactDOM.createRoot(document.getElementById("root")).render(_jsx(React.StrictMode, { children: _jsx(App, {}) }));

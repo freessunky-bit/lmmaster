@@ -1,0 +1,101 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "LMmaster",
+  "version": "0.0.1",
+  "identifier": "com.lmmaster.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "devUrl": "http://127.0.0.1:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "LMmaster",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 600,
+        "decorations": true,
+        "transparent": false,
+        "theme": "Dark"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "dmg", "appimage"],
+    "category": "DeveloperTool",
+    "shortDescription": "LM Studio + Ollama을 묶는 한국어 기반 로컬 AI 운영 허브",
+    "longDescription": "LM Studio와 Ollama를 자동 설치·관리하고, 한국어 큐레이션 모델 카탈로그·워크벤치·자가스캔·자동 갱신을 제공하는 데스크톱 동반자.",
+    "publisher": "LMmaster",
+    "copyright": "© 2026 LMmaster",
+    "licenseFile": "../../../LICENSE",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../../../manifests/apps/*.json": "manifests/apps/",
+      "../../../manifests/snapshot/*.json": "manifests/snapshot/",
+      "../../../manifests/snapshot/models/agents/*.json": "manifests/snapshot/models/agents/",
+      "../../../manifests/snapshot/models/coding/*.json": "manifests/snapshot/models/coding/",
+      "../../../manifests/snapshot/models/roleplay/*.json": "manifests/snapshot/models/roleplay/",
+      "../../../manifests/snapshot/models/slm/*.json": "manifests/snapshot/models/slm/",
+      "../../../manifests/snapshot/models/sound-stt/*.json": "manifests/snapshot/models/sound-stt/",
+      "../../../manifests/presets/coding/*.json": "manifests/presets/coding/",
+      "../../../manifests/presets/translation/*.json": "manifests/presets/translation/",
+      "../../../manifests/presets/legal/*.json": "manifests/presets/legal/",
+      "../../../manifests/presets/marketing/*.json": "manifests/presets/marketing/",
+      "../../../manifests/presets/medical/*.json": "manifests/presets/medical/",
+      "../../../manifests/presets/education/*.json": "manifests/presets/education/",
+      "../../../manifests/presets/research/*.json": "manifests/presets/research/"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["Korean", "English"],
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico"
+      },
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "wix": null
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "11.0",
+      "exceptionDomain": null,
+      "signingIdentity": null,
+      "providerShortName": null,
+      "entitlements": "entitlements.plist"
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false,
+        "files": {}
+      },
+      "deb": {
+        "depends": []
+      }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/freessunky-bit/lmmaster/releases/latest/download/latest.json"
+      ],
+      "dialog": false,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJGNUMzNkQ2NUU5OUM0NEYKUldSUHhKbGUxalpjdi9BQ2sxTWlxSGNDMDJvTUJhUzM1dkpGOHEzNnM5ckZrdXQyOHlER3ZncWUK"
+    }
+  }
+}

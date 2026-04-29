@@ -1,0 +1,61 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-27T00:00:00Z",
+  "entries": [
+    {
+      "id": "whisper-large-v3-korean",
+      "display_name": "Whisper Large v3 Korean",
+      "category": "sound-stt",
+      "model_family": "whisper",
+      "source": {
+        "type": "hugging-face",
+        "repo": "ggerganov/whisper.cpp",
+        "file": "ggml-large-v3.bin"
+      },
+      "runner_compatibility": ["llama-cpp"],
+      "quantization_options": [
+        {
+          "label": "F16",
+          "size_mb": 3094,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "ggml-large-v3.bin"
+        },
+        {
+          "label": "Q5_0",
+          "size_mb": 1100,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "ggml-large-v3-q5_0.bin"
+        }
+      ],
+      "min_vram_mb": null,
+      "rec_vram_mb": 6144,
+      "min_ram_mb": 4096,
+      "rec_ram_mb": 8192,
+      "install_size_mb": 3094,
+      "context_guidance": "한국어 STT — 음성 인식. whisper.cpp 호환. 일상 발화 정확도 우수.",
+      "language_strength": 9,
+      "roleplay_strength": 0,
+      "coding_strength": 0,
+      "tool_support": false,
+      "vision_support": false,
+      "structured_output_support": false,
+      "license": "MIT",
+      "maturity": "stable",
+      "portable_suitability": 8,
+      "on_device_suitability": 8,
+      "fine_tune_suitability": 5,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-27",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "한국어 음성 → 텍스트",
+        "회의록 자동 작성",
+        "음성 명령 인식"
+      ],
+      "warnings": []
+    }
+  ]
+}

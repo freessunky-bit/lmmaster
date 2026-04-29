@@ -1,0 +1,145 @@
+[workspace]
+resolver = "2"
+members = [
+  "apps/desktop/src-tauri",
+  "crates/core-gateway",
+  "crates/runtime-manager",
+  "crates/runtime-detector",
+  "crates/installer",
+  "crates/registry-fetcher",
+  "crates/scanner",
+  "crates/bench-harness",
+  "crates/preset-registry",
+  "crates/adapter-llama-cpp",
+  "crates/adapter-koboldcpp",
+  "crates/adapter-ollama",
+  "crates/adapter-lmstudio",
+  "crates/adapter-vllm",
+  "crates/hardware-probe",
+  "crates/model-registry",
+  "crates/portable-workspace",
+  "crates/key-manager",
+  "crates/shared-types",
+  "crates/workbench-core",
+  "crates/auto-updater",
+  "crates/knowledge-stack",
+  "crates/pipelines",
+]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.78"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/freessunky-bit/lmmaster"
+
+[workspace.dependencies]
+# async / runtime
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["rt", "io"] }
+tokio-stream = "0.1"
+futures = "0.3"
+async-trait = "0.1"
+
+# http / serialization
+axum = "0.8"
+axum-extra = { version = "0.10", features = ["typed-header"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "limit", "timeout", "request-id"] }
+hyper = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# storage
+rusqlite = { version = "0.31", features = ["bundled"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "macros"] }
+
+# crypto / hash
+sha2 = "0.10"
+hex = "0.4"
+
+# logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# system
+sysinfo = "0.31"
+keyring = "3"
+libc = "0.2"
+
+# hardware probe (Phase 1A.2)
+nvml-wrapper = "0.11"
+libloading = "0.8"
+ash = { version = "0.38", default-features = false, features = ["loaded"] }
+
+# manifest evaluator (Phase 1A.2.b)
+which = "8"
+regex = "1"
+winreg = "0.55"
+
+# downloader / installer (Phase 1A.3)
+backon = "1.6"
+atomicwrites = "0.4"
+tempfile = "3"
+bytes = "1"
+futures-util = "0.3"
+webbrowser = "1"
+# archive extraction (Phase 1A.3.b.2). zip 8.x — CVE-2025-29787(symlink path-traversal) 수정 포함.
+zip = { version = "8", default-features = false, features = ["deflate", "bzip2"] }
+tar = "0.4"
+flate2 = "1"
+
+# dmg extraction (Phase 1A.3.b.3, macOS only via target-cfg).
+plist = "1"
+walkdir = "2"
+
+# RAII guards (Phase 1A.3.c — install registry token cleanup).
+scopeguard = "1"
+
+# Self-scan scheduler (Phase 1', crates/scanner).
+tokio-cron-scheduler = { version = "0.15", default-features = false }
+
+# HTTP mocking (Phase 5'.e — workbench responder unit tests).
+wiremock = "0.6"
+
+# error
+anyhow = "1"
+thiserror = "1"
+
+# semver (Phase 6'.a — auto-updater 버전 비교)
+semver = "1"
+
+# uuid / time
+uuid = { version = "1", features = ["v4", "serde"] }
+time = { version = "0.3", features = ["serde", "formatting", "parsing"] }
+
+# internal
+shared-types = { path = "crates/shared-types" }
+key-manager = { path = "crates/key-manager" }
+runtime-manager = { path = "crates/runtime-manager" }
+runtime-detector = { path = "crates/runtime-detector" }
+installer = { path = "crates/installer" }
+registry-fetcher = { path = "crates/registry-fetcher" }
+scanner = { path = "crates/scanner" }
+bench-harness = { path = "crates/bench-harness" }
+preset-registry = { path = "crates/preset-registry" }
+adapter-ollama = { path = "crates/adapter-ollama" }
+adapter-lmstudio = { path = "crates/adapter-lmstudio" }
+hardware-probe = { path = "crates/hardware-probe" }
+model-registry = { path = "crates/model-registry" }
+portable-workspace = { path = "crates/portable-workspace" }
+core-gateway = { path = "crates/core-gateway" }
+workbench-core = { path = "crates/workbench-core" }
+auto-updater = { path = "crates/auto-updater" }
+knowledge-stack = { path = "crates/knowledge-stack" }
+pipelines = { path = "crates/pipelines" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+
+[profile.dev]
+opt-level = 1

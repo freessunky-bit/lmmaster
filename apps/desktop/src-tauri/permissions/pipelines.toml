@@ -1,0 +1,29 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 6'.c: pipelines IPC 권한 — Settings 화면이 게이트웨이 필터 토글 + 감사 로그를 다룰 때 사용.
+# capabilities/main.json에서 "allow-*"로 참조.
+
+[[permission]]
+identifier = "allow-list-pipelines"
+description = "List the v1 seed gateway pipelines (id + Korean fallback labels + enabled state)."
+commands.allow = ["list_pipelines"]
+
+[[permission]]
+identifier = "allow-set-pipeline-enabled"
+description = "Toggle a single pipeline's enabled flag and persist the configuration to app data."
+commands.allow = ["set_pipeline_enabled"]
+
+[[permission]]
+identifier = "allow-get-pipelines-config"
+description = "Read the persisted pipelines configuration snapshot."
+commands.allow = ["get_pipelines_config"]
+
+[[permission]]
+identifier = "allow-get-audit-log"
+description = "Read the most recent pipeline audit entries (in-memory ring buffer, capped at 200)."
+commands.allow = ["get_audit_log"]
+
+[[permission]]
+identifier = "allow-clear-audit-log"
+description = "Empty the pipeline audit ring buffer (does not affect persisted configuration)."
+commands.allow = ["clear_audit_log"]

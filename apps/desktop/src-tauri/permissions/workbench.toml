@@ -1,0 +1,40 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 5'.b: 워크벤치 IPC 권한 (5단계 flow + JSONL preview).
+
+[[permission]]
+identifier = "allow-start-workbench-run"
+description = "Start a 5-step workbench run (data → quantize → lora → validate → register) and stream WorkbenchEvent to caller window."
+commands.allow = ["start_workbench_run"]
+
+[[permission]]
+identifier = "allow-cancel-workbench-run"
+description = "Cancel an in-flight workbench run by id (idempotent)."
+commands.allow = ["cancel_workbench_run"]
+
+[[permission]]
+identifier = "allow-list-workbench-runs"
+description = "List active workbench run snapshots (in-memory registry)."
+commands.allow = ["list_workbench_runs"]
+
+[[permission]]
+identifier = "allow-workbench-preview-jsonl"
+description = "Preview the first N lines of a JSONL dataset for the workbench data step."
+commands.allow = ["workbench_preview_jsonl"]
+
+[[permission]]
+identifier = "allow-workbench-serialize-examples"
+description = "Serialize normalized chat examples back to JSONL text."
+commands.allow = ["workbench_serialize_examples"]
+
+# Phase 8'.0.c (ADR-0037) — workbench artifact retention.
+
+[[permission]]
+identifier = "allow-get-artifact-stats"
+description = "Read current workbench artifact disk usage and retention policy."
+commands.allow = ["get_artifact_stats"]
+
+[[permission]]
+identifier = "allow-cleanup-artifacts-now"
+description = "Trigger an immediate cleanup of expired or oversized workbench artifacts."
+commands.allow = ["cleanup_artifacts_now"]

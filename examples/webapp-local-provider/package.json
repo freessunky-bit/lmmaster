@@ -1,0 +1,15 @@
+{
+  "name": "@lmmaster/example-webapp-local-provider",
+  "version": "0.0.1",
+  "private": true,
+  "description": "기존 웹앱 형태에 LocalCompanionProvider를 추가하는 통합 예제. 실제 기존 웹앱이 PR 1개로 어떻게 LMmaster를 붙이는지 보여준다.",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'example: source-only'",
+    "lint": "echo 'TODO'",
+    "test": "echo 'TODO'"
+  },
+  "dependencies": {
+    "@lmmaster/sdk": "workspace:*"
+  }
+}

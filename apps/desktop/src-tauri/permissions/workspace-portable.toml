@@ -1,0 +1,28 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 11' — Portable Workspace export/import (ADR-0039).
+
+[[permission]]
+identifier = "allow-start-workspace-export"
+description = "Pack the active workspace into a single zip archive (optionally with models / encrypted keys)."
+commands.allow = ["start_workspace_export"]
+
+[[permission]]
+identifier = "allow-cancel-workspace-export"
+description = "Cancel an in-flight workspace export by export_id (idempotent)."
+commands.allow = ["cancel_workspace_export"]
+
+[[permission]]
+identifier = "allow-start-workspace-import"
+description = "Verify a workspace archive and unpack it into the target workspace (atomic commit)."
+commands.allow = ["start_workspace_import"]
+
+[[permission]]
+identifier = "allow-cancel-workspace-import"
+description = "Cancel an in-flight workspace import by import_id (idempotent)."
+commands.allow = ["cancel_workspace_import"]
+
+[[permission]]
+identifier = "allow-verify-workspace-archive"
+description = "Read a workspace archive header to preview manifest summary + fingerprint + size before import."
+commands.allow = ["verify_workspace_archive"]

@@ -1,0 +1,61 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-27T00:00:00Z",
+  "entries": [
+    {
+      "id": "qwen-2.5-coder-3b-instruct",
+      "display_name": "Qwen 2.5 Coder 3B Instruct",
+      "category": "coding",
+      "model_family": "qwen",
+      "source": {
+        "type": "hugging-face",
+        "repo": "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF",
+        "file": "qwen2.5-coder-3b-instruct-q4_k_m.gguf"
+      },
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 1900,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "qwen2.5-coder-3b-instruct-q4_k_m.gguf"
+        },
+        {
+          "label": "Q8_0",
+          "size_mb": 3300,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "qwen2.5-coder-3b-instruct-q8_0.gguf"
+        }
+      ],
+      "min_vram_mb": 3072,
+      "rec_vram_mb": 4096,
+      "min_ram_mb": 4096,
+      "rec_ram_mb": 8192,
+      "install_size_mb": 1900,
+      "context_guidance": "코딩 보조 — FIM/리팩터링/코드 리뷰. 한국어 주석 OK.",
+      "language_strength": 7,
+      "roleplay_strength": 4,
+      "coding_strength": 9,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "Apache-2.0",
+      "maturity": "stable",
+      "portable_suitability": 8,
+      "on_device_suitability": 8,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-27",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "코드 자동 완성/리팩터링",
+        "한국어 주석 + 영어 코드 혼용",
+        "에디터 보조 — IDE 통합"
+      ],
+      "warnings": []
+    }
+  ]
+}

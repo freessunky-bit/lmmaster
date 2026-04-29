@@ -1,0 +1,78 @@
+{
+  "$schema_hint": "Pinokio-style declarative app manifest. Schema versioned by `schema_version`.",
+  "schema_version": 1,
+  "id": "lm-studio",
+  "display_name": "LM Studio",
+  "license": "Element Labs EULA — see https://lmstudio.ai/app-terms (free for personal & internal business use, redistribution prohibited).",
+  "redistribution_allowed": false,
+  "homepage": "https://lmstudio.ai",
+  "download_page": "https://lmstudio.ai/download",
+  "category": "external-runtime",
+  "notes_ko": "EULA 상 installer 재배포가 금지되어 있어 LMmaster는 자동 설치를 지원하지 않습니다. 공식 페이지를 열어 직접 다운로드해주세요. 통합은 lms CLI와 OpenAI 호환 REST(127.0.0.1:1234)를 통해서만 진행합니다.",
+
+  "detect": [
+    {
+      "method": "http.get",
+      "url": "http://127.0.0.1:1234/v1/models",
+      "timeout_ms": 1500,
+      "expect_status": 200,
+      "indicates": "running"
+    },
+    {
+      "method": "shell.which",
+      "cmd": "lms",
+      "indicates": "installed",
+      "version_command": ["lms", "version"]
+    },
+    {
+      "method": "registry.read",
+      "platform": "windows",
+      "hive": "HKCU",
+      "subkey_glob": "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
+      "match_value": { "key": "DisplayName", "regex": "^LM Studio" },
+      "extract_value": "DisplayVersion",
+      "indicates": "installed"
+    },
+    {
+      "method": "fs.exists",
+      "platform": "macos",
+      "path": "/Applications/LM Studio.app",
+      "extract_plist_field": "CFBundleShortVersionString",
+      "indicates": "installed"
+    }
+  ],
+
+  "install": {
+    "windows": {
+      "method": "open_url",
+      "url": "https://lmstudio.ai/download",
+      "reason_ko": "EULA 상 installer 재배포 금지. 공식 사이트로 안내해드릴게요."
+    },
+    "macos": {
+      "method": "open_url",
+      "url": "https://lmstudio.ai/download",
+      "reason_ko": "EULA 상 installer 재배포 금지. 공식 사이트로 안내해드릴게요."
+    },
+    "linux": {
+      "method": "open_url",
+      "url": "https://lmstudio.ai/download",
+      "reason_ko": "EULA 상 installer 재배포 금지. 공식 사이트로 안내해드릴게요."
+    }
+  },
+
+  "update": {
+    "source": { "type": "vendor_endpoint", "url": "https://lmstudio.ai/api/latest-version" },
+    "trigger": { "method": "open_url", "url": "https://lmstudio.ai/download" }
+  },
+
+  "ports": { "default": 1234, "alternate": 1235 },
+
+  "korean_copy": {
+    "name": "LM Studio",
+    "summary": "GUI 기반 로컬 LLM 환경 (Element Labs)",
+    "install_consent": "LM Studio는 공식 사이트에서 직접 다운로드해주세요. 페이지를 열어드릴게요.",
+    "install_running": "공식 다운로드 페이지를 열어드렸어요",
+    "install_done": "LM Studio 연결됐어요",
+    "install_failed": "LM Studio 연결에 문제가 생겼어요. 실행 후 다시 확인해주세요."
+  }
+}

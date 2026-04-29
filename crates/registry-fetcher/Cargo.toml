@@ -1,0 +1,38 @@
+[package]
+name = "registry-fetcher"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+# HTTP
+reqwest = { workspace = true }
+
+# async / runtime
+tokio = { workspace = true }
+futures = { workspace = true }
+
+# storage
+rusqlite = { workspace = true }
+
+# serde
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# crypto
+sha2 = { workspace = true }
+hex = { workspace = true }
+
+# error / logging
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+# retry / time parsing
+backon = { workspace = true }
+time = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "test-util"] }
+wiremock = "0.6"
+tempfile = { workspace = true }

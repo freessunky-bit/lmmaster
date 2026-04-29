@@ -1,0 +1,44 @@
+[package]
+name = "hardware-probe"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+shared-types.workspace = true
+
+# cross-platform basics
+sysinfo.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+# NVIDIA-specific (graceful fail) + DLL probe
+nvml-wrapper.workspace = true
+libloading.workspace = true
+
+# Vulkan loader probe — `loaded` feature: 미존재 시 panic 대신 Result::Err.
+ash.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+winreg.workspace = true
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-metal = { version = "0.3", features = ["MTLDevice"] }
+objc2-foundation = "0.3"
+libc.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt", "test-util"] }

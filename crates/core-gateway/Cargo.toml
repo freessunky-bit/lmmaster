@@ -1,0 +1,37 @@
+[package]
+name = "core-gateway"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+# 공통 타입
+shared-types.workspace = true
+
+# Phase 0 실사용
+tokio.workspace = true
+tokio-util.workspace = true
+axum.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+
+# Phase 3'.a / 3'.b — Gateway routing + auth
+reqwest = { workspace = true, features = ["json", "stream"] }
+async-trait.workspace = true
+thiserror.workspace = true
+futures.workspace = true
+bytes.workspace = true
+key-manager.workspace = true
+time.workspace = true
+
+# Phase 6'.b — gateway-side filter pipelines
+pipelines.workspace = true
+http-body-util = "0.1"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt", "test-util"] }
+http-body-util = "0.1"
+wiremock = "0.6"

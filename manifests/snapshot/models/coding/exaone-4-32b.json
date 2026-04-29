@@ -1,0 +1,63 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-27T00:00:00Z",
+  "entries": [
+    {
+      "id": "exaone-4.0-32b-instruct",
+      "display_name": "EXAONE 4.0 32B Instruct",
+      "category": "coding",
+      "model_family": "exaone",
+      "source": {
+        "type": "hugging-face",
+        "repo": "LGAI-EXAONE/EXAONE-4.0-32B-Instruct-GGUF",
+        "file": "EXAONE-4.0-32B-Instruct-Q4_K_M.gguf"
+      },
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 19500,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "EXAONE-4.0-32B-Instruct-Q4_K_M.gguf"
+        },
+        {
+          "label": "Q5_K_M",
+          "size_mb": 23000,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "EXAONE-4.0-32B-Instruct-Q5_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 22528,
+      "rec_vram_mb": 24576,
+      "min_ram_mb": 32768,
+      "rec_ram_mb": 65536,
+      "install_size_mb": 19500,
+      "context_guidance": "최대 32K context. 한국어 + 코딩 — 큰 호스트 전용. 추론/계획 강함.",
+      "language_strength": 9,
+      "roleplay_strength": 7,
+      "coding_strength": 9,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "EXAONE Custom",
+      "maturity": "stable",
+      "portable_suitability": 3,
+      "on_device_suitability": 5,
+      "fine_tune_suitability": 9,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-27",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "한국어 + 코딩 — 큰 작업",
+        "복잡한 추론/계획",
+        "대형 워크벤치 모델"
+      ],
+      "warnings": [
+        "VRAM 24GB 이상 필요 — RTX 3090/4090 또는 멀티 GPU."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,181 @@
+/* LMmaster Design System — Base reset + typography baseline */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-14);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; cursor: pointer; background: transparent; border: 0; }
+
+/* Phase 1A.4.e — 모든 인터랙티브 요소에 80~120ms transition baseline.
+ * Linear/Vercel 시그니처 — 0ms는 안 보이게.
+ */
+button,
+a[href],
+[role="button"] {
+  transition:
+    background var(--dur-fast) var(--ease-emphasized),
+    color      var(--dur-fast) var(--ease-emphasized),
+    border-color var(--dur-fast) var(--ease-emphasized),
+    box-shadow var(--dur-fast) var(--ease-emphasized),
+    transform  var(--dur-fast) var(--ease-emphasized);
+}
+
+/* :active scale — button만 (text 입력은 영향 없음). */
+button:active:not(:disabled),
+[role="button"]:active:not([aria-disabled="true"]) {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled),
+  [role="button"]:active:not([aria-disabled="true"]) {
+    transform: none;
+  }
+}
+
+/* :focus-visible only — mouse click ring 회피, WCAG C40 충족 */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-1);
+}
+:focus:not(:focus-visible) { outline: none; }
+
+/* App shell */
+.app-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  height: 100vh;
+  background: var(--bg);
+}
+
+.sidebar {
+  background: var(--bg-subtle);
+  border-right: 1px solid var(--border);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semi);
+  font-size: var(--fs-18);
+  color: var(--primary);
+  padding: var(--space-2);
+  letter-spacing: -0.01em;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+}
+
+.nav-item {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  text-align: left;
+  font: inherit;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    background var(--dur-fast) var(--ease-standard);
+  font-size: var(--fs-13);
+}
+.nav-item:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 1px;
+}
+.nav-item:hover { background: var(--white-a-2); color: var(--text); }
+.nav-item.active {
+  background: var(--white-a-3);
+  color: var(--text);
+}
+
+/* Gateway status pill (sidebar 하단) */
+.gateway-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-top: auto;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: var(--fs-12);
+  color: var(--text-secondary);
+}
+.gateway-pill .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--text-muted);
+  flex-shrink: 0;
+  transition: background var(--dur-fast) var(--ease-standard),
+              box-shadow var(--dur-fast) var(--ease-standard);
+}
+.gateway-pill[data-status="listening"] .dot {
+  background: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-a-3);
+}
+.gateway-pill[data-status="failed"] .dot { background: var(--error); }
+.gateway-pill[data-status="booting"] .dot {
+  background: var(--info);
+  animation: pulse var(--dur-slow) var(--ease-standard) infinite alternate;
+}
+.gateway-pill[data-status="stopping"] .dot { background: var(--warn); }
+.gateway-pill .label { color: var(--text); }
+.gateway-pill .port { color: var(--text-muted); }
+
+/* StatusPill sidebar 변형 — 하단 정렬 (StatusPill 마이그레이션 후, Phase 4 cleanup) */
+.sidebar-pill { margin-top: auto; }
+
+@keyframes pulse {
+  from { opacity: 0.6; }
+  to   { opacity: 1; }
+}
+
+.content {
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  min-width: 0;
+}
+
+.topbar {
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  background: var(--bg);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semi);
+  font-size: var(--fs-16);
+}
+
+.placeholder {
+  padding: var(--space-6);
+  color: var(--text-secondary);
+  line-height: var(--lh-loose);
+}

@@ -1,0 +1,61 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-27T00:00:00Z",
+  "entries": [
+    {
+      "id": "exaone-4.0-1.2b-instruct",
+      "display_name": "EXAONE 4.0 1.2B Instruct",
+      "category": "agent-general",
+      "model_family": "exaone",
+      "source": {
+        "type": "hugging-face",
+        "repo": "LGAI-EXAONE/EXAONE-4.0-1.2B-Instruct-GGUF",
+        "file": "EXAONE-4.0-1.2B-Instruct-Q4_K_M.gguf"
+      },
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 760,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "EXAONE-4.0-1.2B-Instruct-Q4_K_M.gguf"
+        },
+        {
+          "label": "Q8_0",
+          "size_mb": 1300,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "EXAONE-4.0-1.2B-Instruct-Q8_0.gguf"
+        }
+      ],
+      "min_vram_mb": null,
+      "rec_vram_mb": 2048,
+      "min_ram_mb": 4096,
+      "rec_ram_mb": 8192,
+      "install_size_mb": 760,
+      "context_guidance": "최대 32K context. 한국어 일상 대화/짧은 글쓰기.",
+      "language_strength": 9,
+      "roleplay_strength": 6,
+      "coding_strength": 5,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "EXAONE Custom",
+      "maturity": "stable",
+      "portable_suitability": 9,
+      "on_device_suitability": 9,
+      "fine_tune_suitability": 6,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-27",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "한국어 일상 대화",
+        "짧은 글쓰기/요약",
+        "온디바이스 비서"
+      ],
+      "warnings": []
+    }
+  ]
+}

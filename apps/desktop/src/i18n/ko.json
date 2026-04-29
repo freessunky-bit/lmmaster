@@ -1,0 +1,1147 @@
+{
+  "nav": {
+    "home": "홈",
+    "catalog": "모델 카탈로그",
+    "install": "설치 센터",
+    "runtimes": "런타임",
+    "workspace": "워크스페이스",
+    "projects": "프로젝트 연결",
+    "keys": "로컬 API",
+    "workbench": "워크벤치",
+    "diagnostics": "진단",
+    "guide": "가이드",
+    "settings": "설정"
+  },
+  "home": {
+    "title": "홈",
+    "gateway-booting": "로컬 게이트웨이를 켜고 있어요…",
+    "gateway-ready": "로컬 게이트웨이가 포트 {{port}}에서 돌고 있어요.",
+    "gateway-failed": "로컬 게이트웨이를 켜지 못했어요. 원인: {{error}}",
+    "gateway-stopping": "로컬 게이트웨이를 끄고 있어요…",
+    "hero": {
+      "title": "오늘도 잘 와주셨어요",
+      "subtitle": "로컬 AI를 한국어로, 안전하게 써보세요."
+    },
+    "recommend": {
+      "title": "추천 모델",
+      "subtitle": "이 PC에 잘 맞는 모델 3종이에요. 카탈로그에서 더 많이 찾을 수 있어요.",
+      "cardLabel": "{{name}} — {{reason}} (클릭하면 카탈로그에서 자세히 볼 수 있어요)"
+    },
+    "scan": {
+      "title": "최근 자가 점검",
+      "empty": "아직 자가 점검 결과가 없어요. 진단 메뉴에서 점검을 시작해 주세요."
+    }
+  },
+  "toast": {
+    "update": {
+      "title": "{{version}}으로 업데이트할 수 있어요",
+      "detail": "현재 {{currentVersion}} · {{published}} 게시",
+      "view": "업데이트 보기",
+      "skip": "이번 버전은 건너뛰어요",
+      "apply": "지금 적용",
+      "defer": "다음 실행 때",
+      "close": "닫기"
+    }
+  },
+  "gateway": {
+    "status": {
+      "booting": "기동 중",
+      "listening": "사용 가능",
+      "failed": "오류",
+      "stopping": "종료 중"
+    }
+  },
+  "common": {
+    "retry": "다시 시도",
+    "cancel": "취소",
+    "confirm": "확인",
+    "install": "설치하기",
+    "open": "열기"
+  },
+  "dialogs": {
+    "crash": {
+      "title": "예기치 못한 오류가 났어요",
+      "body": "예기치 못한 오류가 발생했어요. 자세한 내용은 진단 화면에서 확인할 수 있어요.",
+      "confirm": "알겠어요"
+    }
+  },
+  "status": {
+    "installing": "설치 중",
+    "queued": "대기 중",
+    "verifying": "검증 중",
+    "extracting": "압축 해제 중",
+    "warmup": "워밍업 중",
+    "standby": "대기 상태",
+    "active": "사용 중",
+    "available": "사용 가능",
+    "caution": "주의 필요",
+    "experimental": "실험 기능"
+  },
+  "recommend": {
+    "best": "상위 품질",
+    "balanced": "균형형",
+    "lightweight": "경량형",
+    "fallback": "대체 모델"
+  },
+  "screens": {
+    "workspaceSwitcher": {
+      "current": "워크스페이스",
+      "loading": "워크스페이스를 불러오고 있어요…",
+      "triggerAria": "{{name}} 워크스페이스 — 클릭해서 전환하거나 새로 만들 수 있어요",
+      "menuAria": "워크스페이스 목록",
+      "empty": "아직 워크스페이스가 없어요. 새로 만들어 볼래요?",
+      "rename": "이름 바꾸기",
+      "renameAria": "{{name}} 워크스페이스 이름 바꾸기",
+      "delete": "지우기",
+      "deleteAria": "{{name}} 워크스페이스 지우기",
+      "create": "+ 새 워크스페이스 만들기",
+      "createTitle": "새 워크스페이스 만들기",
+      "renameTitle": "워크스페이스 이름 바꾸기",
+      "nameLabel": "이름",
+      "namePlaceholder": "예: 사이드 프로젝트",
+      "descriptionLabel": "설명 (선택)",
+      "descriptionPlaceholder": "이 워크스페이스가 어떤 용도인지 짧게 적어주세요",
+      "submit": "만들게요",
+      "cancel": "취소할래요",
+      "deleteConfirmTitle": "‘{{name}}’을 지울까요?",
+      "deleteConfirmBody": "이 워크스페이스의 자료와 사용자 모델은 모두 정리할 예정이에요. 디스크 파일은 보존되니, 다시 쓰고 싶으시면 백업해 두세요. 정말 진행할까요?",
+      "deleteCancel": "그대로 둘래요",
+      "deleteConfirm": "지울게요",
+      "errors": {
+        "duplicate": "‘{{name}}’이라는 이름의 워크스페이스가 이미 있어요. 다른 이름을 적어주세요.",
+        "empty": "이름을 비워둘 수 없어요. 워크스페이스 이름을 적어주세요.",
+        "notFound": "이 워크스페이스를 찾지 못했어요. 새로 고침할게요.",
+        "cannotDeleteOnly": "마지막 워크스페이스는 지울 수 없어요. 새 워크스페이스를 먼저 만들어 주세요.",
+        "persist": "워크스페이스 정보를 저장하지 못했어요. {{message}}",
+        "internal": "내부 오류가 났어요. {{message}}",
+        "unknown": "알 수 없는 오류가 났어요. 다시 시도해 볼래요?"
+      }
+    },
+    "catalog": {
+      "custom": {
+        "title": "내가 만든 모델",
+        "subtitle": "워크벤치에서 만든 사용자 정의 모델이 여기 모여요",
+        "badge": "내가 만든 모델",
+        "loading": "모델 목록을 가져오고 있어요…",
+        "empty": "아직 만든 모델이 없어요. 워크벤치에서 만들면 여기 표시돼요.",
+        "openWorkbench": "워크벤치로 갈게요",
+        "basedOn": "기반 모델: {{base}}",
+        "quant": "양자화: {{quant}}",
+        "evalSummary": "검증 통과 {{passed}} / {{total}}"
+      }
+    },
+    "workspace": {
+      "title": "워크스페이스",
+      "subtitle": "내 자료를 모델에 가르쳐 두고, 빠르게 찾아볼 수 있어요",
+      "loading": "워크스페이스를 불러오고 있어요…",
+      "tabs": {
+        "knowledge": "지식 자료"
+      },
+      "knowledge": {
+        "title": "지식 자료",
+        "subtitle": "문서를 자동으로 정리해서 검색할 수 있게 만들어 드려요",
+        "statsAria": "현재 워크스페이스에 저장된 자료 통계",
+        "stats": {
+          "documents": "문서",
+          "chunks": "청크"
+        },
+        "ingest": {
+          "title": "자료 받기",
+          "subtitle": "파일이나 폴더를 가리키면 자동으로 청크화해서 저장해요",
+          "pathLabel": "경로",
+          "pathPlaceholder": "예: C:/Users/me/notes",
+          "pathHint": "절대 경로를 적어 주세요",
+          "kindLabel": "종류",
+          "kind": {
+            "file": "파일 1개",
+            "directory": "폴더 (재귀)"
+          },
+          "start": "인덱싱 시작",
+          "cancel": "그만둘게요",
+          "reset": "다시 할래요",
+          "progressAria": "인덱싱 진행률",
+          "currentPath": "지금 처리 중: {{path}}",
+          "summary": "문서 {{files}}개, 청크 {{chunks}}개를 받았어요"
+        },
+        "stage": {
+          "reading": "읽는 중",
+          "chunking": "분할 중",
+          "embedding": "임베딩 중",
+          "writing": "쓰는 중",
+          "done": "완료",
+          "failed": "실패",
+          "cancelled": "취소됨"
+        },
+        "search": {
+          "title": "검색",
+          "subtitle": "자료에서 관련 청크를 빠르게 찾아드려요",
+          "queryLabel": "검색어",
+          "queryPlaceholder": "예: 서울의 수도",
+          "kLabel": "결과 개수",
+          "kHint": "최대 {{max}}개까지 보여드려요",
+          "submit": "검색",
+          "empty": "결과가 없어요. 다른 키워드로 검색해 볼래요?"
+        },
+        "errors": {
+          "missingPath": "경로를 적어 주세요",
+          "startFailed": "인덱싱을 시작하지 못했어요. 잠시 뒤 다시 시도해 볼래요?",
+          "searchFailed": "검색에 실패했어요. 잠시 뒤 다시 시도해 볼래요?",
+          "statsFailed": "워크스페이스 통계를 가져오지 못했어요"
+        }
+      }
+    },
+    "projects": {
+      "title": "프로젝트",
+      "subtitle": "키 별로 어떤 사이트에서 어떤 모델을 호출했는지 보여드려요",
+      "loading": "프로젝트를 가져오고 있어요",
+      "summary": {
+        "activeCount": "{{count}}개 활성"
+      },
+      "card": {
+        "lastUsed": "{{when}}에 마지막 사용",
+        "lastUsedNever": "사용 기록 없음",
+        "lastUsedLabel": "마지막 사용",
+        "modelsAllowed": "허용 모델",
+        "keys": "키 개수",
+        "openDetail": "사용량 보기"
+      },
+      "detail": {
+        "last24h": "최근 24시간",
+        "totalRequests": "{{count}}회 호출",
+        "topModels": "많이 쓴 모델",
+        "keysSection": "이 프로젝트의 키",
+        "revoke": "키 회수",
+        "close": "닫기",
+        "sparklineAria": "최근 24시간 호출 분포 — 합계 {{count}}회"
+      },
+      "empty": {
+        "title": "아직 발급한 키가 없어요",
+        "body": "API 키 화면에서 새 키를 만들어 보세요",
+        "cta": "API 키로 가볼게요"
+      },
+      "errors": {
+        "loadFailed": "프로젝트 정보를 가져오지 못했어요. 다시 시도해 볼래요?"
+      }
+    },
+    "eula": {
+      "title": "LMmaster 사용자 동의서",
+      "version": "버전 {{version}}",
+      "accept": "동의할게요",
+      "decline": "동의하지 않을래요",
+      "scrollToAccept": "끝까지 읽으면 동의 버튼이 활성화돼요.",
+      "lang": {
+        "ko": "한국어",
+        "en": "English"
+      },
+      "decline.confirmTitle": "정말 동의하지 않으실 건가요?",
+      "decline.confirmBody": "동의하지 않으면 LMmaster를 사용할 수 없어요. 앱을 종료할까요?",
+      "decline.cancel": "다시 볼게요",
+      "decline.exit": "앱을 종료할게요"
+    },
+    "settings": {
+      "title": "설정",
+      "versionLabel": "버전",
+      "lastChecked": "{{when}}에 마지막 확인",
+      "telemetry": {
+        "title": "익명 사용 통계",
+        "description": "기본은 비활성이에요. 활성하면 익명 사용 통계만 보내요. 프롬프트·모델 출력은 절대 전송하지 않아요. 언제든 비활성할 수 있어요.",
+        "toggleLabel": "익명 사용 통계 보내기",
+        "statusOn": "익명 통계를 보내고 있어요",
+        "statusOff": "통계는 보내지 않아요",
+        "anonIdLabel": "익명 식별자",
+        "privacyNote": "식별자는 PC 단위로 부여돼요. 개인 식별 정보는 포함되지 않아요.",
+        "errors": {
+          "loadFailed": "텔레메트리 설정을 불러오지 못했어요.",
+          "toggleFailed": "텔레메트리 설정을 바꾸지 못했어요. 다시 시도해 볼래요?"
+        }
+      },
+      "categories": {
+        "general": "일반",
+        "workspace": "워크스페이스",
+        "portable": "포터블 이동",
+        "catalog": "카탈로그",
+        "advanced": "고급"
+      },
+      "general": {
+        "language": "언어",
+        "language.ko": "한국어",
+        "language.en": "English",
+        "theme": "테마",
+        "theme.dark": "다크",
+        "theme.light": "라이트 (곧 만나요)",
+        "scanInterval": "자가 점검 주기",
+        "scanInterval.off": "끔",
+        "scanInterval.15m": "15분",
+        "scanInterval.60m": "1시간",
+        "voice": "한국어 음성 입출력",
+        "voice.comingSoon": "Phase 6'에서 만나요"
+      },
+      "autoUpdate": {
+        "title": "자동 갱신",
+        "toggleLabel": "자동으로 업데이트를 확인할게요",
+        "toggleOn": "자동으로 업데이트를 확인하고 있어요",
+        "toggleOff": "수동으로만 업데이트를 확인할게요",
+        "intervalLabel": "확인 주기",
+        "interval.1h": "1시간마다",
+        "interval.6h": "6시간마다",
+        "interval.12h": "12시간마다",
+        "interval.24h": "24시간마다",
+        "repoLabel": "릴리스 저장소",
+        "lastChecked": "마지막 확인: {{when}}",
+        "neverChecked": "확인하지 않음",
+        "checkNow": "지금 확인할게요",
+        "checking": "확인하고 있어요",
+        "upToDate": "최신 버전이에요",
+        "errorStatus": "자동 갱신 상태를 가져오지 못했어요",
+        "errorStart": "자동 갱신을 시작하지 못했어요. 다시 시도해 볼래요?",
+        "errorStop": "자동 갱신을 중단하지 못했어요",
+        "errorCheck": "업데이트 확인에 실패했어요"
+      },
+      "pipelines": {
+        "title": "Pipelines (게이트웨이 필터)",
+        "description": "기존 웹앱이 호출하는 길목에서 자동으로 동작해요. 토글로 켜고 끌 수 있어요.",
+        "header": {
+          "name": "이름",
+          "description": "설명",
+          "enabled": "사용 여부"
+        },
+        "pipelines": {
+          "piiRedact": {
+            "name": "개인정보 보호 필터",
+            "desc": "주민·휴대폰·신용카드·이메일을 자동으로 가려드려요."
+          },
+          "tokenQuota": {
+            "name": "토큰 한도 관리",
+            "desc": "키별 토큰 한도를 추적하고 초과 요청은 막아드려요."
+          },
+          "observability": {
+            "name": "관찰성 로그",
+            "desc": "요청·응답 메타를 진단 로그에 남겨드려요."
+          }
+        },
+        "audit": {
+          "title": "최근 감사 로그",
+          "clear": "지울게요",
+          "refresh": "새로 고칠게요",
+          "empty": "감사 로그가 비어 있어요. 게이트웨이에서 요청이 처리되면 여기에 기록돼요.",
+          "actionPassed": "통과",
+          "actionModified": "수정",
+          "actionBlocked": "차단",
+          "timestampPrefix": "기록 시각",
+          "detailsLabel": "상세"
+        },
+        "errors": {
+          "toggleFailed": "필터 설정을 바꾸지 못했어요. 다시 시도해 볼래요?",
+          "clearFailed": "감사 로그를 지우지 못했어요",
+          "refreshFailed": "필터 정보를 가져오지 못했어요",
+          "unknownPipeline": "알 수 없는 필터예요. 잠시 뒤 다시 시도해 볼래요?"
+        }
+      },
+      "workspace": {
+        "path": "워크스페이스 경로",
+        "relocate": "다른 폴더로 옮기기",
+        "relocate.comingSoon": "다음 업데이트에서 만나요",
+        "repair": "워크스페이스 정리",
+        "repairButton": "지금 정리할게요",
+        "repairing": "정리하고 있어요",
+        "repairDone": "정리했어요. tier {{tier}}, 다시 측정할 캐시 {{caches}}개",
+        "errorLoad": "워크스페이스 정보를 가져오지 못했어요",
+        "errorRepair": "정리에 실패했어요. 다시 시도해 볼래요?"
+      },
+      "catalog": {
+        "registryUrl": "카탈로그 주소",
+        "registryHint": "외부 통신 0 정책으로 변경할 수 없어요",
+        "lastUpdated": "마지막 갱신",
+        "refresh": "지금 갱신",
+        "refresh.comingSoon": "다음 업데이트에서 만나요"
+      },
+      "catalogRefresh": {
+        "title": "카탈로그 자동 갱신",
+        "intervalHint": "6시간마다 알아서 받아와요. 외부 통신은 GitHub와 jsDelivr만 써요.",
+        "lastRefresh": "마지막 갱신: {{when}} · 받음 {{fetched}}건 / 실패 {{failed}}건",
+        "never": "아직 갱신한 적이 없어요. 시작하면 6시간마다 자동으로 받을게요.",
+        "refreshNow": "지금 갱신할게요",
+        "refreshing": "갱신 중이에요…",
+        "partial": "일부 매니페스트만 받았어요. 다음 갱신에서 다시 시도할게요.",
+        "failed": "모든 매니페스트 갱신에 실패했어요. 캐시된 카탈로그를 그대로 써요.",
+        "errorRefresh": "갱신을 실행하지 못했어요. 잠시 뒤 다시 해 볼래요?"
+      },
+      "advanced": {
+        "gemini": "Gemini 한국어 도우미",
+        "gemini.comingSoon": "Phase 6'에서 만나요",
+        "sqlcipher": "키 저장 암호화",
+        "sqlcipher.envHint": "OS 키체인에 자동으로 발급된 비밀번호로 SQLCipher 암호화를 켜요. 키체인을 쓸 수 없으면 평문 모드로 폴백돼요.",
+        "exportLogs": "진단 로그 내보내기",
+        "exportLogs.comingSoon": "다음 업데이트에서 만나요",
+        "buildInfo": "빌드 정보"
+      },
+      "workbench": {
+        "artifacts": {
+          "title": "워크벤치 임시 파일",
+          "description": "양자화·LoRA 학습으로 생긴 임시 결과물이에요. 30일 또는 10GB가 지나면 자동으로 정리해요.",
+          "loading": "사용량을 가져오고 있어요…",
+          "loadFailed": "사용량을 가져오지 못했어요. 잠시 뒤 다시 시도해 볼래요?",
+          "runCount": "보관 중인 실행 결과 {{count}}건",
+          "totalBytes": "총 {{size}}",
+          "policyHint": "보관 정책: 최대 {{days}}일 또는 {{cap}}",
+          "cleanupNow": "지금 정리할게요",
+          "cleaning": "정리하고 있어요…",
+          "cleanupDone": "{{removed}}건을 정리해서 {{freed}} 만큼 비웠어요.",
+          "cleanupFailed": "정리에 실패했어요. 다시 시도해 볼래요?"
+        }
+      },
+      "portable": {
+        "categoryLabel": "포터블 이동",
+        "export": {
+          "title": "워크스페이스 내보내기",
+          "subtitle": "이 워크스페이스를 한 개의 zip 파일로 묶어요. 다른 PC로 옮기거나 백업할 때 써요.",
+          "start": "이 워크스페이스 내보낼게요",
+          "dialogTitle": "어떤 옵션으로 내보낼까요?",
+          "runningTitle": "내보내고 있어요",
+          "targetPath": "저장 위치",
+          "targetHint": "절대 경로로 입력해 주세요. .zip 확장자로 끝나야 해요.",
+          "includeModels": "모델 파일도 포함할게요",
+          "includeModelsHint": "수 GB가 늘어날 수 있어요. 끄면 새 PC에서 카탈로그로 다시 받을 수 있어요.",
+          "includeKeys": "API 키도 포함할게요",
+          "includeKeysHint": "이 옵션을 켜면 키를 패스프레이즈로 암호화해서 함께 넣어요.",
+          "passphraseLabel": "패스프레이즈",
+          "passphraseHint": "최소 8자를 권장해요. 분실하면 키를 복구할 수 없어요.",
+          "confirm": "내보낼게요",
+          "cancel": "취소할래요",
+          "running": "압축하고 있어요. 시간이 좀 걸릴 수 있어요.",
+          "done": "내보내기를 마쳤어요.",
+          "again": "다시 내보낼게요",
+          "archiveSize": "아카이브 크기",
+          "errors": {
+            "emptyTarget": "저장 위치를 입력해 주세요.",
+            "emptyPassphrase": "패스프레이즈를 입력해 주세요.",
+            "start": "내보내기를 시작하지 못했어요. 다시 시도해 볼래요?",
+            "runner": "내보내기 중에 문제가 생겼어요"
+          }
+        },
+        "import": {
+          "title": "워크스페이스 가져오기",
+          "subtitle": "다른 PC에서 만든 워크스페이스 zip을 이 PC로 가져와요.",
+          "start": "워크스페이스 가져올게요",
+          "dialogTitle": "어떤 파일을 가져올까요?",
+          "optionsTitle": "이렇게 가져갈까요?",
+          "runningTitle": "가져오고 있어요",
+          "selectFile": "아카이브 파일",
+          "selectFileHint": "내보내기에서 만든 .zip 파일 경로를 입력해 주세요.",
+          "verify": "이 파일 확인할게요",
+          "verifying": "확인하고 있어요",
+          "preview": {
+            "title": "이 아카이브 정보예요",
+            "size": "전체 크기",
+            "entries": "포함된 항목 수",
+            "contents": "포함 내용",
+            "hasModels": "모델 포함",
+            "metaOnly": "메타데이터만",
+            "hasKeys": "암호화된 키 포함"
+          },
+          "passphrase": "패스프레이즈",
+          "conflictPolicy": {
+            "label": "이미 워크스페이스가 있다면",
+            "skip": "그만둘게요",
+            "overwrite": "덮어쓸게요",
+            "rename": "다른 이름으로 가져올게요"
+          },
+          "confirm": "가져올게요",
+          "cancel": "취소할래요",
+          "running": "압축을 풀고 있어요. 시간이 좀 걸릴 수 있어요.",
+          "done": "가져오기를 마쳤어요.",
+          "again": "다시 가져올게요",
+          "tier": {
+            "green": "이 PC와 잘 맞아요. 바로 사용할 수 있어요.",
+            "yellow": "GPU나 메모리가 달라요. 벤치를 다시 측정하실 수 있어요.",
+            "red": "이 PC와 OS 계열이 달라요. 일부 모델을 다시 받아야 해요."
+          },
+          "errors": {
+            "emptySource": "가져올 파일 경로를 입력해 주세요.",
+            "emptyPassphrase": "패스프레이즈를 입력해 주세요.",
+            "verify": "아카이브를 읽지 못했어요. 파일이 맞는지 확인해 볼래요?",
+            "start": "가져오기를 시작하지 못했어요. 다시 시도해 볼래요?",
+            "runner": "가져오기 중에 문제가 생겼어요"
+          }
+        }
+      }
+    },
+    "runtimes": {
+      "title": "런타임",
+      "subtitle": "이 PC에서 사용할 수 있는 런타임 상태예요",
+      "summary": {
+        "runningCount": "{{running}} / {{total}} 실행 중"
+      },
+      "card": {
+        "notInstalled": "아직 안 받았어요",
+        "lastPing": "{{seconds}}초 전 응답",
+        "modelCount": "모델 {{count}}개",
+        "actions": {
+          "stop": "끄기",
+          "restart": "다시 시작",
+          "logs": "로그 보기",
+          "disabledHint": "다음 업데이트에서 만나요"
+        }
+      },
+      "models": {
+        "search": "모델 이름 검색",
+        "sort": {
+          "name": "이름순",
+          "size": "크기 순"
+        },
+        "empty": {
+          "title": "아직 로드한 모델이 없어요",
+          "body": "카탈로그에서 받아볼래요?",
+          "cta": "카탈로그로 가볼게요"
+        },
+        "column": {
+          "name": "이름",
+          "size": "크기",
+          "digest": "디지스트"
+        }
+      }
+    },
+    "install": {
+      "title": "런타임 설치",
+      "subtitle": "기존 웹앱이 호출할 로컬 AI 두뇌 1개를 받아드릴게요",
+      "alreadyReady": "준비됐어요",
+      "notInstalled": "아직 받지 않았어요",
+      "actions": {
+        "install": "받을게요",
+        "reinstall": "다시 받을게요",
+        "details": "자세히 볼래요",
+        "openFolder": "폴더 열기",
+        "cancel": "그만둘게요"
+      },
+      "cards": {
+        "ollama": {
+          "name": "Ollama",
+          "reason": "가장 빠르게 시작할 수 있는 오픈소스 런타임이에요",
+          "license": "MIT · 자동 설치"
+        },
+        "lmStudio": {
+          "name": "LM Studio",
+          "reason": "GUI가 필요하면 좋아요. 공식 사이트에서 설치해요",
+          "license": "EULA 동의 필요"
+        }
+      },
+      "empty": {
+        "title": "두 런타임 모두 준비됐어요",
+        "body": "카탈로그에서 모델을 받아볼까요?",
+        "cta": "카탈로그로 가볼게요"
+      },
+      "drawer": {
+        "installSize": "설치 크기",
+        "licenseFull": "라이선스",
+        "homepage": "공식 사이트",
+        "close": "닫기"
+      }
+    },
+    "workbench": {
+      "title": "워크벤치",
+      "subtitle": "5단계 작업대",
+      "comingSoon": "다음 페이즈에서 만나요",
+      "hero": {
+        "title": "내 모델을 직접 빚어볼래요",
+        "body": "한국어 데이터로 LoRA 파인튜닝하고, 양자화하고, Ollama에 1-click 등록하는 5단계 작업대예요.",
+        "notifyToggle": "준비되면 알려드릴게요",
+        "notifyOn": "알림이 켜졌어요"
+      },
+      "stepper": {
+        "data": "데이터",
+        "quantize": "양자화",
+        "lora": "LoRA",
+        "validate": "검증",
+        "register": "등록"
+      },
+      "actions": {
+        "start": "시작할게요",
+        "cancel": "그만둘게요",
+        "next": "다음으로 갈게요",
+        "back": "이전으로",
+        "retry": "다시 시도할게요",
+        "newRun": "새 작업으로",
+        "browse": "파일 고를래요"
+      },
+      "config": {
+        "baseModel": "기본 모델 이름",
+        "baseModelHint": "기본 모델 식별자예요. 예: Qwen2.5-3B",
+        "datasetPath": "데이터 파일 경로",
+        "datasetPathHint": "JSONL 파일 경로를 적어 주세요. 비워두면 mock 데이터로 연습할 수 있어요.",
+        "epochs": "epoch 수",
+        "epochsHint": "보통 3~5가 적당해요"
+      },
+      "data": {
+        "title": "1. 데이터를 골라주세요",
+        "subtitle": "JSONL 파일을 자동으로 정규화해서 미리 보여드려요. 4가지 포맷(OpenAI/ShareGPT/Alpaca/한국어 Q&A)이 모두 돼요.",
+        "previewTitle": "첫 5줄 미리보기",
+        "previewLoading": "데이터를 불러오고 있어요",
+        "previewEmpty": "비어 있어요. 다른 파일을 골라볼래요?",
+        "previewError": "미리 볼 수 없는 형식이에요. 데이터 파일을 다시 확인해 주세요.",
+        "skipPreview": "미리보기 없이 진행할래요"
+      },
+      "quantize": {
+        "title": "2. 모델을 가볍게 만들게요",
+        "subtitle": "양자화 수준을 골라주세요. 숫자가 작을수록 가볍지만 품질이 살짝 떨어질 수 있어요.",
+        "typeLabel": "양자화 수준",
+        "typeHint": "Q4_K_M이 가장 균형 좋아요"
+      },
+      "lora": {
+        "title": "3. 한국어를 가르칠게요",
+        "subtitle": "LoRA 파인튜닝으로 데이터에 맞춰 모델을 살짝 튜닝해요.",
+        "presetLabel": "한국어 preset",
+        "presetOn": "한국어(alpaca-ko) preset을 켤게요",
+        "presetOff": "일반 alpaca preset을 쓸래요"
+      },
+      "validate": {
+        "title": "4. 품질을 확인해 볼게요",
+        "subtitle": "한국어 baseline 10개 evals로 모델 품질을 점검해요.",
+        "score": "정답률 {{pct}}% (통과 {{passed}} / 전체 {{total}})",
+        "categoryFactuality": "사실 확인",
+        "categoryInstruction": "지시 따르기",
+        "categoryToneKorean": "한국어 톤",
+        "categoryUnknown": "기타",
+        "byCategoryLabel": "카테고리별 점수",
+        "casesLabel": "케이스별 결과",
+        "passed": "통과",
+        "failed": "실패"
+      },
+      "register": {
+        "title": "5. Ollama에 등록할게요",
+        "subtitle": "Modelfile을 만들어 보여드릴게요. 등록 토글을 켜두면 Ollama에 바로 등록할 수 있어요.",
+        "togglePullLabel": "Ollama에 자동으로 등록할게요",
+        "previewTitle": "Modelfile 미리보기",
+        "successTitle": "등록 준비를 마쳤어요",
+        "summaryDuration": "총 {{seconds}}초 걸렸어요",
+        "summaryArtifacts": "결과물 {{count}}개",
+        "registeredIdLabel": "등록된 모델 ID",
+        "openCatalog": "모델 카탈로그에서 확인할게요",
+        "ollamaCreate": {
+          "outputNameLabel": "Ollama 모델 이름",
+          "logTitle": "Ollama create 진행 로그",
+          "started": "Ollama에 등록을 시작했어요",
+          "completed": "Ollama 등록을 마쳤어요",
+          "failed": "Ollama 등록이 실패했어요"
+        }
+      },
+      "runtime": {
+        "label": "검증 단계 런타임",
+        "hint": "검증 단계에서 어떤 런타임으로 응답을 받을지 골라 주세요. Mock은 외부 통신 없이 데모용이에요.",
+        "option": {
+          "mock": "Mock(테스트)",
+          "ollama": "Ollama",
+          "lm-studio": "LM Studio"
+        },
+        "baseUrlLabel": "런타임 base URL",
+        "baseUrlHint": "보통 기본값 그대로면 돼요. 다른 포트면 바꿔 주세요.",
+        "modelIdLabel": "모델 ID",
+        "modelIdHint": "Ollama tag 또는 LM Studio에 로드된 모델 ID예요. 비우면 기본 모델 이름을 써요.",
+        "ollamaCreateToggle": "완료 후 Ollama에 자동으로 등록할게요"
+      },
+      "progress": {
+        "label": "진행률",
+        "current": "지금: {{stage}}"
+      },
+      "status": {
+        "idle": "대기 중",
+        "starting": "시작하고 있어요",
+        "running": "진행 중",
+        "completed": "끝났어요",
+        "failed": "실패했어요",
+        "cancelled": "취소됐어요"
+      },
+      "errors": {
+        "startFailed": "시작에 실패했어요. 다시 시도해 볼래요?",
+        "default": "알 수 없는 오류가 났어요. 다시 시도해 볼까요?",
+        "missingBaseModel": "기본 모델 이름을 적어 주세요"
+      },
+      "steps": {
+        "1": {
+          "title": "데이터 인입",
+          "body": "JSONL chat을 자동으로 변환해 드려요"
+        },
+        "2": {
+          "title": "양자화",
+          "body": "llama-quantize로 모델 크기를 줄여요"
+        },
+        "3": {
+          "title": "LoRA 파인튜닝",
+          "body": "LLaMA-Factory CLI로 한국어를 가르쳐요"
+        },
+        "4": {
+          "title": "한국어 검증",
+          "body": "QA evals로 품질을 확인해요"
+        },
+        "5": {
+          "title": "등록",
+          "body": "Ollama Modelfile을 자동으로 만들어요"
+        }
+      }
+    },
+    "diagnostics": {
+      "title": "진단",
+      "subtitle": "이 PC가 잘 돌아가는지 한 번에 확인해요",
+      "health": {
+        "green": "전부 정상이에요",
+        "yellow": "주의할 항목이 있어요",
+        "red": "문제가 발생했어요"
+      },
+      "sections": {
+        "scan": {
+          "title": "자가 점검",
+          "empty": "아직 점검을 한 적이 없어요",
+          "rescan": "다시 점검"
+        },
+        "gateway": {
+          "title": "게이트웨이 헬스",
+          "activeKeys": "활성 키 {{count}}개",
+          "latency": "최근 60초 응답 속도",
+          "recentRequests": "최근 요청",
+          "noRequests": "아직 요청이 없어요"
+        },
+        "bench": {
+          "title": "벤치 결과",
+          "empty": "측정한 모델이 없어요",
+          "startNew": "새 측정 시작"
+        },
+        "workspace": {
+          "title": "워크스페이스",
+          "fingerprint": "PC 지문",
+          "lastRepair": "마지막 정리",
+          "never": "정리한 적 없어요",
+          "history": "정리 기록"
+        }
+      }
+    },
+    "presets": {
+      "category": {
+        "coding": "코딩",
+        "translation": "번역",
+        "legal": "법률",
+        "marketing": "마케팅",
+        "medical": "의료",
+        "education": "교육",
+        "research": "리서치"
+      }
+    },
+    "guide": {
+      "title": "가이드",
+      "subtitle": "LMmaster의 6가지 핵심 기능을 한국어로 안내해드려요",
+      "sectionsHeading": "섹션",
+      "searchPlaceholder": "검색어를 적어 주세요",
+      "noResults": "결과가 없어요. 다른 키워드로 검색해 볼래요?",
+      "tryAction": "이 기능 사용해 볼게요",
+      "sections": {
+        "getting-started": "시작하기",
+        "catalog": "모델 카탈로그",
+        "workbench": "워크벤치",
+        "knowledge": "자료 인덱싱 (RAG)",
+        "api-keys": "API 키 + 외부 웹앱",
+        "portable": "포터블 이동",
+        "diagnostics": "자가 점검 + 자동 갱신",
+        "faq": "자주 묻는 질문 (FAQ)"
+      }
+    },
+    "help": {
+      "triggerAria": "이 화면 도움말을 볼게요",
+      "popoverAria": "도움말 팝오버",
+      "openGuide": "전체 가이드 보기",
+      "close": "닫을게요",
+      "defaultHint": "이 기능에 대한 도움말이에요",
+      "workspace": "내 자료를 모델에 가르쳐 두고 빠르게 검색해요. 여기서 폴더를 인덱싱하면 워크스페이스 안에 격리돼요.",
+      "workbench": "데이터 → 양자화 → LoRA → 검증 → 등록 5단계로 모델을 직접 가공할 수 있어요.",
+      "catalog": "PC에 잘 맞는 모델을 자동으로 추천해드려요. 카드를 클릭하면 자세히 볼 수 있어요.",
+      "apiKeys": "외부 웹앱이 LMmaster를 부를 수 있게 키를 만들어요. 허용 모델, 출처, 만료 시간을 정할 수 있어요.",
+      "portable": "워크스페이스 전체를 단일 zip으로 내보내고 다른 PC에서 그대로 가져올 수 있어요."
+    },
+    "shortcuts": {
+      "title": "단축키",
+      "close": "닫을게요",
+      "col": {
+        "action": "기능",
+        "shortcut": "단축키"
+      },
+      "rows": {
+        "palette": "명령 팔레트",
+        "shortcuts": "단축키 도움말",
+        "shortcutsAlt": "단축키 도움말 (대체)",
+        "navHome": "홈으로 이동",
+        "navCatalog": "모델 카탈로그",
+        "navInstall": "설치 센터",
+        "navRuntimes": "런타임",
+        "navWorkspace": "워크스페이스",
+        "navProjects": "프로젝트",
+        "navKeys": "로컬 API",
+        "navWorkbench": "워크벤치",
+        "navDiagnostics": "진단",
+        "escape": "모달, 드로어 닫기"
+      }
+    },
+    "tour": {
+      "title": "처음이세요?",
+      "body": "가이드 둘러보고 LMmaster의 핵심 기능을 빠르게 익혀볼래요?",
+      "accept": "지금 볼게요",
+      "decline": "다음에 할게요"
+    }
+  },
+  "catalog": {
+    "title": "모델 카탈로그",
+    "subtitle": "내 PC에 맞는 모델을 골라보세요",
+    "search": { "placeholder": "모델 이름 검색" },
+    "category": {
+      "all": "전체",
+      "agent-general": "일반 어시스턴트",
+      "roleplay": "롤플레이",
+      "coding": "코딩",
+      "slm": "소형 모델",
+      "sound-stt": "음성 인식",
+      "sound-tts": "음성 합성"
+    },
+    "filter": {
+      "tool": "도구 호출",
+      "vision": "비전",
+      "structured": "구조화 출력",
+      "recommendedOnly": "추천만"
+    },
+    "sort": {
+      "label": "정렬",
+      "score": "추천 점수순",
+      "korean": "한국어 강도순",
+      "size": "설치 크기 작은순"
+    },
+    "empty": {
+      "noMatch": "조건에 맞는 모델이 없어요. 필터를 조정해 볼래요?",
+      "category": "이 카테고리에는 아직 모델이 없어요."
+    }
+  },
+  "recommendation": {
+    "best": { "label": "이 PC에 가장 좋아요" },
+    "balanced": { "label": "균형이 좋아요" },
+    "lightweight": { "label": "가볍게 써볼래요" },
+    "fallback": { "label": "확실하게 돌아가요" },
+    "empty": {
+      "best": "이 PC에서 권장할 모델이 없어요. 가벼운 옵션부터 시도해 볼래요?",
+      "slot": "후보가 없어요"
+    },
+    "loading": "추천을 계산하고 있어요"
+  },
+  "model": {
+    "metric": {
+      "vram": "VRAM 권장",
+      "ram": "RAM 권장",
+      "size": "설치 크기",
+      "noVram": "GPU 미사용"
+    },
+    "maturity": {
+      "stable": "안정",
+      "beta": "베타",
+      "experimental": "실험",
+      "deprecated": "지원 종료"
+    },
+    "verification": {
+      "verified": "검증됨",
+      "community": "커뮤니티"
+    },
+    "compat": {
+      "fit": "내 PC와 잘 맞아요",
+      "tight": "메모리 빠듯해요",
+      "exceeds": "여유 있게 돌아가요",
+      "unfit": "이 PC에선 못 돌려요"
+    },
+    "exclude": {
+      "insufficientVram": "VRAM {{need}} 필요 (현재 {{have}})",
+      "insufficientRam": "RAM {{need}} 필요 (현재 {{have}})",
+      "deprecated": "더 이상 권장하지 않아요",
+      "incompatible": "이 PC와 호환되지 않아요"
+    },
+    "cta": {
+      "details": "자세히 볼래요",
+      "install": "설치할게요"
+    }
+  },
+  "drawer": {
+    "section": {
+      "quant": "양자화 옵션",
+      "warnings": "주의 사항",
+      "useCases": "주요 사용처",
+      "license": "라이선스",
+      "context": "사용 가이드",
+      "bench": "30초 측정",
+      "presets": "이 모델 추천 프리셋",
+      "presetsEmpty": "추천 프리셋이 없어요"
+    },
+    "close": "닫기",
+    "quantRecommended": "이게 권장이에요",
+    "install": {
+      "cta": "이 모델 설치할게요",
+      "aria": "{{name}} 설치 페이지로 이동할게요"
+    }
+  },
+  "workspace": {
+    "repair": {
+      "yellow": "이 PC에서 처음 실행하는 환경이에요. 벤치/스캔 캐시를 새로 측정할게요.",
+      "applyYellow": "지금 갱신할게요",
+      "later": "나중에 할게요",
+      "redTitle": "다른 환경에서 가져온 워크스페이스예요",
+      "redBody": "운영체제 또는 아키텍처가 바뀌었어요. 기존 런타임은 다시 설치해야 동작해요.",
+      "redDetail": "이전: {{prevOs}} → 지금: {{currentOs}}",
+      "redModelsPreserved": "받아둔 모델 파일은 그대로 보존돼요.",
+      "applyRed": "갱신하고 다시 설치 안내 받을래요",
+      "applied": "정리했어요. 다시 측정할 캐시: {{caches}}",
+      "close": "닫을게요"
+    }
+  },
+  "keys": {
+    "title": "로컬 API 키",
+    "subtitle": "기존 웹앱이 이 PC의 모델을 호출할 때 쓰는 인증 토큰이에요",
+    "create": "새 키 만들기",
+    "table": {
+      "alias": "별칭",
+      "prefix": "키 미리보기",
+      "scope": "권한",
+      "created": "생성",
+      "lastUsed": "마지막 사용",
+      "status": "상태",
+      "actions": ""
+    },
+    "status": {
+      "active": "사용 중",
+      "revoked": "회수됨"
+    },
+    "neverUsed": "사용 기록 없음",
+    "actions": {
+      "revoke": "회수할게요",
+      "revokeConfirm": "이 키를 회수할게요. 회수된 키는 더 이상 호출할 수 없어요."
+    },
+    "empty": {
+      "title": "아직 발급한 키가 없어요",
+      "body": "새 키를 만들어 기존 웹앱과 연결해 보세요"
+    },
+    "modal": {
+      "createTitle": "새 키 발급",
+      "aliasLabel": "별칭 (어떤 사이트에서 쓸지 알아볼 수 있게요)",
+      "aliasPlaceholder": "예: 내 블로그",
+      "originLabel": "허용할 사이트 주소 (Origin)",
+      "originPlaceholder": "예: https://my-blog.com",
+      "originHint": "이 키는 정확히 이 주소에서만 호출할 수 있어요. 여러 개를 추가할 수 있어요.",
+      "addOrigin": "주소 추가",
+      "removeOrigin": "지우기",
+      "modelsLabel": "허용할 모델 패턴",
+      "modelsHint": "* 는 모든 모델, exaone-* 는 EXAONE 계열만",
+      "submit": "발급할게요",
+      "cancel": "취소",
+      "revealTitle": "이 키는 지금만 보여드려요",
+      "revealBody": "닫으면 다시 볼 수 없어요. 안전한 곳에 복사해 주세요.",
+      "revealCopy": "복사할게요",
+      "revealCopied": "복사했어요",
+      "revealClose": "닫을게요",
+      "revealAutomask": "{{seconds}}초 뒤에 자동으로 가려요"
+    },
+    "errors": {
+      "emptyAlias": "별칭을 입력해 주세요",
+      "emptyOrigin": "허용할 사이트 주소를 1개 이상 추가해 주세요",
+      "createFailed": "키 발급에 실패했어요. 다시 시도해 볼래요?",
+      "revokeFailed": "키 회수에 실패했어요"
+    }
+  },
+  "bench": {
+    "measure": "이 PC에서 30초 측정해 볼래요",
+    "running": "측정하고 있어요",
+    "cancel": "그만둘게요",
+    "retry": "다시 측정",
+    "summary": "초당 {{tps}}토큰 · 첫 응답 {{ttft}}초",
+    "partial": "약 {{tps}}토큰/초 · {{seconds}}초 부분측정",
+    "timeoutZero": "30초 안에 측정을 마치지 못했어요",
+    "wallclockBadge": "추정",
+    "wallclockHint": "LM Studio는 정확한 토큰 카운터를 주지 않아 추정치예요",
+    "error": {
+      "runtimeUnreachable": "런타임이 꺼져 있어요",
+      "modelNotLoaded": "모델이 런타임에 등록되지 않았어요",
+      "insufficientVram": "이 PC에는 무거워요 ({{need}} 필요, {{have}} 있음)",
+      "cancelled": "측정을 취소했어요",
+      "timeout": "30초 안에 끝내지 못했어요",
+      "other": "측정에 실패했어요"
+    }
+  },
+  "palette": {
+    "aria": {
+      "dialog": "명령 팔레트"
+    },
+    "placeholder": "명령을 검색해 주세요",
+    "empty": "찾는 명령이 없어요. 다른 단어로 검색해 주세요.",
+    "group": {
+      "wizard": "마법사",
+      "navigation": "이동",
+      "system": "시스템",
+      "diagnostics": "진단"
+    },
+    "cmd": {
+      "wizard": {
+        "lang.ko": "언어를 한국어로",
+        "lang.en": "Switch to English",
+        "scan.retry": "환경 다시 점검",
+        "restart": "마법사 처음부터"
+      },
+      "nav": {
+        "home": "홈으로 가기",
+        "diagnostics": "진단 보기"
+      },
+      "system": {
+        "gateway.copyUrl": "게이트웨이 URL 복사",
+        "wizard.reopen": "마법사 다시 보기"
+      }
+    }
+  },
+  "onboarding": {
+    "aria": {
+      "root": "첫 실행 안내"
+    },
+    "steps": {
+      "language": "언어",
+      "scan": "환경 점검",
+      "install": "첫 모델",
+      "done": "준비 완료"
+    },
+    "actions": {
+      "next": "계속할게요",
+      "back": "이전으로",
+      "skip": "나중에 할게요"
+    },
+    "language": {
+      "title": "언어를 선택해 주세요",
+      "subtitle": "언제든 설정에서 바꿀 수 있어요",
+      "option": {
+        "ko": "한국어",
+        "en": "English"
+      }
+    },
+    "scan": {
+      "title": "환경을 살펴볼게요",
+      "subtitle": {
+        "running": "하드웨어와 런타임을 확인하고 있어요.",
+        "done": "확인을 마쳤어요. 아래에서 살펴봐 주세요.",
+        "failed": "환경을 확인하지 못했어요"
+      },
+      "captionRunning": "최대 3초 정도 걸려요",
+      "card": {
+        "os": "운영체제",
+        "memory": "메모리",
+        "gpu": "GPU 가속",
+        "runtimes": "런타임"
+      },
+      "status": {
+        "ok": "괜찮아요",
+        "warn": "주의",
+        "cpuOnly": "CPU 전용",
+        "running": "사용 중",
+        "none": "없음"
+      },
+      "body": {
+        "memory": "{{available}} 사용 가능 / {{total}} 전체",
+        "noGpu": "GPU를 찾지 못했어요. CPU로도 실행은 돼요"
+      },
+      "hint": {
+        "lowRam": "메모리가 8GB 미만이라 큰 모델이 어려울 수 있어요",
+        "lowDisk": "여유 디스크가 20GB 미만이에요. 모델 다운로드 전에 정리해 주세요"
+      },
+      "runtime": {
+        "running": "사용 중",
+        "installed": "설치됨",
+        "notInstalled": "설치 안 됨",
+        "error": "확인 실패"
+      },
+      "failure": {
+        "title": "환경 점검에 실패했어요",
+        "body": "다시 시도해 볼까요?"
+      }
+    },
+    "install": {
+      "title": "런타임을 받아볼게요",
+      "subtitle": "Ollama가 추천이에요. 한 가지만 받으면 모델은 카탈로그에서 받을 수 있어요.",
+      "alreadyRunning": "이미 사용 중이에요",
+      "ramLowHint": "메모리가 8GB 미만이에요. 작은 모델을 권장해요",
+      "pill": {
+        "recommended": "추천",
+        "eula": "EULA 안내"
+      },
+      "meta": {
+        "license": "라이선스",
+        "size": "용량"
+      },
+      "cta": {
+        "install": "받을게요",
+        "alreadyOk": "준비됐어요"
+      },
+      "cards": {
+        "ollama": {
+          "reason": "가장 빠르게 시작할 수 있는 오픈소스 런타임이에요",
+          "license": "MIT · 자동 설치",
+          "size": "약 800MB"
+        },
+        "lmStudio": {
+          "reason": "GUI가 필요하면 좋아요. 공식 사이트에서 직접 설치해요",
+          "license": "EULA 동의 필요",
+          "size": "공식 사이트 안내"
+        }
+      },
+      "running": {
+        "title": "{{name}} 받고 있어요"
+      },
+      "phase": {
+        "starting": "시작하고 있어요",
+        "download": "받고 있어요",
+        "extract": "압축 풀고 있어요",
+        "postCheck": "확인하고 있어요",
+        "finished": "거의 끝났어요"
+      },
+      "retrySuffix": "({{attempt}}차 시도)",
+      "speedPending": "속도 측정 중",
+      "etaPending": "곧 알려드릴게요",
+      "etaSeconds": "약 {{seconds}}초 남았어요",
+      "etaMinutes": "약 {{minutes}}분 {{seconds}}초 남았어요",
+      "progressAria": "설치 진행률",
+      "detailsLabel": "자세히 보기",
+      "noLogYet": "아직 진행 정보가 없어요",
+      "cancel": "그만두기",
+      "skip": {
+        "title": "이미 셋업이 끝났어요",
+        "body": "이미 사용 중이에요. 다음 단계로 갈게요"
+      },
+      "failed": {
+        "title": "설치에 실패했어요"
+      },
+      "openedUrl": {
+        "title": "공식 사이트가 열렸어요",
+        "body": "공식 사이트에서 설치를 끝내고 다시 와주세요"
+      },
+      "error": {
+        "default": "알 수 없는 오류가 났어요. 다시 시도해 볼까요?",
+        "download-failed": "받기에 실패했어요. 네트워크를 확인하고 다시 시도해 볼까요?",
+        "extract-failed": "압축 풀기에 실패했어요. 디스크 공간을 확인해 주세요.",
+        "io-error": "파일을 쓰지 못했어요. 권한을 확인해 주세요.",
+        "installer-exit-nonzero": "설치 프로그램이 정상 종료하지 않았어요.",
+        "installer-killed": "설치 프로그램이 도중에 멈췄어요.",
+        "installer-timeout": "시간이 너무 오래 걸렸어요. 다시 시도해 볼까요?",
+        "cancelled": "설치를 취소했어요.",
+        "open-url-failed": "브라우저를 여는 데 실패했어요. 직접 사이트를 열어주세요.",
+        "unsupported": "이 환경은 아직 지원하지 않아요.",
+        "invalid-spec": "매니페스트가 잘못됐어요. 개발팀에 알려주세요.",
+        "sink-closed": "진행 정보가 끊겼어요. 다시 시도해 볼까요?",
+        "no-install-section": "설치 정보가 없어요.",
+        "no-platform-branch": "이 OS에서는 설치할 수 없어요.",
+        "init-failed": "설치 준비 중 문제가 생겼어요."
+      }
+    },
+    "done": {
+      "title": "준비됐어요",
+      "subtitle": "이제 LMmaster를 마음껏 써보세요",
+      "cta": "시작할게요"
+    },
+    "error": {
+      "title": "문제가 생겼어요",
+      "body": "다시 시도해 볼까요?",
+      "retry": "다시 시도",
+      "close": "닫기"
+    }
+  }
+}

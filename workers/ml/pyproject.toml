@@ -1,0 +1,21 @@
+[project]
+name = "lmmaster-ml"
+version = "0.0.1"
+description = "LMmaster ML Workbench Python sidecar (v1 placeholder)."
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+# 실제 의존성은 ML Workbench 활성 시 별도 가상환경에서 설치.
+sft = [
+  "transformers",
+  "peft",
+  "trl",
+  "accelerate",
+  "datasets",
+  "bitsandbytes; sys_platform != 'darwin'"
+]
+quantize = [
+  "optimum",
+  "onnxruntime"
+]

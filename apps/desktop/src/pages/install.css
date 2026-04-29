@@ -1,0 +1,369 @@
+/* Install 페이지 — design-system tokens만 사용. Phase 4.b. */
+
+.install-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-8);
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* ── Topbar ─────────────────────────────────────────────────────── */
+
+.install-topbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.install-topbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.install-title {
+  margin: 0;
+  font-size: var(--fs-22);
+  font-weight: var(--weight-semi);
+  letter-spacing: -0.01em;
+}
+
+.install-subtitle {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+}
+
+/* ── Card grid (2 cards) ──────────────────────────────────────── */
+
+.install-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+@media (max-width: 880px) {
+  .install-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.install-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-emphasized),
+    transform var(--dur-fast) var(--ease-emphasized);
+  box-shadow: inset 0 1px 0 var(--white-a-2);
+  text-align: left;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+}
+
+.install-card:hover {
+  border-color: var(--primary-a-3);
+}
+
+.install-card:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
+.install-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.install-card-name {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: var(--weight-semi);
+  color: var(--text);
+}
+
+.install-card-license {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-11);
+  font-weight: var(--weight-medium);
+  background: var(--surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.install-card-reason {
+  margin: 0;
+  font-size: var(--fs-13);
+  line-height: var(--lh-loose);
+  color: var(--text-secondary);
+}
+
+.install-card-status-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.install-card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.install-action {
+  appearance: none;
+  font: inherit;
+  height: 32px;
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  font-size: var(--fs-12);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-emphasized),
+    border-color var(--dur-fast) var(--ease-emphasized);
+}
+
+.install-action:hover {
+  background: var(--surface-2);
+  border-color: var(--primary-a-3);
+}
+
+.install-action:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 1px;
+}
+
+.install-action.is-primary {
+  background: var(--primary-a-2);
+  color: var(--primary);
+  border-color: var(--primary-a-3);
+}
+
+.install-action.is-primary:hover {
+  background: var(--primary-a-3);
+}
+
+.install-action[disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ── Progress panel (InstallProgress compact) ─────────────────── */
+
+.install-progress-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  box-shadow: inset 0 1px 0 var(--white-a-2);
+}
+
+.install-progress-panel-title {
+  margin: 0;
+  font-size: var(--fs-12);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+}
+
+/* InstallProgress compact 모드 — 단일 라인 row + 작은 height. */
+
+.onb-install-compact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.onb-install-compact-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 40px;
+}
+
+.onb-install-compact-title {
+  font-size: var(--fs-13);
+  color: var(--text);
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onb-install-compact-phase {
+  font-size: var(--fs-12);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.onb-install-compact-cancel {
+  height: 28px;
+  padding: 0 var(--space-3);
+  font-size: var(--fs-12);
+}
+
+.onb-install-progress.is-compact {
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.onb-install-progress.is-compact .onb-install-bar {
+  height: 4px;
+}
+
+/* ── Empty state ──────────────────────────────────────────────── */
+
+.install-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-3);
+}
+
+.install-empty-title {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: var(--weight-semi);
+  color: var(--text);
+}
+
+.install-empty-body {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+}
+
+.install-empty-cta {
+  margin-top: var(--space-2);
+}
+
+/* ── Drawer (manifest detail) ─────────────────────────────────── */
+
+.install-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 100;
+  animation: install-drawer-fade var(--dur-base) var(--ease-emphasized);
+}
+
+@keyframes install-drawer-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.install-drawer {
+  width: 420px;
+  max-width: 90vw;
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  animation: install-drawer-slide var(--dur-base) var(--ease-emphasized);
+}
+
+@keyframes install-drawer-slide {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.install-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.install-drawer-title {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: var(--weight-semi);
+  color: var(--text);
+}
+
+.install-drawer-close {
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-1);
+  color: var(--text);
+  font-size: var(--fs-18);
+  cursor: pointer;
+}
+
+.install-drawer-close:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 1px;
+}
+
+.install-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-4);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.install-drawer-section-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-12);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+}
+
+.install-drawer-text {
+  margin: 0;
+  font-size: var(--fs-13);
+  line-height: var(--lh-loose);
+  color: var(--text);
+}
+
+.install-drawer-link {
+  color: var(--primary);
+  text-decoration: none;
+  border-bottom: 1px solid var(--primary-a-3);
+}
+
+.install-drawer-link:hover {
+  border-bottom-color: var(--primary);
+}

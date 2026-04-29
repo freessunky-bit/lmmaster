@@ -1,0 +1,14 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 1' integration: registry-fetcher 자동 갱신 + 수동 트리거 IPC 권한.
+# 외부 통신 0 정책 예외 — GitHub Releases / jsDelivr만 허용 (ADR-0026 §1과 같은 갈래).
+
+[[permission]]
+identifier = "allow-refresh-catalog-now"
+description = "Trigger an immediate manifest re-fetch (manual refresh)."
+commands.allow = ["refresh_catalog_now"]
+
+[[permission]]
+identifier = "allow-get-last-catalog-refresh"
+description = "Read the last manifest refresh outcome (timestamp + counts)."
+commands.allow = ["get_last_catalog_refresh"]

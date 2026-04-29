@@ -1,0 +1,31 @@
+[package]
+name = "scanner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+shared-types.workspace = true
+runtime-detector.workspace = true
+hardware-probe.workspace = true
+
+# async / scheduler
+tokio = { workspace = true }
+tokio-cron-scheduler = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# HTTP (Ollama)
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# error / logging
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "test-util"] }
+wiremock = "0.6"
+tempfile = { workspace = true }

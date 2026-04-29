@@ -1,0 +1,192 @@
+/* Home 페이지 스타일 — design-system tokens만 사용. Phase 1' 추가 화면. */
+
+.home-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-8);
+  overflow-y: auto;
+}
+
+/* ── Hero ────────────────────────────────────────────────────────── */
+
+.home-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.home-hero-title {
+  margin: 0;
+  font-size: var(--fs-22);
+  font-weight: var(--weight-semi);
+  letter-spacing: -0.01em;
+}
+
+.home-hero-subtitle {
+  margin: 0;
+  font-size: var(--fs-15);
+  color: var(--text-secondary);
+}
+
+/* MIGRATED to StatusPill (design-system/react) — Phase 4 cleanup.
+   아래 룰은 더 이상 사용되지 않아요. v1.x cleanup 페이즈에서 정식 삭제 예정 (audit trail 유지).
+.home-gateway-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-13);
+  width: fit-content;
+}
+
+.home-gateway-pill .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--text-muted);
+  transition: background var(--dur-fast) var(--ease-emphasized),
+    box-shadow var(--dur-fast) var(--ease-emphasized);
+}
+
+.home-gateway-pill[data-status="listening"] .dot {
+  background: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-a-3);
+}
+
+.home-gateway-pill[data-status="failed"] .dot {
+  background: var(--error);
+}
+
+.home-gateway-pill[data-status="booting"] .dot {
+  background: var(--info);
+}
+
+.home-gateway-pill[data-status="stopping"] .dot {
+  background: var(--warn);
+}
+
+.home-gateway-text {
+  color: var(--text);
+}
+
+.home-gateway-port {
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+}
+*/
+
+/* ── Section ─────────────────────────────────────────────────────── */
+
+.home-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.home-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.home-section-title {
+  margin: 0;
+  font-size: var(--fs-18);
+  font-weight: var(--weight-semi);
+}
+
+.home-section-subtitle {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+}
+
+/* ── Recommended models grid ─────────────────────────────────────── */
+
+.home-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-3);
+}
+
+.home-model-card {
+  padding: var(--space-5);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-md), inset 0 1px 0 var(--white-a-2);
+  transition: border-color var(--dur-base) var(--ease-emphasized);
+}
+
+.home-model-card:hover {
+  border-color: var(--border-strong);
+}
+
+.home-model-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.home-model-card-title {
+  font-size: var(--fs-16);
+  font-weight: var(--weight-semi);
+  color: var(--text);
+}
+
+.home-model-card-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-12);
+  font-weight: var(--weight-medium);
+  background: var(--primary-a-2);
+  color: var(--primary);
+  border: 1px solid var(--primary-a-3);
+}
+
+.home-model-card-reason {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+  line-height: var(--lh-normal);
+}
+
+.home-model-card-size {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+}
+
+/* ── Scan card ───────────────────────────────────────────────────── */
+
+.home-scan-card {
+  padding: var(--space-5);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  box-shadow: inset 0 1px 0 var(--white-a-2);
+}
+
+.home-scan-summary {
+  margin: 0;
+  font-size: var(--fs-14);
+  line-height: var(--lh-loose);
+  color: var(--text);
+}
+
+.home-scan-empty {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text-muted);
+}

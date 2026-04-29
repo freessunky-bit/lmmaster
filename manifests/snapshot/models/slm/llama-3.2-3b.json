@@ -1,0 +1,63 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1. Bundled fallback.",
+  "schema_version": 1,
+  "generated_at": "2026-04-27T00:00:00Z",
+  "entries": [
+    {
+      "id": "llama-3.2-3b-instruct",
+      "display_name": "Llama 3.2 3B Instruct",
+      "category": "slm",
+      "model_family": "llama",
+      "source": {
+        "type": "hugging-face",
+        "repo": "bartowski/Llama-3.2-3B-Instruct-GGUF",
+        "file": "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
+      },
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 2000,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
+        },
+        {
+          "label": "Q8_0",
+          "size_mb": 3400,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Llama-3.2-3B-Instruct-Q8_0.gguf"
+        }
+      ],
+      "min_vram_mb": null,
+      "rec_vram_mb": 4096,
+      "min_ram_mb": 4096,
+      "rec_ram_mb": 8192,
+      "install_size_mb": 2000,
+      "context_guidance": "영어 우선 — 한국어 fallback. 가장 작은 stable 옵션 (fallback_choice).",
+      "language_strength": 5,
+      "roleplay_strength": 5,
+      "coding_strength": 5,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "Llama 3.2 Community License",
+      "maturity": "stable",
+      "portable_suitability": 9,
+      "on_device_suitability": 9,
+      "fine_tune_suitability": 6,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-27",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "영어 우선 일반 비서",
+        "온디바이스 SLM",
+        "fallback (한국어 미지원 환경)"
+      ],
+      "warnings": [
+        "한국어 응답 품질이 EXAONE/HCX-SEED보다 낮아요. 한국어가 1순위면 다른 모델을 권해요."
+      ]
+    }
+  ]
+}

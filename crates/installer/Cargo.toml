@@ -1,0 +1,49 @@
+[package]
+name = "installer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+shared-types.workspace = true
+
+# HTTP / streaming
+reqwest = { workspace = true, features = ["stream"] }
+tokio.workspace = true
+tokio-util.workspace = true
+futures-util.workspace = true
+bytes.workspace = true
+
+# crypto
+sha2.workspace = true
+hex.workspace = true
+
+# retry / atomic write
+backon.workspace = true
+atomicwrites.workspace = true
+tempfile.workspace = true
+
+# serde / error / logging
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+
+# Phase 1A.3.b: install action executor
+runtime-detector.workspace = true
+webbrowser.workspace = true
+
+# archive extraction (Phase 1A.3.b.2)
+zip.workspace = true
+tar.workspace = true
+flate2.workspace = true
+
+# dmg extraction (Phase 1A.3.b.3, macOS only)
+[target.'cfg(target_os = "macos")'.dependencies]
+plist.workspace = true
+walkdir.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "test-util"] }
+wiremock = "0.6"

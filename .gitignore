@@ -1,0 +1,64 @@
+# Rust
+/target
+**/target
+**/*.rs.bk
+Cargo.lock
+
+# Node
+node_modules
+.pnpm-store
+dist
+.next
+.vite
+
+# Tauri
+apps/desktop/src-tauri/target
+apps/desktop/src-tauri/gen
+
+# Python
+__pycache__
+*.pyc
+.venv
+.python-version
+.pytest_cache
+.mypy_cache
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode
+.idea
+*.iml
+
+# LMmaster workspace runtime data (do not commit)
+/workspace
+/runtimes
+/models
+/cache
+/logs
+
+# Secrets
+.env
+.env.*
+*.sqlcipher
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Cryptographic keys (minisign, etc.) — 절대 commit X
+*.key
+*.key.pwd
+*.pem
+.tauri/
+**/.tauri/
+
+# Tauri 자동 서명 임시 파일
+minisign.local.key.pwd
+
+# Build artifacts
+*.log
+*.tmp

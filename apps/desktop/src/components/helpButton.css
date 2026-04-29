@@ -1,0 +1,140 @@
+/* HelpButton — Phase 12'.b. design-system tokens만. */
+
+.help-button-wrap {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.help-button-trigger {
+  appearance: none;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: var(--fs-13);
+  font-weight: var(--weight-semi);
+  text-align: center;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--dur-1, 120ms) var(--ease-out, ease-out),
+    color var(--dur-1, 120ms) var(--ease-out, ease-out),
+    border-color var(--dur-1, 120ms) var(--ease-out, ease-out);
+}
+
+.help-button-trigger:hover {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.help-button-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-a-3);
+  border-color: var(--primary);
+}
+
+.help-button-trigger[aria-expanded="true"] {
+  background: var(--primary-a-2);
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+/* ── Popover ───────────────────────────────────────────────────────── */
+
+.help-button-popover {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: 280px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .help-button-popover {
+    animation: help-popover-fade 120ms var(--ease-out, ease-out);
+  }
+}
+
+@keyframes help-popover-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.help-button-hint {
+  margin: 0;
+  font-size: var(--fs-13);
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.help-button-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.help-button-link {
+  appearance: none;
+  background: var(--primary);
+  color: var(--primary-on);
+  border: 0;
+  border-radius: var(--radius-1);
+  padding: var(--space-1) var(--space-3);
+  font: inherit;
+  font-size: var(--fs-13);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.help-button-link:hover {
+  background: var(--primary-hover);
+}
+
+.help-button-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-a-3);
+}
+
+.help-button-close {
+  appearance: none;
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-1);
+  padding: var(--space-1) var(--space-3);
+  font: inherit;
+  font-size: var(--fs-13);
+  cursor: pointer;
+}
+
+.help-button-close:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.help-button-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-a-3);
+}

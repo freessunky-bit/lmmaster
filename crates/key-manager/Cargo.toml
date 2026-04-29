@@ -1,0 +1,31 @@
+[package]
+name = "key-manager"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+# Phase 8'.0.a (ADR-0035) — SQLCipher 활성. Production 빌드는 항상 `sqlcipher` 켜요.
+# Dev 빌드에서 OpenSSL build chain 미설치 시 (Windows에 Strawberry Perl 없을 때) 끄고 진행.
+# Default: SQLCipher OFF — 테스트/dev 빌드 호환. 프로덕션 빌드 자동화에서 `--features sqlcipher` 주입.
+default = []
+sqlcipher = ["rusqlite/bundled-sqlcipher-vendored-openssl"]
+
+[dependencies]
+shared-types.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rusqlite = { workspace = true }
+sha2.workspace = true
+hex.workspace = true
+uuid.workspace = true
+time.workspace = true
+keyring.workspace = true
+tracing.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+argon2 = "0.5"
+rand = "0.8"
+
+[dev-dependencies]
+tempfile.workspace = true

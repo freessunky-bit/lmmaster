@@ -1,0 +1,14 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 7'.a: telemetry opt-in 관련 app-defined 권한.
+# capabilities/main.json에서 "allow-*"로 참조.
+
+[[permission]]
+identifier = "allow-get-telemetry-config"
+description = "Read the persisted telemetry opt-in configuration (enabled flag + anon UUID + opted_in_at)."
+commands.allow = ["get_telemetry_config"]
+
+[[permission]]
+identifier = "allow-set-telemetry-enabled"
+description = "Toggle the telemetry opt-in flag. First opt-in issues an anonymous UUID. Disabling preserves the UUID for re-enable reuse."
+commands.allow = ["set_telemetry_enabled"]

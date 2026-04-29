@@ -1,0 +1,18 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 3'.b: API 키 발급/회수/조회 IPC.
+
+[[permission]]
+identifier = "allow-create-api-key"
+description = "Issue a new API key with alias and scope. Returns plaintext once."
+commands.allow = ["create_api_key"]
+
+[[permission]]
+identifier = "allow-list-api-keys"
+description = "List all API keys (revoked included). Plaintext is never included."
+commands.allow = ["list_api_keys"]
+
+[[permission]]
+identifier = "allow-revoke-api-key"
+description = "Revoke an API key by id (idempotent)."
+commands.allow = ["revoke_api_key"]

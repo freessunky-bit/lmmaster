@@ -1,0 +1,243 @@
+/* Guide page — Phase 12'.a. design-system tokens만. */
+
+.guide-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6);
+}
+
+/* ── Top bar ───────────────────────────────────────────────────────── */
+
+.guide-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.guide-page-title {
+  margin: 0;
+  font-size: var(--fs-24);
+  font-weight: var(--weight-semi);
+  color: var(--text);
+}
+
+.guide-page-subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-14);
+  color: var(--text-secondary);
+}
+
+/* ── Shell — sidebar + main ────────────────────────────────────────── */
+
+.guide-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: var(--space-5);
+  align-items: flex-start;
+}
+
+@media (max-width: 720px) {
+  .guide-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────────── */
+
+.guide-sidebar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: sticky;
+  top: var(--space-4);
+  max-height: calc(100vh - var(--space-12));
+  overflow-y: auto;
+}
+
+.guide-sidebar-heading {
+  margin: 0;
+  font-size: var(--fs-12);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.guide-search {
+  appearance: none;
+  width: 100%;
+  height: 36px;
+  padding: 0 var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-14);
+  outline: none;
+}
+
+.guide-search::placeholder {
+  color: var(--text-muted);
+}
+
+.guide-search:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-a-3);
+}
+
+.guide-section-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.guide-section-item {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-left: 2px solid transparent;
+  text-align: left;
+  font: inherit;
+  font-size: var(--fs-14);
+  color: var(--text-secondary);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-1);
+  cursor: pointer;
+  transition: background var(--dur-1, 120ms) var(--ease-out, ease-out);
+}
+
+.guide-section-item:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.guide-section-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-a-3);
+}
+
+.guide-section-item.is-active {
+  background: var(--primary-a-2);
+  border-left-color: var(--primary);
+  color: var(--text);
+}
+
+.guide-empty {
+  margin: 0;
+  padding: var(--space-3);
+  font-size: var(--fs-13);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ── Main / article ───────────────────────────────────────────────── */
+
+.guide-main {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  padding: var(--space-6);
+  min-height: 320px;
+}
+
+.guide-article-title {
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-20);
+  font-weight: var(--weight-semi);
+  color: var(--text);
+}
+
+.guide-article-body {
+  font-size: var(--fs-14);
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.guide-article-body h1,
+.guide-article-body h2 {
+  margin: var(--space-5) 0 var(--space-3);
+  font-size: var(--fs-16);
+  font-weight: var(--weight-semi);
+  color: var(--text);
+}
+
+.guide-article-body h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--fs-14);
+  font-weight: var(--weight-semi);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.guide-article-body p {
+  margin: 0 0 var(--space-3);
+}
+
+.guide-article-body ul {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-5);
+}
+
+.guide-article-body li {
+  margin-bottom: var(--space-2);
+}
+
+.guide-article-body code {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-1);
+  padding: 1px var(--space-1);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: var(--fs-13);
+}
+
+.guide-article-body strong {
+  font-weight: var(--weight-semi);
+  color: var(--text);
+}
+
+/* ── CTA ───────────────────────────────────────────────────────────── */
+
+.guide-article-cta {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.guide-cta-button {
+  appearance: none;
+  background: var(--primary);
+  color: var(--primary-on);
+  border: 0;
+  border-radius: var(--radius-2);
+  padding: var(--space-2) var(--space-4);
+  font: inherit;
+  font-size: var(--fs-14);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background var(--dur-1, 120ms) var(--ease-out, ease-out);
+}
+
+.guide-cta-button:hover {
+  background: var(--primary-hover);
+}
+
+.guide-cta-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-a-3);
+}
+
+.guide-cta-button:active {
+  background: var(--primary-press);
+}
