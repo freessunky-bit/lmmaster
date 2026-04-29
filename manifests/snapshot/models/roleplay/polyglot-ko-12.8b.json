@@ -1,0 +1,63 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-27T00:00:00Z",
+  "entries": [
+    {
+      "id": "polyglot-ko-12.8b",
+      "display_name": "Polyglot-Ko 12.8B",
+      "category": "roleplay",
+      "model_family": "polyglot",
+      "source": {
+        "type": "hugging-face",
+        "repo": "EleutherAI/polyglot-ko-12.8b",
+        "file": "polyglot-ko-12.8b.Q4_K_M.gguf"
+      },
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 7700,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "polyglot-ko-12.8b.Q4_K_M.gguf"
+        },
+        {
+          "label": "Q5_K_M",
+          "size_mb": 9000,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "polyglot-ko-12.8b.Q5_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 10240,
+      "rec_vram_mb": 12288,
+      "min_ram_mb": 16384,
+      "rec_ram_mb": 24576,
+      "install_size_mb": 7700,
+      "context_guidance": "한국어 캐릭터/롤플레이 — Polyglot 한국어 코퍼스 기반.",
+      "language_strength": 9,
+      "roleplay_strength": 9,
+      "coding_strength": 4,
+      "tool_support": false,
+      "vision_support": false,
+      "structured_output_support": false,
+      "license": "Apache-2.0",
+      "maturity": "stable",
+      "portable_suitability": 5,
+      "on_device_suitability": 6,
+      "fine_tune_suitability": 9,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-27",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "캐릭터 롤플레이 — 한국어",
+        "감성 글쓰기/소설",
+        "장문 한국어 대화"
+      ],
+      "warnings": [
+        "베이스 모델 — instruction-tuned가 아니에요. 캐릭터 카드/시스템 프롬프트 권장."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-04-26T00:00:00Z",
+  "categories": [
+    { "id": "agent-general", "label_ko": "에이전트 / 범용",  "path": "agents/" },
+    { "id": "roleplay",      "label_ko": "캐릭터 / 롤플레이","path": "roleplay/" },
+    { "id": "coding",        "label_ko": "코딩 서포트",      "path": "coding/" },
+    { "id": "sound-stt",     "label_ko": "음성 인식(STT)",   "path": "sound-stt/" },
+    { "id": "sound-tts",     "label_ko": "음성 합성(TTS)",   "path": "sound-tts/" },
+    { "id": "slm",           "label_ko": "온디바이스 SLM",   "path": "slm/" }
+  ],
+  "notes": "Curated remote manifest seed. 실제 모델 엔트리는 카테고리별 디렉터리 안에 추가됩니다 (M1 산출물)."
+}

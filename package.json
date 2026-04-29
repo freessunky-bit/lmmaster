@@ -1,0 +1,16 @@
+{
+  "name": "lmmaster",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Local AI Companion for existing web apps — desktop orchestrator (Tauri 2 + Rust + React)",
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @lmmaster/desktop dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
+  }
+}

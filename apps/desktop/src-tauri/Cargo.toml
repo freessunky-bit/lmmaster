@@ -1,0 +1,79 @@
+[package]
+name = "lmmaster-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "lmmaster_desktop_lib"
+# `staticlib` 제거 — 사용처 없음(unit-test exe만 무거워짐). cdylib는 모바일 wrapper 호환,
+# rlib는 통합 테스트용. Tauri 2 desktop은 cdylib + rlib로 충분.
+crate-type = ["cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-updater = "2"
+# Phase 8'.0.b — 단일 인스턴스 보장 + 부팅 신호 forwarding.
+tauri-plugin-single-instance = "2"
+# Phase 8'.b.2 — 외부 URL 오픈 (ToastUpdate 등). capability scope `https://**` 강제.
+tauri-plugin-shell = "2"
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+anyhow.workspace = true
+# Phase 8'.0.a — OS 키체인 + 32 byte secret 발급 + hex 인코딩 (SQLCipher passphrase).
+keyring.workspace = true
+hex.workspace = true
+rand = "0.8"
+
+# LMmaster crates
+shared-types.workspace = true
+core-gateway.workspace = true
+runtime-manager.workspace = true
+runtime-detector.workspace = true
+installer.workspace = true
+scanner.workspace = true
+bench-harness.workspace = true
+adapter-ollama.workspace = true
+adapter-lmstudio.workspace = true
+hardware-probe.workspace = true
+model-registry.workspace = true
+portable-workspace.workspace = true
+key-manager.workspace = true
+preset-registry.workspace = true
+workbench-core.workspace = true
+knowledge-stack.workspace = true
+auto-updater.workspace = true
+pipelines.workspace = true
+registry-fetcher.workspace = true
+
+# scheduler — registry-fetcher 6h cron + scanner 6h cron 공용.
+tokio-cron-scheduler.workspace = true
+
+# Phase 1A.3.c
+scopeguard.workspace = true
+thiserror.workspace = true
+# Phase 3'.b
+time.workspace = true
+# Phase 3'.c
+uuid.workspace = true
+# Phase 3'.c+ — async UpstreamProvider impl.
+async-trait.workspace = true
+# Phase 3'.c+ — gateway provider 통합 테스트 dev-utility.
+futures.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+wiremock.workspace = true
+axum.workspace = true
+tower.workspace = true
+http-body-util = "0.1"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]

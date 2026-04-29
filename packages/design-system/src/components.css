@@ -1,0 +1,221 @@
+/* LMmaster Design System — Components (Phase 1A.4.e Polish & Palette).
+ *
+ * 본 파일에 등록된 reusable utility classes:
+ *   .surface-aurora — 정적 3-radial 배경. wizard root + future MainShell main 영역.
+ *   .glass          — backdrop-filter blur + saturate + Apple top highlight.
+ *   .spotlight      — pointermove로 따라가는 radial-gradient hover wash.
+ *   kbd             — palette/도움말의 단축키 칩.
+ *
+ * 정책:
+ *   - reduced-motion / reduced-transparency 자동 degradation.
+ *   - viewport-wide backdrop-filter 금지 (M1 air FPS drop). glass는 panel-scope.
+ *   - Aurora는 ::before pseudo로 z-index: -1 — content 위로 절대 안 올라옴.
+ */
+
+/* ── Aurora background ───────────────────────────────────────────── */
+
+.surface-aurora {
+  position: relative;
+  isolation: isolate;
+  background: var(--bg);
+}
+
+.surface-aurora::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--aurora-1), var(--aurora-2), var(--aurora-3);
+  -webkit-mask-image: var(--aurora-mask);
+          mask-image: var(--aurora-mask);
+  pointer-events: none;
+}
+
+/* ── Glass surface ───────────────────────────────────────────────── */
+
+.glass {
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+          backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--white-a-2);
+  box-shadow: var(--shadow-glass);
+  border-radius: var(--radius-3);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* ── Spotlight hover (pointermove) ───────────────────────────────── */
+
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    240px circle at var(--mx, 50%) var(--my, 50%),
+    var(--primary-a-2),
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-emphasized);
+  z-index: 0;
+}
+
+.spotlight:hover::before,
+.spotlight:focus-within::before {
+  opacity: 1;
+}
+
+/* spotlight 사용 시 children은 stacking context 위로 올라가야 함 — 구현체에서 보장. */
+
+/* ── kbd 칩 (palette / 도움말 단축키) ────────────────────────────── */
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  min-width: 20px;
+  padding: 0 6px;
+  background: var(--surface-3);
+  border: 1px solid var(--white-a-2);
+  border-radius: var(--radius-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+
+/* ── Reduced-motion / transparency degradation ───────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  /* aurora layer는 정적이지만 mask-shimmer가 있다면 제거. 현재 없음. */
+  .spotlight::before {
+    transition: none;
+    background: var(--primary-a-2);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--surface-2);
+    -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+  }
+  .surface-aurora::before {
+    opacity: 0.4;
+  }
+}
+
+/* ── ToastUpdate (Phase 1' 추가 화면) ──────────────────────────── */
+
+.toast-update {
+  position: fixed;
+  right: var(--space-6);
+  bottom: var(--space-6);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  width: min(380px, calc(100vw - 48px));
+  background: color-mix(in srgb, var(--surface-2) 85%, transparent);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+          backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--white-a-2);
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-glass);
+  isolation: isolate;
+  animation: toast-slide-up var(--dur-base) var(--ease-emphasized);
+}
+
+@keyframes toast-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-update {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .toast-update {
+    background: var(--surface-2);
+    -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+  }
+}
+
+.toast-update-body {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.toast-update-icon {
+  font-size: var(--fs-18);
+  color: var(--primary);
+  line-height: 1;
+}
+
+.toast-update-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+}
+
+.toast-update-title {
+  font-size: var(--fs-14);
+  font-weight: var(--weight-semi);
+  color: var(--text);
+}
+
+.toast-update-detail {
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+}
+
+.toast-update-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.toast-update-cta {
+  height: 32px;
+  font-size: var(--fs-13);
+}
+
+.toast-update-close {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-1);
+}
+
+.toast-update-close:hover {
+  color: var(--text);
+  background: var(--white-a-2);
+}

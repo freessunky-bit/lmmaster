@@ -1,0 +1,42 @@
+/* VirtualList — design-system tokens. */
+
+.ds-vlist {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  font-size: var(--fs-13);
+}
+
+.ds-vlist-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.ds-vlist-row {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.ds-vlist-row:last-child {
+  border-bottom: 0;
+}
+
+.ds-vlist-row-header {
+  background: var(--surface-2);
+  font-weight: var(--weight-medium);
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ds-vlist-header {
+  width: 100%;
+  padding: var(--space-1) 0;
+}

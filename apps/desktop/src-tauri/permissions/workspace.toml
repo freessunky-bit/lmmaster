@@ -1,0 +1,13 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 3'.c: workspace fingerprint repair IPC.
+
+[[permission]]
+identifier = "allow-get-workspace-fingerprint"
+description = "Compute current host fingerprint and compare to stored one (read-only)."
+commands.allow = ["get_workspace_fingerprint"]
+
+[[permission]]
+identifier = "allow-check-workspace-repair"
+description = "Apply 3-tier repair (cache invalidate / runtimes invalidate) and persist fingerprint."
+commands.allow = ["check_workspace_repair"]

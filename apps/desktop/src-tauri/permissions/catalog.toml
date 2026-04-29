@@ -1,0 +1,13 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 2'.a: 모델 카탈로그 + 추천 IPC 권한.
+
+[[permission]]
+identifier = "allow-get-catalog"
+description = "Read the in-memory model catalog (optionally filtered by category)."
+commands.allow = ["get_catalog"]
+
+[[permission]]
+identifier = "allow-get-recommendation"
+description = "Compute deterministic model recommendation for the host given a category."
+commands.allow = ["get_recommendation"]

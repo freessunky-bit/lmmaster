@@ -1,0 +1,19 @@
+{
+  "name": "@lmmaster/example-web-demo",
+  "version": "0.0.1",
+  "private": true,
+  "description": "기존 HTML 웹앱이 LMmaster local gateway를 호출하는 데모 — endpoint URL만 바꿔도 동작.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@lmmaster/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0",
+    "typescript": "^5.5.0"
+  }
+}

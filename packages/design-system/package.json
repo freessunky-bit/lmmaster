@@ -1,0 +1,35 @@
+{
+  "name": "@lmmaster/design-system",
+  "version": "0.0.1",
+  "private": true,
+  "description": "LMmaster 공유 디자인 시스템 (데스크톱 앱 + 기존 웹앱). Dark-only + 네온 그린 + 4단 surface.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react/index.ts",
+    "./tokens.css": "./src/tokens.css",
+    "./base.css": "./src/base.css",
+    "./components.css": "./src/components.css",
+    "./layout.css": "./src/layout.css",
+    "./motion.css": "./src/motion.css",
+    "./react/pill.css": "./src/react/StatusPill.css",
+    "./react/virtual-list.css": "./src/react/VirtualList.css"
+  },
+  "files": [
+    "src"
+  ],
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "@tanstack/react-virtual": "^3.10.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0"
+  },
+  "scripts": {
+    "build": "echo 'design-system: source export only (no build step)'",
+    "lint": "echo 'TODO: stylelint'",
+    "test": "echo 'no design-system tests yet — covered by desktop integration'"
+  }
+}

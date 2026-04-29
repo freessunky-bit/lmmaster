@@ -1,0 +1,15 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 1A.3.c: install 관련 app-defined 권한.
+# capabilities/main.json에서 "allow-install-app", "allow-cancel-install"로 참조.
+# 향후 removeUnusedCommands=true 빌드 옵션 호환 + ACL 명시화.
+
+[[permission]]
+identifier = "allow-install-app"
+description = "Run install_app for an app id and stream InstallEvent to caller window."
+commands.allow = ["install_app"]
+
+[[permission]]
+identifier = "allow-cancel-install"
+description = "Cancel an in-flight install by app id (idempotent)."
+commands.allow = ["cancel_install"]

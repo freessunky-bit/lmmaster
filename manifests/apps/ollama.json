@@ -1,0 +1,89 @@
+{
+  "$schema_hint": "Pinokio-style declarative app manifest. Schema versioned by `schema_version`.",
+  "schema_version": 1,
+  "id": "ollama",
+  "display_name": "Ollama",
+  "license": "MIT",
+  "redistribution_allowed": true,
+  "homepage": "https://ollama.com",
+  "github_repo": "ollama/ollama",
+  "category": "external-runtime",
+
+  "detect": [
+    {
+      "method": "http.get",
+      "url": "http://127.0.0.1:11434/api/version",
+      "timeout_ms": 1500,
+      "expect_status": 200,
+      "extract_field": "version",
+      "indicates": "running"
+    },
+    {
+      "method": "shell.which",
+      "cmd": "ollama",
+      "indicates": "installed"
+    },
+    {
+      "method": "registry.read",
+      "platform": "windows",
+      "hive": "HKCU",
+      "subkey_glob": "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
+      "match_value": { "key": "DisplayName", "regex": "^Ollama" },
+      "extract_value": "DisplayVersion",
+      "indicates": "installed"
+    },
+    {
+      "method": "fs.exists",
+      "platform": "macos",
+      "path": "/Applications/Ollama.app",
+      "indicates": "installed"
+    }
+  ],
+
+  "install": {
+    "windows": {
+      "method": "download_and_run",
+      "url_template": "https://github.com/ollama/ollama/releases/latest/download/OllamaSetup.exe",
+      "version_url": "https://api.github.com/repos/ollama/ollama/releases/latest",
+      "args": ["/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART"],
+      "min_disk_mb": 800,
+      "min_ram_mb": 2048,
+      "post_install_check": {
+        "method": "http.get",
+        "url": "http://127.0.0.1:11434/api/version",
+        "wait_seconds": 30
+      }
+    },
+    "macos": {
+      "method": "download_and_extract",
+      "url_template": "https://github.com/ollama/ollama/releases/latest/download/Ollama-darwin.zip",
+      "version_url": "https://api.github.com/repos/ollama/ollama/releases/latest",
+      "extract_to": "/Applications",
+      "min_disk_mb": 800,
+      "min_ram_mb": 2048
+    },
+    "linux": {
+      "method": "shell.curl_pipe_sh",
+      "url_template": "https://ollama.com/install.sh",
+      "min_disk_mb": 800,
+      "min_ram_mb": 2048,
+      "warning_ko": "리눅스에서는 sudo 권한이 필요할 수 있어요."
+    }
+  },
+
+  "update": {
+    "source": { "type": "github_release", "repo": "ollama/ollama" },
+    "trigger": { "method": "rerun_install" }
+  },
+
+  "ports": { "default": 11434 },
+
+  "korean_copy": {
+    "name": "Ollama",
+    "summary": "오픈소스 로컬 LLM 런타임",
+    "install_consent": "Ollama를 설치할게요. 약 800MB의 디스크가 필요해요.",
+    "install_running": "Ollama를 받고 있어요",
+    "install_done": "Ollama 준비됐어요",
+    "install_failed": "Ollama 설치에 문제가 생겼어요. 다시 시도하시겠어요?"
+  }
+}

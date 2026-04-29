@@ -1,0 +1,18 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 2'.c.2: 벤치마크 IPC 권한.
+
+[[permission]]
+identifier = "allow-start-bench"
+description = "Run a 30s bench measurement for a model on a runtime."
+commands.allow = ["start_bench"]
+
+[[permission]]
+identifier = "allow-cancel-bench"
+description = "Cancel an in-flight bench by model_id (idempotent)."
+commands.allow = ["cancel_bench"]
+
+[[permission]]
+identifier = "allow-get-last-bench-report"
+description = "Read the cached BenchReport for a (model, runtime, host) tuple."
+commands.allow = ["get_last_bench_report"]

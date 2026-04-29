@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "scan-summary",
+  "description": "자가 점검 결과를 한국어 해요체로 4~5 문장 요약. ADR-0020 + crates/scanner::llm_summary 사용.",
+  "language": "ko-KR",
+  "voice": "haeyo",
+  "max_chars": 800,
+  "temperature": 0.4,
+  "num_predict": 400,
+  "top_p": 0.9,
+  "keep_alive": "30s",
+  "system": "너는 LMmaster라는 한국어 데스크톱 AI 도우미의 진단 요약 도우미야. 사용자에게 점검 결과를 따뜻하고 짧게 한국어 해요체로 정리해줘. 판단(권장/권장 안 함)은 하지 말고, 사실만 풀어 말해줘. 답은 4~5 문장 평문으로만 작성해줘.",
+  "user_template": "환경: {env_summary}\n점검 결과(JSON): {issues_json}\n\n한국어 요약:",
+  "validation": {
+    "min_hangul_ratio": 0.3,
+    "max_chars": 800,
+    "reject_template_tokens": [
+      "<|im_start|>",
+      "<|im_end|>",
+      "[INST]",
+      "[/INST]",
+      "</s>",
+      "<|endoftext|>",
+      "<|begin_of_text|>"
+    ]
+  },
+  "model_cascade": [
+    "exaone3.5:2.4b",
+    "exaone:1.2b",
+    "exaone:7.8b",
+    "hyperclova-x-seed-text-instruct:8b",
+    "qwen2.5:3b",
+    "llama3.2:3b"
+  ]
+}

@@ -1,0 +1,1147 @@
+{
+  "nav": {
+    "home": "Home",
+    "catalog": "Model Catalog",
+    "install": "Install Center",
+    "runtimes": "Runtimes",
+    "workspace": "Workspace",
+    "projects": "Projects",
+    "keys": "Local API",
+    "workbench": "Workbench",
+    "diagnostics": "Diagnostics",
+    "guide": "Guide",
+    "settings": "Settings"
+  },
+  "home": {
+    "title": "Home",
+    "gateway-booting": "Starting the local gateway…",
+    "gateway-ready": "Local gateway running on port {{port}}.",
+    "gateway-failed": "Local gateway didn't start. Reason: {{error}}",
+    "gateway-stopping": "Stopping the local gateway…",
+    "hero": {
+      "title": "Welcome back",
+      "subtitle": "Local AI, in Korean, safely."
+    },
+    "recommend": {
+      "title": "Recommended models",
+      "subtitle": "Three picks that fit this machine. See more in the catalog.",
+      "cardLabel": "{{name}} — {{reason}} (click to open in catalog)"
+    },
+    "scan": {
+      "title": "Recent self-scan",
+      "empty": "No scans yet. Start one from Diagnostics."
+    }
+  },
+  "toast": {
+    "update": {
+      "title": "Update to {{version}} is available",
+      "detail": "Current {{currentVersion}} · published {{published}}",
+      "view": "View update",
+      "skip": "Skip this version",
+      "apply": "Apply now",
+      "defer": "Next launch",
+      "close": "Close"
+    }
+  },
+  "gateway": {
+    "status": {
+      "booting": "Starting",
+      "listening": "Ready",
+      "failed": "Failed",
+      "stopping": "Stopping"
+    }
+  },
+  "common": {
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "install": "Install",
+    "open": "Open"
+  },
+  "dialogs": {
+    "crash": {
+      "title": "An unexpected error occurred",
+      "body": "An unexpected error occurred. Open Diagnostics for details.",
+      "confirm": "OK"
+    }
+  },
+  "status": {
+    "installing": "Installing",
+    "queued": "Queued",
+    "verifying": "Verifying",
+    "extracting": "Extracting",
+    "warmup": "Warming up",
+    "standby": "Standby",
+    "active": "Active",
+    "available": "Available",
+    "caution": "Caution",
+    "experimental": "Experimental"
+  },
+  "recommend": {
+    "best": "Top quality",
+    "balanced": "Balanced",
+    "lightweight": "Lightweight",
+    "fallback": "Fallback"
+  },
+  "screens": {
+    "workspaceSwitcher": {
+      "current": "Workspace",
+      "loading": "Loading workspaces…",
+      "triggerAria": "{{name}} workspace — click to switch or create",
+      "menuAria": "Workspace list",
+      "empty": "No workspaces yet. Want to create one?",
+      "rename": "Rename",
+      "renameAria": "Rename workspace {{name}}",
+      "delete": "Delete",
+      "deleteAria": "Delete workspace {{name}}",
+      "create": "+ Create new workspace",
+      "createTitle": "Create new workspace",
+      "renameTitle": "Rename workspace",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Side project",
+      "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "Briefly describe what this workspace is for",
+      "submit": "Create",
+      "cancel": "Cancel",
+      "deleteConfirmTitle": "Delete ‘{{name}}’?",
+      "deleteConfirmBody": "We will clean up this workspace’s knowledge and custom models. Disk files are preserved — back them up if you may need them later. Proceed?",
+      "deleteCancel": "Keep it",
+      "deleteConfirm": "Delete",
+      "errors": {
+        "duplicate": "A workspace named ‘{{name}}’ already exists. Please choose a different name.",
+        "empty": "The name cannot be empty. Please enter a workspace name.",
+        "notFound": "We couldn’t find this workspace. Refreshing…",
+        "cannotDeleteOnly": "You can’t delete the last workspace. Create a new one first.",
+        "persist": "We couldn’t save workspace info. {{message}}",
+        "internal": "An internal error occurred. {{message}}",
+        "unknown": "Something went wrong. Try again?"
+      }
+    },
+    "catalog": {
+      "custom": {
+        "title": "Your custom models",
+        "subtitle": "Custom models you built in Workbench appear here.",
+        "badge": "Your model",
+        "loading": "Loading models…",
+        "empty": "No custom models yet. Build one in Workbench and it will show up here.",
+        "openWorkbench": "Open Workbench",
+        "basedOn": "Base: {{base}}",
+        "quant": "Quant: {{quant}}",
+        "evalSummary": "Eval pass {{passed}} / {{total}}"
+      }
+    },
+    "workspace": {
+      "title": "Workspace",
+      "subtitle": "Teach your documents to the model and search them quickly.",
+      "loading": "Loading workspace…",
+      "tabs": {
+        "knowledge": "Knowledge"
+      },
+      "knowledge": {
+        "title": "Knowledge",
+        "subtitle": "We auto-chunk your documents so you can search them fast.",
+        "statsAria": "Current workspace document counts",
+        "stats": {
+          "documents": "Documents",
+          "chunks": "Chunks"
+        },
+        "ingest": {
+          "title": "Ingest",
+          "subtitle": "Point to a file or folder and we'll chunk and store it.",
+          "pathLabel": "Path",
+          "pathPlaceholder": "e.g. /Users/me/notes",
+          "pathHint": "Absolute path, please.",
+          "kindLabel": "Kind",
+          "kind": {
+            "file": "Single file",
+            "directory": "Folder (recursive)"
+          },
+          "start": "Start indexing",
+          "cancel": "Stop",
+          "reset": "Try again",
+          "progressAria": "Ingest progress",
+          "currentPath": "Now processing: {{path}}",
+          "summary": "Ingested {{files}} files, {{chunks}} chunks."
+        },
+        "stage": {
+          "reading": "Reading",
+          "chunking": "Chunking",
+          "embedding": "Embedding",
+          "writing": "Writing",
+          "done": "Done",
+          "failed": "Failed",
+          "cancelled": "Cancelled"
+        },
+        "search": {
+          "title": "Search",
+          "subtitle": "Find relevant chunks quickly.",
+          "queryLabel": "Query",
+          "queryPlaceholder": "e.g. capital of Seoul",
+          "kLabel": "Result count",
+          "kHint": "Up to {{max}} results.",
+          "submit": "Search",
+          "empty": "No results. Try different keywords?"
+        },
+        "errors": {
+          "missingPath": "Please enter a path.",
+          "startFailed": "Couldn't start indexing. Retry?",
+          "searchFailed": "Search failed. Retry?",
+          "statsFailed": "Couldn't load workspace stats."
+        }
+      }
+    },
+    "projects": {
+      "title": "Projects",
+      "subtitle": "See which sites called which models, grouped by key.",
+      "loading": "Loading projects…",
+      "summary": {
+        "activeCount": "{{count}} active"
+      },
+      "card": {
+        "lastUsed": "Last used {{when}}",
+        "lastUsedNever": "Never used",
+        "lastUsedLabel": "Last used",
+        "modelsAllowed": "Allowed models",
+        "keys": "Key count",
+        "openDetail": "View usage"
+      },
+      "detail": {
+        "last24h": "Last 24 hours",
+        "totalRequests": "{{count}} calls",
+        "topModels": "Most-used models",
+        "keysSection": "Keys in this project",
+        "revoke": "Revoke",
+        "close": "Close",
+        "sparklineAria": "Last 24h call distribution — total {{count}}"
+      },
+      "empty": {
+        "title": "No keys issued yet",
+        "body": "Create a key on the API Keys screen.",
+        "cta": "Open API Keys"
+      },
+      "errors": {
+        "loadFailed": "Couldn't load projects. Retry."
+      }
+    },
+    "eula": {
+      "title": "LMmaster End User License Agreement",
+      "version": "Version {{version}}",
+      "accept": "I agree",
+      "decline": "I do not agree",
+      "scrollToAccept": "Read to the end to enable the accept button.",
+      "lang": {
+        "ko": "한국어",
+        "en": "English"
+      },
+      "decline.confirmTitle": "Decline the agreement?",
+      "decline.confirmBody": "If you decline, you cannot use LMmaster. Exit the app?",
+      "decline.cancel": "Keep reading",
+      "decline.exit": "Exit the app"
+    },
+    "settings": {
+      "title": "Settings",
+      "versionLabel": "Version",
+      "lastChecked": "Last checked {{when}}",
+      "telemetry": {
+        "title": "Anonymous usage stats",
+        "description": "Off by default. When enabled, only anonymous usage stats are sent. Prompts and model outputs are never transmitted. You can disable this at any time.",
+        "toggleLabel": "Send anonymous usage stats",
+        "statusOn": "Sending anonymous stats",
+        "statusOff": "Not sending stats",
+        "anonIdLabel": "Anonymous ID",
+        "privacyNote": "The ID is per-PC and contains no personally identifying information.",
+        "errors": {
+          "loadFailed": "Couldn't load telemetry settings.",
+          "toggleFailed": "Couldn't update the telemetry setting. Retry."
+        }
+      },
+      "categories": {
+        "general": "General",
+        "workspace": "Workspace",
+        "portable": "Portable move",
+        "catalog": "Catalog",
+        "advanced": "Advanced"
+      },
+      "general": {
+        "language": "Language",
+        "language.ko": "한국어",
+        "language.en": "English",
+        "theme": "Theme",
+        "theme.dark": "Dark",
+        "theme.light": "Light (coming soon)",
+        "scanInterval": "Self-scan interval",
+        "scanInterval.off": "Off",
+        "scanInterval.15m": "15 min",
+        "scanInterval.60m": "1 hour",
+        "voice": "Korean voice I/O",
+        "voice.comingSoon": "Coming in Phase 6"
+      },
+      "autoUpdate": {
+        "title": "Auto-update",
+        "toggleLabel": "Check for updates automatically",
+        "toggleOn": "Checking for updates automatically",
+        "toggleOff": "Manual checks only",
+        "intervalLabel": "Check interval",
+        "interval.1h": "Every 1 hour",
+        "interval.6h": "Every 6 hours",
+        "interval.12h": "Every 12 hours",
+        "interval.24h": "Every 24 hours",
+        "repoLabel": "Release repo",
+        "lastChecked": "Last checked: {{when}}",
+        "neverChecked": "Never checked",
+        "checkNow": "Check now",
+        "checking": "Checking…",
+        "upToDate": "You are on the latest version",
+        "errorStatus": "Could not load auto-update status",
+        "errorStart": "Could not start auto-update. Retry?",
+        "errorStop": "Could not stop auto-update",
+        "errorCheck": "Update check failed"
+      },
+      "pipelines": {
+        "title": "Pipelines (gateway filters)",
+        "description": "Pipelines run inline on every gateway request. Toggle them on or off.",
+        "header": {
+          "name": "Name",
+          "description": "Description",
+          "enabled": "Enabled"
+        },
+        "pipelines": {
+          "piiRedact": {
+            "name": "PII redaction",
+            "desc": "Automatically masks Korean RRN, phone, credit card, and email."
+          },
+          "tokenQuota": {
+            "name": "Token quota",
+            "desc": "Tracks per-key token budgets and rejects over-quota requests."
+          },
+          "observability": {
+            "name": "Observability log",
+            "desc": "Records request/response metadata in the diagnostics log."
+          }
+        },
+        "audit": {
+          "title": "Recent audit log",
+          "clear": "Clear",
+          "refresh": "Refresh",
+          "empty": "Audit log is empty. Entries appear here as the gateway processes requests.",
+          "actionPassed": "passed",
+          "actionModified": "modified",
+          "actionBlocked": "blocked",
+          "timestampPrefix": "Recorded at",
+          "detailsLabel": "Details"
+        },
+        "errors": {
+          "toggleFailed": "Could not change the filter setting. Retry?",
+          "clearFailed": "Could not clear the audit log",
+          "refreshFailed": "Could not fetch filter information",
+          "unknownPipeline": "Unknown filter. Please retry later."
+        }
+      },
+      "workspace": {
+        "path": "Workspace path",
+        "relocate": "Move to another folder",
+        "relocate.comingSoon": "Coming in the next update",
+        "repair": "Workspace cleanup",
+        "repairButton": "Clean up now",
+        "repairing": "Cleaning up…",
+        "repairDone": "Done. Tier {{tier}}, {{caches}} caches to re-measure.",
+        "errorLoad": "Couldn't load workspace info.",
+        "errorRepair": "Cleanup failed. Retry."
+      },
+      "catalog": {
+        "registryUrl": "Catalog URL",
+        "registryHint": "Read-only under the zero-egress policy",
+        "lastUpdated": "Last updated",
+        "refresh": "Refresh now",
+        "refresh.comingSoon": "Coming in the next update"
+      },
+      "catalogRefresh": {
+        "title": "Auto catalog refresh",
+        "intervalHint": "Auto-fetches every 6 hours. Only GitHub and jsDelivr are reached.",
+        "lastRefresh": "Last refresh: {{when}} · {{fetched}} fetched / {{failed}} failed",
+        "never": "Never refreshed yet. We'll auto-fetch every 6 hours from now.",
+        "refreshNow": "Refresh now",
+        "refreshing": "Refreshing…",
+        "partial": "Some manifests failed. We'll retry on the next refresh.",
+        "failed": "All manifest fetches failed. Keeping the cached catalog.",
+        "errorRefresh": "Couldn't trigger a refresh. Please try again."
+      },
+      "advanced": {
+        "gemini": "Gemini Korean assistant",
+        "gemini.comingSoon": "Coming in Phase 6",
+        "sqlcipher": "Key store encryption",
+        "sqlcipher.envHint": "SQLCipher is enabled with a secret stored in the OS keychain. Falls back to plaintext when the keychain is unavailable.",
+        "exportLogs": "Export diagnostic logs",
+        "exportLogs.comingSoon": "Coming in the next update",
+        "buildInfo": "Build info"
+      },
+      "workbench": {
+        "artifacts": {
+          "title": "Workbench temporary files",
+          "description": "Quantize and LoRA artifacts. Older than 30 days or beyond 10 GB are auto-cleaned.",
+          "loading": "Loading usage…",
+          "loadFailed": "Couldn't load usage. Try again later.",
+          "runCount": "{{count}} kept runs",
+          "totalBytes": "Total {{size}}",
+          "policyHint": "Policy: up to {{days}} days or {{cap}}",
+          "cleanupNow": "Clean up now",
+          "cleaning": "Cleaning up…",
+          "cleanupDone": "Cleaned {{removed}} runs, freed {{freed}}.",
+          "cleanupFailed": "Cleanup failed. Retry?"
+        }
+      },
+      "portable": {
+        "categoryLabel": "Portable move",
+        "export": {
+          "title": "Export workspace",
+          "subtitle": "Pack this workspace into a single zip file. Use this to back up or move to another PC.",
+          "start": "Export this workspace",
+          "dialogTitle": "What options do you want?",
+          "runningTitle": "Exporting",
+          "targetPath": "Save to",
+          "targetHint": "Use an absolute path. The filename should end with .zip.",
+          "includeModels": "Include model files",
+          "includeModelsHint": "Adds gigabytes. If off, the new PC can re-download from the catalog.",
+          "includeKeys": "Include API keys",
+          "includeKeysHint": "When enabled, keys are encrypted with a passphrase.",
+          "passphraseLabel": "Passphrase",
+          "passphraseHint": "At least 8 characters recommended. If lost, keys cannot be recovered.",
+          "confirm": "Export",
+          "cancel": "Cancel",
+          "running": "Compressing. This may take a moment.",
+          "done": "Export finished.",
+          "again": "Export again",
+          "archiveSize": "Archive size",
+          "errors": {
+            "emptyTarget": "Please enter a save location.",
+            "emptyPassphrase": "Please enter a passphrase.",
+            "start": "Couldn't start export. Try again?",
+            "runner": "Something went wrong during export"
+          }
+        },
+        "import": {
+          "title": "Import workspace",
+          "subtitle": "Bring in a workspace zip from another PC.",
+          "start": "Import a workspace",
+          "dialogTitle": "Which file should we open?",
+          "optionsTitle": "Looks good?",
+          "runningTitle": "Importing",
+          "selectFile": "Archive file",
+          "selectFileHint": "Enter the path to the .zip created by export.",
+          "verify": "Check this file",
+          "verifying": "Checking",
+          "preview": {
+            "title": "Archive details",
+            "size": "Total size",
+            "entries": "Number of entries",
+            "contents": "Contents",
+            "hasModels": "Includes models",
+            "metaOnly": "Metadata only",
+            "hasKeys": "Includes encrypted keys"
+          },
+          "passphrase": "Passphrase",
+          "conflictPolicy": {
+            "label": "If a workspace already exists",
+            "skip": "Stop",
+            "overwrite": "Overwrite",
+            "rename": "Import with a different name"
+          },
+          "confirm": "Import",
+          "cancel": "Cancel",
+          "running": "Extracting. This may take a moment.",
+          "done": "Import finished.",
+          "again": "Import again",
+          "tier": {
+            "green": "Matches this PC. Ready to use.",
+            "yellow": "GPU or memory differs. You can re-run benchmarks.",
+            "red": "OS family differs. Some models need to be re-downloaded."
+          },
+          "errors": {
+            "emptySource": "Please enter the path of the file to import.",
+            "emptyPassphrase": "Please enter the passphrase.",
+            "verify": "Couldn't read the archive. Is the path correct?",
+            "start": "Couldn't start import. Try again?",
+            "runner": "Something went wrong during import"
+          }
+        }
+      }
+    },
+    "runtimes": {
+      "title": "Runtimes",
+      "subtitle": "Status of runtimes on this machine.",
+      "summary": {
+        "runningCount": "{{running}} of {{total}} running"
+      },
+      "card": {
+        "notInstalled": "Not installed",
+        "lastPing": "{{seconds}}s ago",
+        "modelCount": "{{count}} models",
+        "actions": {
+          "stop": "Stop",
+          "restart": "Restart",
+          "logs": "Logs",
+          "disabledHint": "Coming in the next update"
+        }
+      },
+      "models": {
+        "search": "Search by model name",
+        "sort": {
+          "name": "By name",
+          "size": "By size"
+        },
+        "empty": {
+          "title": "No models loaded",
+          "body": "Grab one from the catalog.",
+          "cta": "Open catalog"
+        },
+        "column": {
+          "name": "Name",
+          "size": "Size",
+          "digest": "Digest"
+        }
+      }
+    },
+    "install": {
+      "title": "Runtime install",
+      "subtitle": "Pick one local AI engine to power your web app.",
+      "alreadyReady": "Ready",
+      "notInstalled": "Not installed",
+      "actions": {
+        "install": "Install",
+        "reinstall": "Reinstall",
+        "details": "Details",
+        "openFolder": "Open folder",
+        "cancel": "Stop"
+      },
+      "cards": {
+        "ollama": {
+          "name": "Ollama",
+          "reason": "Fastest way to get started — open-source runtime",
+          "license": "MIT · auto install"
+        },
+        "lmStudio": {
+          "name": "LM Studio",
+          "reason": "Best if you want a GUI. Install from the official site.",
+          "license": "EULA acceptance required"
+        }
+      },
+      "empty": {
+        "title": "Both runtimes are ready",
+        "body": "Grab a model from the catalog.",
+        "cta": "Open catalog"
+      },
+      "drawer": {
+        "installSize": "Install size",
+        "licenseFull": "License",
+        "homepage": "Official site",
+        "close": "Close"
+      }
+    },
+    "workbench": {
+      "title": "Workbench",
+      "subtitle": "5-step pipeline",
+      "comingSoon": "Coming in the next phase",
+      "hero": {
+        "title": "Forge your own model",
+        "body": "A 5-step workbench: LoRA-fine-tune on Korean data, quantize, and register to Ollama in one click.",
+        "notifyToggle": "Notify me when ready",
+        "notifyOn": "Notifications on"
+      },
+      "stepper": {
+        "data": "Data",
+        "quantize": "Quantize",
+        "lora": "LoRA",
+        "validate": "Validate",
+        "register": "Register"
+      },
+      "actions": {
+        "start": "Start",
+        "cancel": "Stop",
+        "next": "Next",
+        "back": "Back",
+        "retry": "Retry",
+        "newRun": "New run",
+        "browse": "Browse…"
+      },
+      "config": {
+        "baseModel": "Base model id",
+        "baseModelHint": "Base model identifier, e.g. Qwen2.5-3B",
+        "datasetPath": "Dataset path",
+        "datasetPathHint": "Path to a JSONL file. Leave empty to dry-run with mock data.",
+        "epochs": "Epochs",
+        "epochsHint": "3 to 5 is typical"
+      },
+      "data": {
+        "title": "1. Pick your data",
+        "subtitle": "We auto-normalize JSONL into chat messages. All four formats (OpenAI / ShareGPT / Alpaca / Korean Q&A) are supported.",
+        "previewTitle": "First 5 lines",
+        "previewLoading": "Loading preview…",
+        "previewEmpty": "Empty file. Pick another?",
+        "previewError": "Couldn't preview this file. Check the format.",
+        "skipPreview": "Skip preview"
+      },
+      "quantize": {
+        "title": "2. Shrink the model",
+        "subtitle": "Pick a quantization level. Smaller numbers mean a lighter file with slightly less quality.",
+        "typeLabel": "Quantization",
+        "typeHint": "Q4_K_M is usually the sweet spot."
+      },
+      "lora": {
+        "title": "3. Teach it Korean",
+        "subtitle": "LoRA fine-tunes the model lightly on your dataset.",
+        "presetLabel": "Korean preset",
+        "presetOn": "Use the Korean (alpaca-ko) preset",
+        "presetOff": "Use the generic alpaca preset"
+      },
+      "validate": {
+        "title": "4. Check the quality",
+        "subtitle": "We run 10 baseline Korean evals against your model.",
+        "score": "Pass rate {{pct}}% ({{passed}} of {{total}})",
+        "categoryFactuality": "Factuality",
+        "categoryInstruction": "Instruction-following",
+        "categoryToneKorean": "Korean tone",
+        "categoryUnknown": "Other",
+        "byCategoryLabel": "Score by category",
+        "casesLabel": "Per-case results",
+        "passed": "Pass",
+        "failed": "Fail"
+      },
+      "register": {
+        "title": "5. Register to Ollama",
+        "subtitle": "We render an Ollama Modelfile. Toggle on to register automatically.",
+        "togglePullLabel": "Register to Ollama automatically",
+        "previewTitle": "Modelfile preview",
+        "successTitle": "Ready to register",
+        "summaryDuration": "Took {{seconds}}s",
+        "summaryArtifacts": "{{count}} artifacts",
+        "registeredIdLabel": "Registered model ID",
+        "openCatalog": "Open in catalog",
+        "ollamaCreate": {
+          "outputNameLabel": "Ollama model name",
+          "logTitle": "Ollama create progress log",
+          "started": "Started registering to Ollama",
+          "completed": "Registered to Ollama",
+          "failed": "Failed to register to Ollama"
+        }
+      },
+      "runtime": {
+        "label": "Validate runtime",
+        "hint": "Pick the runtime to call during the Validate stage. Mock means no external calls (demo).",
+        "option": {
+          "mock": "Mock (test)",
+          "ollama": "Ollama",
+          "lm-studio": "LM Studio"
+        },
+        "baseUrlLabel": "Runtime base URL",
+        "baseUrlHint": "The default usually works. Change it only if the port differs.",
+        "modelIdLabel": "Model ID",
+        "modelIdHint": "Ollama tag or LM Studio loaded model id. Leaving empty uses the base model name.",
+        "ollamaCreateToggle": "Register to Ollama automatically when done"
+      },
+      "progress": {
+        "label": "Progress",
+        "current": "Now: {{stage}}"
+      },
+      "status": {
+        "idle": "Idle",
+        "starting": "Starting",
+        "running": "Running",
+        "completed": "Completed",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      },
+      "errors": {
+        "startFailed": "Couldn't start. Retry?",
+        "default": "Something went wrong. Retry?",
+        "missingBaseModel": "Enter a base model id"
+      },
+      "steps": {
+        "1": {
+          "title": "Data ingest",
+          "body": "Auto-converts JSONL chat."
+        },
+        "2": {
+          "title": "Quantize",
+          "body": "Shrinks the model with llama-quantize."
+        },
+        "3": {
+          "title": "LoRA fine-tune",
+          "body": "Teaches Korean via LLaMA-Factory CLI."
+        },
+        "4": {
+          "title": "Korean eval",
+          "body": "Verifies quality with QA evals."
+        },
+        "5": {
+          "title": "Register",
+          "body": "Auto-builds an Ollama Modelfile."
+        }
+      }
+    },
+    "diagnostics": {
+      "title": "Diagnostics",
+      "subtitle": "Check this machine's health at a glance.",
+      "health": {
+        "green": "All systems normal",
+        "yellow": "Some items need attention",
+        "red": "Problem detected"
+      },
+      "sections": {
+        "scan": {
+          "title": "Self-scan",
+          "empty": "No scans yet",
+          "rescan": "Re-scan"
+        },
+        "gateway": {
+          "title": "Gateway health",
+          "activeKeys": "{{count}} active keys",
+          "latency": "Last 60s latency",
+          "recentRequests": "Recent requests",
+          "noRequests": "No requests yet"
+        },
+        "bench": {
+          "title": "Bench results",
+          "empty": "No models measured yet",
+          "startNew": "Start new measurement"
+        },
+        "workspace": {
+          "title": "Workspace",
+          "fingerprint": "Machine fingerprint",
+          "lastRepair": "Last cleanup",
+          "never": "Never cleaned",
+          "history": "Cleanup history"
+        }
+      }
+    },
+    "presets": {
+      "category": {
+        "coding": "Coding",
+        "translation": "Translation",
+        "legal": "Legal",
+        "marketing": "Marketing",
+        "medical": "Medical",
+        "education": "Education",
+        "research": "Research"
+      }
+    },
+    "guide": {
+      "title": "Guide",
+      "subtitle": "Walkthroughs for the 6 core features of LMmaster",
+      "sectionsHeading": "Sections",
+      "searchPlaceholder": "Search the guide",
+      "noResults": "No matches. Try a different keyword.",
+      "tryAction": "Try this feature",
+      "sections": {
+        "getting-started": "Getting Started",
+        "catalog": "Model Catalog",
+        "workbench": "Workbench",
+        "knowledge": "Knowledge (RAG)",
+        "api-keys": "API Keys + External Apps",
+        "portable": "Portable Move",
+        "diagnostics": "Diagnostics + Auto-Update",
+        "faq": "FAQ"
+      }
+    },
+    "help": {
+      "triggerAria": "Open help for this screen",
+      "popoverAria": "Help popover",
+      "openGuide": "Open the full guide",
+      "close": "Close",
+      "defaultHint": "Quick help for this feature",
+      "workspace": "Teach documents to the model and search them fast. Each workspace stays isolated.",
+      "workbench": "Build models in 5 steps: Data → Quantize → LoRA → Validate → Register.",
+      "catalog": "Auto-recommended models that fit your PC. Click a card for details.",
+      "apiKeys": "Issue keys so external apps can call LMmaster. Set allowed models, origins, expiry.",
+      "portable": "Export an entire workspace as one zip and re-import it on another PC."
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "close": "Close",
+      "col": {
+        "action": "Action",
+        "shortcut": "Shortcut"
+      },
+      "rows": {
+        "palette": "Command Palette",
+        "shortcuts": "Shortcuts help",
+        "shortcutsAlt": "Shortcuts help (alt)",
+        "navHome": "Go to Home",
+        "navCatalog": "Model Catalog",
+        "navInstall": "Install Center",
+        "navRuntimes": "Runtimes",
+        "navWorkspace": "Workspace",
+        "navProjects": "Projects",
+        "navKeys": "Local API",
+        "navWorkbench": "Workbench",
+        "navDiagnostics": "Diagnostics",
+        "escape": "Close modal or drawer"
+      }
+    },
+    "tour": {
+      "title": "First time here?",
+      "body": "Take a quick tour of LMmaster's core features.",
+      "accept": "Show me now",
+      "decline": "Maybe later"
+    }
+  },
+  "catalog": {
+    "title": "Model Catalog",
+    "subtitle": "Pick a model that fits your machine.",
+    "search": { "placeholder": "Search by model name" },
+    "category": {
+      "all": "All",
+      "agent-general": "General Assistant",
+      "roleplay": "Roleplay",
+      "coding": "Coding",
+      "slm": "Small models",
+      "sound-stt": "Speech recognition",
+      "sound-tts": "Speech synthesis"
+    },
+    "filter": {
+      "tool": "Tool calling",
+      "vision": "Vision",
+      "structured": "Structured output",
+      "recommendedOnly": "Recommended only"
+    },
+    "sort": {
+      "label": "Sort",
+      "score": "By recommendation score",
+      "korean": "By Korean strength",
+      "size": "By install size"
+    },
+    "empty": {
+      "noMatch": "No models match your filters. Adjust them and try again.",
+      "category": "No models in this category yet."
+    }
+  },
+  "recommendation": {
+    "best": { "label": "Best for this machine" },
+    "balanced": { "label": "Balanced pick" },
+    "lightweight": { "label": "Lightweight option" },
+    "fallback": { "label": "Always works" },
+    "empty": {
+      "best": "Nothing fits this machine. Start with the lightweight option.",
+      "slot": "No candidate"
+    },
+    "loading": "Computing recommendation…"
+  },
+  "model": {
+    "metric": {
+      "vram": "VRAM rec.",
+      "ram": "RAM rec.",
+      "size": "Install size",
+      "noVram": "No GPU"
+    },
+    "maturity": {
+      "stable": "Stable",
+      "beta": "Beta",
+      "experimental": "Experimental",
+      "deprecated": "Deprecated"
+    },
+    "verification": {
+      "verified": "Verified",
+      "community": "Community"
+    },
+    "compat": {
+      "fit": "Fits this machine",
+      "tight": "Memory tight",
+      "exceeds": "Plenty of headroom",
+      "unfit": "Won't run on this machine"
+    },
+    "exclude": {
+      "insufficientVram": "Needs {{need}} VRAM (have {{have}})",
+      "insufficientRam": "Needs {{need}} RAM (have {{have}})",
+      "deprecated": "No longer recommended",
+      "incompatible": "Incompatible with this machine"
+    },
+    "cta": {
+      "details": "Details",
+      "install": "Install"
+    }
+  },
+  "drawer": {
+    "section": {
+      "quant": "Quantization",
+      "warnings": "Warnings",
+      "useCases": "Use cases",
+      "license": "License",
+      "context": "Usage notes",
+      "bench": "30-second measure",
+      "presets": "Recommended presets for this model",
+      "presetsEmpty": "No recommended presets"
+    },
+    "close": "Close",
+    "quantRecommended": "Recommended",
+    "install": {
+      "cta": "Install this model",
+      "aria": "Open install page for {{name}}"
+    }
+  },
+  "workspace": {
+    "repair": {
+      "yellow": "First run on this machine. Re-measuring bench and scan caches.",
+      "applyYellow": "Refresh now",
+      "later": "Later",
+      "redTitle": "Workspace from a different environment",
+      "redBody": "OS or architecture changed. Reinstall existing runtimes to continue.",
+      "redDetail": "Was: {{prevOs}} → Now: {{currentOs}}",
+      "redModelsPreserved": "Downloaded models stay intact.",
+      "applyRed": "Refresh and show install guide",
+      "applied": "Done. Caches to re-measure: {{caches}}",
+      "close": "Close"
+    }
+  },
+  "keys": {
+    "title": "Local API Keys",
+    "subtitle": "Auth tokens for web apps calling this machine's models.",
+    "create": "New key",
+    "table": {
+      "alias": "Alias",
+      "prefix": "Key preview",
+      "scope": "Scope",
+      "created": "Created",
+      "lastUsed": "Last used",
+      "status": "Status",
+      "actions": ""
+    },
+    "status": {
+      "active": "Active",
+      "revoked": "Revoked"
+    },
+    "neverUsed": "Never used",
+    "actions": {
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke this key? Revoked keys stop working immediately."
+    },
+    "empty": {
+      "title": "No keys yet",
+      "body": "Create a key to connect a web app."
+    },
+    "modal": {
+      "createTitle": "Create new key",
+      "aliasLabel": "Alias (so you can spot the use site)",
+      "aliasPlaceholder": "e.g., My Blog",
+      "originLabel": "Allowed origin",
+      "originPlaceholder": "e.g., https://my-blog.com",
+      "originHint": "The key works only from this exact origin. Add as many as you need.",
+      "addOrigin": "Add origin",
+      "removeOrigin": "Remove",
+      "modelsLabel": "Allowed model pattern",
+      "modelsHint": "* matches every model; exaone-* matches the EXAONE family only.",
+      "submit": "Create",
+      "cancel": "Cancel",
+      "revealTitle": "Your key — shown once",
+      "revealBody": "You won't see this again. Copy it somewhere safe.",
+      "revealCopy": "Copy",
+      "revealCopied": "Copied",
+      "revealClose": "Close",
+      "revealAutomask": "Auto-masking in {{seconds}}s"
+    },
+    "errors": {
+      "emptyAlias": "Enter an alias.",
+      "emptyOrigin": "Add at least one origin.",
+      "createFailed": "Couldn't create key. Retry.",
+      "revokeFailed": "Couldn't revoke key."
+    }
+  },
+  "bench": {
+    "measure": "Measure on this machine (30s)",
+    "running": "Measuring…",
+    "cancel": "Stop",
+    "retry": "Re-measure",
+    "summary": "{{tps}} tok/s · {{ttft}}s first token",
+    "partial": "~{{tps}} tok/s · {{seconds}}s partial",
+    "timeoutZero": "Didn't finish within 30s.",
+    "wallclockBadge": "estimate",
+    "wallclockHint": "LM Studio doesn't expose precise token counters, so this is an estimate.",
+    "error": {
+      "runtimeUnreachable": "Runtime is offline.",
+      "modelNotLoaded": "Model isn't loaded in the runtime.",
+      "insufficientVram": "Too heavy for this machine ({{need}} needed, {{have}} available).",
+      "cancelled": "Measurement cancelled.",
+      "timeout": "Didn't finish within 30s.",
+      "other": "Measurement failed."
+    }
+  },
+  "palette": {
+    "aria": {
+      "dialog": "Command palette"
+    },
+    "placeholder": "Search commands…",
+    "empty": "No matches. Try a different keyword.",
+    "group": {
+      "wizard": "Wizard",
+      "navigation": "Navigate",
+      "system": "System",
+      "diagnostics": "Diagnostics"
+    },
+    "cmd": {
+      "wizard": {
+        "lang.ko": "Switch to Korean",
+        "lang.en": "Switch to English",
+        "scan.retry": "Re-scan environment",
+        "restart": "Restart wizard"
+      },
+      "nav": {
+        "home": "Go to Home",
+        "diagnostics": "Open Diagnostics"
+      },
+      "system": {
+        "gateway.copyUrl": "Copy gateway URL",
+        "wizard.reopen": "Re-open onboarding"
+      }
+    }
+  },
+  "onboarding": {
+    "aria": {
+      "root": "First-run setup"
+    },
+    "steps": {
+      "language": "Language",
+      "scan": "Environment",
+      "install": "First model",
+      "done": "Ready"
+    },
+    "actions": {
+      "next": "Continue",
+      "back": "Back",
+      "skip": "Skip for now"
+    },
+    "language": {
+      "title": "Pick your language",
+      "subtitle": "Change this anytime in Settings.",
+      "option": {
+        "ko": "한국어",
+        "en": "English"
+      }
+    },
+    "scan": {
+      "title": "Scan your environment",
+      "subtitle": {
+        "running": "Checking hardware and runtimes…",
+        "done": "Check complete. Review the results below.",
+        "failed": "Couldn't finish the environment check."
+      },
+      "captionRunning": "Usually under 3 seconds",
+      "card": {
+        "os": "Operating system",
+        "memory": "Memory",
+        "gpu": "GPU acceleration",
+        "runtimes": "Runtimes"
+      },
+      "status": {
+        "ok": "OK",
+        "warn": "Warning",
+        "cpuOnly": "CPU only",
+        "running": "Running",
+        "none": "None"
+      },
+      "body": {
+        "memory": "{{available}} available / {{total}} total",
+        "noGpu": "No GPU found. CPU mode still works."
+      },
+      "hint": {
+        "lowRam": "Under 8GB of RAM. Larger models may struggle.",
+        "lowDisk": "Under 20GB free disk. Free up space before downloading."
+      },
+      "runtime": {
+        "running": "Running",
+        "installed": "Installed",
+        "notInstalled": "Not installed",
+        "error": "Check failed"
+      },
+      "failure": {
+        "title": "Environment check failed",
+        "body": "Retry the check."
+      }
+    },
+    "install": {
+      "title": "Set up a runtime",
+      "subtitle": "Ollama is recommended. Pick one — grab models later from the catalog.",
+      "alreadyRunning": "Already running",
+      "ramLowHint": "Under 8GB of RAM. Smaller models recommended.",
+      "pill": {
+        "recommended": "Recommended",
+        "eula": "EULA"
+      },
+      "meta": {
+        "license": "License",
+        "size": "Size"
+      },
+      "cta": {
+        "install": "Install",
+        "alreadyOk": "Ready"
+      },
+      "cards": {
+        "ollama": {
+          "reason": "Fastest way to get started — open-source runtime",
+          "license": "MIT · auto install",
+          "size": "~800MB"
+        },
+        "lmStudio": {
+          "reason": "Best if you want a GUI. Install from the official site.",
+          "license": "EULA acceptance required",
+          "size": "From the official site"
+        }
+      },
+      "running": {
+        "title": "Installing {{name}}…"
+      },
+      "phase": {
+        "starting": "Starting",
+        "download": "Downloading",
+        "extract": "Extracting",
+        "postCheck": "Verifying",
+        "finished": "Almost done"
+      },
+      "retrySuffix": "(attempt {{attempt}})",
+      "speedPending": "Measuring…",
+      "etaPending": "Calculating…",
+      "etaSeconds": "~{{seconds}}s left",
+      "etaMinutes": "~{{minutes}}m {{seconds}}s left",
+      "progressAria": "Install progress",
+      "detailsLabel": "Show details",
+      "noLogYet": "No progress yet",
+      "cancel": "Stop",
+      "skip": {
+        "title": "All set",
+        "body": "Already running. Moving on."
+      },
+      "failed": {
+        "title": "Install failed"
+      },
+      "openedUrl": {
+        "title": "Site opened",
+        "body": "Finish the install on the official site, then come back here."
+      },
+      "error": {
+        "default": "Something went wrong. Retry.",
+        "download-failed": "Download failed. Check your network and retry.",
+        "extract-failed": "Extract failed. Check disk space.",
+        "io-error": "File write failed. Check permissions.",
+        "installer-exit-nonzero": "Installer didn't exit cleanly.",
+        "installer-killed": "Installer stopped before finishing.",
+        "installer-timeout": "Installer timed out. Retry.",
+        "cancelled": "Install cancelled.",
+        "open-url-failed": "Couldn't open browser. Open the site manually.",
+        "unsupported": "This environment isn't supported yet.",
+        "invalid-spec": "Manifest is malformed. Report this issue.",
+        "sink-closed": "Progress stream broke. Retry.",
+        "no-install-section": "No install info available.",
+        "no-platform-branch": "This OS isn't installable.",
+        "init-failed": "Couldn't prepare the install."
+      }
+    },
+    "done": {
+      "title": "All set",
+      "subtitle": "LMmaster is ready to go.",
+      "cta": "Get started"
+    },
+    "error": {
+      "title": "Something went wrong",
+      "body": "Retry to continue.",
+      "retry": "Retry",
+      "close": "Close"
+    }
+  }
+}

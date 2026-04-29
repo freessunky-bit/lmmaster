@@ -1,0 +1,137 @@
+/* WorkspaceRepairBanner — Phase 3'.c. 디자인 토큰만. */
+
+.ws-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-2);
+  border: 1px solid var(--border);
+  font-size: var(--fs-13);
+  margin: var(--space-3) var(--space-8);
+}
+
+.ws-banner-yellow {
+  background: var(--warn-a-2);
+  color: var(--warn);
+  border-color: var(--warn-a-3);
+}
+
+.ws-banner-success {
+  background: var(--primary-a-2);
+  color: var(--primary);
+  border-color: var(--primary-a-3);
+}
+
+.ws-banner-text {
+  flex: 1;
+}
+
+.ws-banner-actions {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.ws-banner-action {
+  appearance: none;
+  background: var(--primary-a-2);
+  color: var(--primary);
+  border: 1px solid var(--primary-a-3);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  font: inherit;
+  font-size: var(--fs-12);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.ws-banner-action:hover { background: var(--primary-a-3); }
+.ws-banner-action:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 1px;
+}
+.ws-banner-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ws-banner-action-secondary {
+  appearance: none;
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  font: inherit;
+  font-size: var(--fs-12);
+  cursor: pointer;
+}
+
+/* ── Red modal ─────────────────────────────────────────────────── */
+
+.ws-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+}
+
+.ws-modal {
+  width: 480px;
+  max-width: 90vw;
+  background: var(--surface);
+  border: 1px solid var(--error-a-3);
+  border-radius: var(--radius-3);
+  display: flex;
+  flex-direction: column;
+}
+
+.ws-modal-header {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--error-a-2);
+  border-radius: var(--radius-3) var(--radius-3) 0 0;
+}
+
+.ws-modal-title {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: var(--weight-semi);
+  color: var(--error);
+}
+
+.ws-modal-body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ws-modal-text {
+  margin: 0;
+  font-size: var(--fs-13);
+  line-height: var(--lh-loose);
+  color: var(--text);
+}
+
+.ws-modal-detail {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-12);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+}
+
+.ws-modal-footer {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}

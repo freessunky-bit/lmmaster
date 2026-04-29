@@ -1,0 +1,13 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 1': self-scan 명령 권한 — main 윈도가 start_scan / get_last_scan 호출 가능.
+
+[[permission]]
+identifier = "allow-start-scan"
+description = "Run start_scan to perform deterministic env checks + optional local-LLM Korean summary."
+commands.allow = ["start_scan"]
+
+[[permission]]
+identifier = "allow-get-last-scan"
+description = "Read the last cached ScanSummary."
+commands.allow = ["get_last_scan"]

@@ -1,0 +1,241 @@
+/* PortableExportPanel + PortableImportPanel — Phase 11' (ADR-0039). design-system tokens만. */
+
+/* ── Modal backdrop + container ──────────────────────────────────────── */
+
+.portable-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-4);
+}
+
+.portable-modal {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-3);
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+}
+
+.portable-modal-header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.portable-modal-title {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: var(--weight-semi);
+}
+
+.portable-modal-body {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.portable-modal-footer {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
+
+/* ── Form rows ───────────────────────────────────────────────────────── */
+
+.portable-input-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.portable-input-field > span {
+  font-size: var(--fs-13);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+}
+
+.portable-checkbox-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.portable-checkbox-row input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+
+.portable-checkbox-row > span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────── */
+
+.portable-progress {
+  width: 100%;
+  height: 8px;
+  background: var(--surface-1);
+  border-radius: var(--radius-1);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.portable-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  transition: width var(--dur-2) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portable-progress-fill {
+    transition: none;
+  }
+}
+
+.portable-progress-meta {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.portable-progress-current {
+  margin: 0;
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  word-break: break-all;
+}
+
+.portable-running-message {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text);
+}
+
+/* ── Result card (done) ──────────────────────────────────────────────── */
+
+.portable-result-card {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2);
+  background: var(--surface-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.portable-result-headline {
+  margin: 0;
+  font-size: var(--fs-14);
+  font-weight: var(--weight-semi);
+  color: var(--success, var(--primary));
+}
+
+.portable-result-summary {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.portable-result-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.portable-result-row {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--fs-12);
+}
+
+.portable-result-row dt {
+  color: var(--text-muted);
+  flex: 0 0 auto;
+  min-width: 80px;
+}
+
+.portable-result-row dd {
+  margin: 0;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.portable-sha {
+  font-size: var(--fs-11);
+}
+
+/* ── Tier badge ──────────────────────────────────────────────────────── */
+
+.portable-tier {
+  margin: 0;
+  display: inline-block;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  font-size: var(--fs-12);
+  font-weight: var(--weight-medium);
+  border: 1px solid var(--border-subtle);
+  align-self: flex-start;
+}
+
+.portable-tier-green {
+  background: var(--primary-a-2, rgba(0, 220, 130, 0.12));
+  color: var(--primary, #00dc82);
+}
+
+.portable-tier-yellow {
+  background: rgba(220, 170, 0, 0.12);
+  color: #f0c14b;
+}
+
+.portable-tier-red {
+  background: rgba(220, 60, 60, 0.12);
+  color: #ff7676;
+}
+
+/* ── Preview card ────────────────────────────────────────────────────── */
+
+.portable-preview-card {
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2);
+  background: var(--surface-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.portable-preview-title {
+  margin: 0;
+  font-size: var(--fs-13);
+  font-weight: var(--weight-semi);
+}
+
+.portable-preview-summary {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  word-break: break-all;
+}

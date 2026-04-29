@@ -1,0 +1,13 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 4.c: 런타임 상태 + 모델 목록 IPC.
+
+[[permission]]
+identifier = "allow-list-runtime-statuses"
+description = "List status of all runtime adapters."
+commands.allow = ["list_runtime_statuses"]
+
+[[permission]]
+identifier = "allow-list-runtime-models"
+description = "List models loaded in a specific runtime."
+commands.allow = ["list_runtime_models"]

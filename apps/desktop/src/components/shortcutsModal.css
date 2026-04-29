@@ -1,0 +1,151 @@
+/* ShortcutsModal — Phase 12'.c. design-system tokens만. */
+
+.shortcuts-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay, rgba(0, 0, 0, 0.55));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-4);
+}
+
+.shortcuts-modal {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-3);
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-md);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shortcuts-modal {
+    animation: shortcuts-modal-in 140ms var(--ease-out, ease-out);
+  }
+}
+
+@keyframes shortcuts-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.shortcuts-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.shortcuts-modal-title {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: var(--weight-semi);
+  color: var(--text);
+}
+
+.shortcuts-modal-close {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  font: inherit;
+  font-size: var(--fs-16);
+  text-align: center;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shortcuts-modal-close:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.shortcuts-modal-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-a-3);
+  border-color: var(--primary);
+}
+
+.shortcuts-modal-body {
+  padding: var(--space-4) var(--space-5);
+  overflow-y: auto;
+}
+
+/* ── Table ─────────────────────────────────────────────────────────── */
+
+.shortcuts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-14);
+  color: var(--text);
+}
+
+.shortcuts-table th {
+  text-align: left;
+  font-size: var(--fs-12);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.shortcuts-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--white-a-2, var(--border));
+}
+
+.shortcuts-action {
+  color: var(--text);
+}
+
+.shortcuts-keys {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.shortcuts-kbd-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.shortcuts-kbd {
+  display: inline-block;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-1);
+  padding: 1px var(--space-2);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: var(--fs-13);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.shortcuts-kbd-sep {
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+}

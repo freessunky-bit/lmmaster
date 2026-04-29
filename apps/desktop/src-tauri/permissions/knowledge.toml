@@ -1,0 +1,28 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 4.5'.b: Knowledge Stack IPC 권한 (workspace 단위 ingest + 검색).
+
+[[permission]]
+identifier = "allow-ingest-path"
+description = "Ingest a file or directory into a knowledge workspace; streams IngestEvent to caller window."
+commands.allow = ["ingest_path"]
+
+[[permission]]
+identifier = "allow-cancel-ingest"
+description = "Cancel an in-flight ingest by workspace_id (idempotent)."
+commands.allow = ["cancel_ingest"]
+
+[[permission]]
+identifier = "allow-search-knowledge"
+description = "Search a knowledge workspace by text query (sync RPC, top-k cosine)."
+commands.allow = ["search_knowledge"]
+
+[[permission]]
+identifier = "allow-list-ingests"
+description = "List active ingest snapshots (in-memory registry)."
+commands.allow = ["list_ingests"]
+
+[[permission]]
+identifier = "allow-knowledge-workspace-stats"
+description = "Return document and chunk counts for a knowledge workspace."
+commands.allow = ["knowledge_workspace_stats"]

@@ -1,0 +1,148 @@
+/* CommandPalette styles. Phase 1A.4.e §B7~B8.
+ *
+ * 토큰 정책:
+ * - position: fixed top: 120px, width: 540px (Linear 스펙).
+ * - .glass 클래스가 backdrop-blur + saturate + Apple top highlight 처리.
+ * - reduced-transparency / reduced-motion은 design-system이 처리.
+ */
+
+.palette-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  z-index: var(--z-palette);
+}
+
+.palette-frame {
+  position: fixed;
+  top: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(540px, calc(100vw - 32px));
+  z-index: calc(var(--z-palette) + 1);
+  pointer-events: auto;
+}
+
+.palette-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 60vh;
+  /* .glass가 background/border/shadow/blur/border-radius 처리 */
+}
+
+/* ── 입력 영역 ────────────────────────────────────────────────────── */
+
+.palette-control {
+  border-bottom: 1px solid var(--border);
+}
+
+.palette-input {
+  width: 100%;
+  height: 56px;
+  padding: 0 var(--space-5);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-16);
+  outline: none;
+}
+
+.palette-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ── 리스트 영역 ──────────────────────────────────────────────────── */
+
+.palette-list {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-2) 0;
+  /* glass 안쪽 — backdrop-filter는 부모가 적용 중이므로 여긴 추가 안 함. */
+}
+
+.palette-empty {
+  padding: var(--space-8) var(--space-5);
+  text-align: center;
+  font-size: var(--fs-14);
+  color: var(--text-secondary);
+}
+
+/* ── Group ────────────────────────────────────────────────────────── */
+
+.palette-group {
+  display: block;
+}
+
+.palette-group + .palette-group {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--white-a-2);
+}
+
+.palette-group-label {
+  display: block;
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--fs-12);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Item ─────────────────────────────────────────────────────────── */
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--fs-14);
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  border-left: 2px solid transparent;
+}
+
+.palette-item:hover {
+  background: var(--surface-3);
+}
+
+/* Ark UI Combobox는 highlighted item에 data-highlighted 속성 부여. */
+.palette-item[data-highlighted] {
+  background: var(--primary-a-2);
+  color: var(--text);
+  border-left-color: var(--primary);
+}
+
+.palette-item[data-disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.palette-item[data-disabled]:hover {
+  background: transparent;
+}
+
+.palette-item-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.palette-item-shortcut {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ── 작은 화면 대응 ──────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .palette-frame {
+    top: 56px;
+    width: calc(100vw - 24px);
+  }
+}

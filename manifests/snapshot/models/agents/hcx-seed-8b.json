@@ -1,0 +1,61 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-27T00:00:00Z",
+  "entries": [
+    {
+      "id": "hcx-seed-8b",
+      "display_name": "HyperCLOVA X SEED 8B",
+      "category": "agent-general",
+      "model_family": "hcx",
+      "source": {
+        "type": "hugging-face",
+        "repo": "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B-GGUF",
+        "file": "HyperCLOVAX-SEED-Text-Instruct-Q4_K_M.gguf"
+      },
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 5100,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "HyperCLOVAX-SEED-Text-Instruct-Q4_K_M.gguf"
+        },
+        {
+          "label": "Q5_K_M",
+          "size_mb": 5900,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "HyperCLOVAX-SEED-Text-Instruct-Q5_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 6144,
+      "rec_vram_mb": 8192,
+      "min_ram_mb": 8192,
+      "rec_ram_mb": 16384,
+      "install_size_mb": 5100,
+      "context_guidance": "한국어 자연스러움 최강 — 일상/공식/문어체 모두 안정.",
+      "language_strength": 10,
+      "roleplay_strength": 7,
+      "coding_strength": 5,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "HyperCLOVA X SEED Open License",
+      "maturity": "stable",
+      "portable_suitability": 7,
+      "on_device_suitability": 8,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-27",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "한국어 자연어 처리 (NER/분류)",
+        "고객 응대 초안",
+        "문서 요약/질의응답"
+      ],
+      "warnings": []
+    }
+  ]
+}

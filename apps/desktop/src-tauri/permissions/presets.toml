@@ -1,0 +1,13 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 4.h: 한국어 preset 카탈로그 IPC.
+
+[[permission]]
+identifier = "allow-get-presets"
+description = "List Korean presets (optionally filtered by category)."
+commands.allow = ["get_presets"]
+
+[[permission]]
+identifier = "allow-get-preset"
+description = "Read a single preset by id."
+commands.allow = ["get_preset"]

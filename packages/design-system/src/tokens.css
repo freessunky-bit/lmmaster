@@ -1,0 +1,188 @@
+/* LMmaster Design System — Tokens
+ * 정책 (docs/design-system-plan.md, ADR-0011, Phase 0 보강 §4):
+ * - Dark-only. 라이트 테마 만들지 않는다.
+ * - 거의 검정 배경 + 4단 surface depth.
+ * - 네온 그린 단일 primary accent.
+ * - 4px spacing scale.
+ * - 숫자는 mono + tabular-nums.
+ *
+ * 보강 변경:
+ * - Pretendard Variable을 Inter보다 우선해 한국어 width consistency 확보.
+ * - Radix-style alpha scale 추가 — surface 위 hover/press wash 합성.
+ * - 의미 색 위 텍스트(--*-on) 짝 추가.
+ * - 2-layer focus ring + :focus-visible 게이트.
+ * - prefers-reduced-motion 오버라이드.
+ */
+
+:root {
+  /* ── Background depth ─────────────────────────────────────────────── */
+  --bg:          #07090b;
+  --bg-subtle:   #0b0e12;
+  --surface:     #11151a;   /* 카드 */
+  --surface-2:   #161b21;   /* raised: popover/menu */
+  --surface-3:   #1c2229;   /* hover/selected row */
+
+  /* ── Text ─────────────────────────────────────────────────────────── */
+  --text:           #e8edf2;
+  --text-secondary: #9aa3ad;
+  --text-muted:     #6b7480;
+
+  /* ── Border / divider ─────────────────────────────────────────────── */
+  --border:        #1f2630;
+  --border-strong: #2a323d;
+
+  /* ── Primary — neon green ─────────────────────────────────────────── */
+  --primary:       #38ff7e;
+  --primary-hover: #4cffa0;
+  --primary-press: #1ee063;
+  --primary-on:    #04140a;
+  --text-on-primary: var(--primary-on);   /* shadcn parity alias */
+  --primary-glow:  rgba(56, 255, 126, 0.35);
+
+  /* ── Semantic secondary ──────────────────────────────────────────── */
+  --info:    #6aa3ff;
+  --warn:    #ffb454;
+  --error:   #ff5c6c;
+  --accent:  #b388ff;
+
+  /* 의미 색 위 텍스트 (shadcn 패턴) */
+  --info-on:   #04111f;
+  --warn-on:   #1a0e02;
+  --error-on:  #1f0509;
+  --accent-on: #0e0420;
+
+  /* shadcn parity */
+  --input-bg:  var(--surface);
+  --ring:      var(--primary);
+
+  /* ── Alpha scales (Radix style) — surface 위 wash 합성 ───────────── */
+  --white-a-1: rgba(255, 255, 255, 0.03);
+  --white-a-2: rgba(255, 255, 255, 0.06);
+  --white-a-3: rgba(255, 255, 255, 0.09);
+  --white-a-4: rgba(255, 255, 255, 0.13);
+  --white-a-5: rgba(255, 255, 255, 0.18);
+  --black-a-3: rgba(0, 0, 0, 0.30);
+  --black-a-6: rgba(0, 0, 0, 0.60);
+  --primary-a-2: rgba(56, 255, 126, 0.10);
+  --primary-a-3: rgba(56, 255, 126, 0.16);
+  --primary-a-6: rgba(56, 255, 126, 0.40);
+  --info-a-2:    rgba(106, 163, 255, 0.10);
+  --info-a-3:    rgba(106, 163, 255, 0.18);
+  --warn-a-2:    rgba(255, 180,  84, 0.12);
+  --warn-a-3:    rgba(255, 180,  84, 0.22);
+  --error-a-2:   rgba(255,  92, 108, 0.12);
+  --error-a-3:   rgba(255,  92, 108, 0.22);
+
+  /* Overlay */
+  --overlay: var(--black-a-6);
+
+  /* Focus — 2-layer (WCAG C40, Linear/Raycast 표준) */
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--primary);
+  --focus-ring-inset: inset 0 0 0 2px var(--primary);
+
+  /* ── Spacing — 4px grid ──────────────────────────────────────────── */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ── Radius ──────────────────────────────────────────────────────── */
+  --radius-1: 4px;
+  --radius-2: 8px;
+  --radius-3: 12px;
+  --radius-pill: 9999px;
+
+  /* ── Shadow (절제. 깊이는 surface 단계로 표현) ─────────────────── */
+  --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md:   0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 0 4px var(--primary-glow);
+
+  /* ── Typography (Pretendard 우선) ────────────────────────────────── */
+  --font-display: "Pretendard Variable", Pretendard, "Inter",
+                  -apple-system, BlinkMacSystemFont,
+                  "Apple SD Gothic Neo", "Segoe UI", Roboto,
+                  "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+  --font-body:    var(--font-display);
+  --font-mono:    "JetBrains Mono", "JetBrainsMonoHangul", "D2Coding",
+                  "Sarasa Mono K", "Apple SD Gothic Neo",
+                  ui-monospace, Menlo, Consolas, monospace;
+
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-15: 15px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-22: 22px;
+  --fs-28: 28px;
+
+  --lh-tight:  1.2;
+  --lh-normal: 1.45;
+  --lh-loose:  1.6;
+
+  --weight-regular: 400;
+  --weight-medium:  500;
+  --weight-semi:    600;
+
+  /* ── Motion ──────────────────────────────────────────────────────── */
+  --ease-standard:    cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-emphasized:  cubic-bezier(0.16, 1, 0.3, 1);  /* Linear-style */
+  --ease-in:          cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:         cubic-bezier(0, 0, 0.2, 1);
+
+  --dur-instant: 80ms;
+  --dur-fast:    120ms;
+  --dur-base:    180ms;
+  --dur-slow:    280ms;
+
+  /* ── Z-index ─────────────────────────────────────────────────────── */
+  --z-base:    0;
+  --z-sticky:  100;
+  --z-overlay: 1000;
+  --z-modal:   1100;
+  --z-toast:   1200;
+  --z-palette: 1300;
+
+  /* ── Aurora background (Phase 1A.4.e) ──────────────────────────────
+   * 정책: 정적 3-radial. 데스크톱 응시 시간 길어 drift 안 함.
+   * 두 장은 primary-a-* (단일 accent), 한 장은 accent 6% whisper(2018 톤 회피).
+   */
+  --aurora-1: radial-gradient(60vw 60vw at 12% -10%,  var(--primary-a-3), transparent 60%);
+  --aurora-2: radial-gradient(50vw 50vw at 100% 110%, var(--primary-a-2), transparent 55%);
+  --aurora-3: radial-gradient(40vw 40vw at 80% -20%,  rgba(179, 136, 255, 0.06), transparent 60%);
+  --aurora-mask: linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%);
+
+  /* ── Glass surface (Phase 1A.4.e) ──────────────────────────────────
+   * Apple/Linear recipe — blur 20 + saturate 160% + 1px outer hairline +
+   * inset top highlight (the secret) + 2-layer drop shadow.
+   * `prefers-reduced-transparency: reduce`에서 surface-2 fallback.
+   */
+  --glass-blur:      20px;
+  --glass-saturate:  160%;
+  --shadow-glass:
+    inset 0 1px 0 var(--white-a-3),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0ms;
+    --dur-fast:    0ms;
+    --dur-base:    0ms;
+    --dur-slow:    0ms;
+  }
+}
+
+/* Numeric utility — 항상 mono + tabular */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

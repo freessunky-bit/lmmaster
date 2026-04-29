@@ -1,0 +1,213 @@
+/* EulaGate — Phase 7'.a. 첫 실행 EULA 게이트.
+ *
+ * 디자인 토큰만 사용. prefers-reduced-motion은 토큰(--dur-*) 차원에서 자동 처리.
+ */
+
+.eula-gate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-overlay, rgba(0, 0, 0, 0.72));
+  padding: var(--space-4, 16px);
+}
+
+.eula-gate-card {
+  width: min(720px, 96vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+  background: var(--surface-1, #14181f);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--space-5, 20px);
+  color: var(--text-primary, #e6e9ee);
+}
+
+.eula-gate-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+}
+
+.eula-gate-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary, #e6e9ee);
+}
+
+.eula-gate-langs {
+  display: inline-flex;
+  gap: var(--space-1, 4px);
+  background: var(--surface-2, #1b2029);
+  padding: 2px;
+  border-radius: var(--radius-md, 8px);
+}
+
+.eula-gate-lang {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #9aa3b2);
+  font: inherit;
+  text-align: center;
+  width: auto;
+  padding: var(--space-1, 4px) var(--space-3, 12px);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+}
+
+.eula-gate-lang.is-active {
+  background: var(--surface-3, #252b36);
+  color: var(--text-primary, #e6e9ee);
+}
+
+.eula-gate-lang:focus-visible {
+  outline: 2px solid var(--primary-a-3, rgba(72, 220, 132, 0.32));
+  outline-offset: 2px;
+}
+
+.eula-gate-version {
+  margin: 0;
+  color: var(--text-muted, #6c7686);
+  font-size: 0.875rem;
+}
+
+.eula-gate-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  background: var(--surface-2, #1b2029);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-4, 16px);
+  line-height: 1.55;
+  color: var(--text-secondary, #c5cad3);
+}
+
+.eula-gate-body:focus-visible {
+  outline: 2px solid var(--primary-a-3, rgba(72, 220, 132, 0.32));
+  outline-offset: -2px;
+}
+
+.eula-gate-body h1,
+.eula-gate-body h2,
+.eula-gate-body h3 {
+  color: var(--text-primary, #e6e9ee);
+  margin: var(--space-4, 16px) 0 var(--space-2, 8px);
+}
+
+.eula-gate-body h1 {
+  font-size: 1.125rem;
+}
+
+.eula-gate-body h2 {
+  font-size: 1rem;
+}
+
+.eula-gate-body p {
+  margin: var(--space-2, 8px) 0;
+}
+
+.eula-gate-body ul {
+  margin: var(--space-2, 8px) 0;
+  padding-left: var(--space-5, 20px);
+}
+
+.eula-gate-body code {
+  background: var(--surface-3, #252b36);
+  padding: 0 4px;
+  border-radius: 4px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.eula-gate-scroll-hint {
+  margin: 0;
+  color: var(--text-muted, #6c7686);
+  font-size: 0.85rem;
+}
+
+.eula-gate-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2, 8px);
+}
+
+.eula-gate-accept,
+.eula-gate-decline {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, #e6e9ee);
+  font: inherit;
+  text-align: center;
+  width: auto;
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+}
+
+.eula-gate-accept {
+  background: var(--primary, #48dc84);
+  color: var(--primary-on, #07140c);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.eula-gate-accept:disabled {
+  background: var(--surface-3, #252b36);
+  color: var(--text-muted, #6c7686);
+  cursor: not-allowed;
+}
+
+.eula-gate-accept:focus-visible,
+.eula-gate-decline:focus-visible {
+  outline: 2px solid var(--primary-a-3, rgba(72, 220, 132, 0.32));
+  outline-offset: 2px;
+}
+
+/* ── 거절 확인 모달 ────────────────────────────────────────────── */
+
+.eula-gate-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-overlay, rgba(0, 0, 0, 0.82));
+  padding: var(--space-4, 16px);
+}
+
+.eula-gate-confirm-card {
+  width: min(420px, 96vw);
+  background: var(--surface-1, #14181f);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--space-5, 20px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+}
+
+.eula-gate-confirm-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-primary, #e6e9ee);
+}
+
+.eula-gate-confirm-body {
+  margin: 0;
+  color: var(--text-secondary, #c5cad3);
+  line-height: 1.55;
+}
+
+.eula-gate-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2, 8px);
+}

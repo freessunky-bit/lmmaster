@@ -1,0 +1,33 @@
+[package]
+name = "portable-workspace"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+shared-types.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+time.workspace = true
+tracing.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+hex.workspace = true
+
+# Phase 11' — export/import.
+zip = { workspace = true }
+tempfile.workspace = true
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+async-trait = { workspace = true }
+# 패스프레이즈 wrap (AES-GCM + PBKDF2). 키 옵션 활성 시 archive 동봉.
+aes-gcm = "0.10"
+pbkdf2 = { version = "0.12", features = ["simple"] }
+hmac = "0.12"
+rand = "0.8"
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

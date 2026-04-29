@@ -1,0 +1,30 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 6'.b: auto-updater 관련 app-defined 권한.
+# capabilities/main.json에서 "allow-*"로 참조.
+# 향후 removeUnusedCommands=true 빌드 옵션 호환 + ACL 명시화.
+
+[[permission]]
+identifier = "allow-check-for-update"
+description = "Run a one-shot check for the latest release and stream UpdateEvent to the caller window."
+commands.allow = ["check_for_update"]
+
+[[permission]]
+identifier = "allow-cancel-update-check"
+description = "Cancel an in-flight update check by check_id (idempotent)."
+commands.allow = ["cancel_update_check"]
+
+[[permission]]
+identifier = "allow-start-auto-update-poller"
+description = "Start the long-running 6h poller for auto-update checks (single-slot)."
+commands.allow = ["start_auto_update_poller"]
+
+[[permission]]
+identifier = "allow-stop-auto-update-poller"
+description = "Stop the long-running auto-update poller (idempotent)."
+commands.allow = ["stop_auto_update_poller"]
+
+[[permission]]
+identifier = "allow-get-auto-update-status"
+description = "Read the auto-update poller status (active flag + repo + interval + last check)."
+commands.allow = ["get_auto_update_status"]

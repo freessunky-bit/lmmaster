@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LMmaster 데모 — 한국어 로컬 AI</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07090b;
+        --surface: #0f1418;
+        --surface-2: #131a20;
+        --border: #1b2329;
+        --primary: #38ff7e;
+        --primary-glow: rgba(56, 255, 126, 0.25);
+        --text: #e6ecef;
+        --text-secondary: #8b969e;
+        --error: #ff5c6c;
+        --warn: #ffb454;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, "Pretendard", "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+      }
+      h1 { font-size: 22px; margin: 0 0 8px; }
+      .subtitle { color: var(--text-secondary); margin: 0 0 24px; font-size: 14px; }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-size: 13px;
+        margin-bottom: 16px;
+      }
+      .status .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--text-secondary);
+      }
+      .status[data-state="ready"] .dot {
+        background: var(--primary);
+        box-shadow: 0 0 0 4px var(--primary-glow);
+      }
+      .status[data-state="error"] .dot { background: var(--error); }
+
+      .panel {
+        width: 100%;
+        max-width: 720px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+      input, textarea, select {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: var(--text);
+        font: inherit;
+        font-size: 14px;
+      }
+      textarea { min-height: 80px; resize: vertical; }
+      button {
+        appearance: none;
+        background: var(--primary);
+        color: #04140a;
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .response {
+        white-space: pre-wrap;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 14px;
+        line-height: 1.6;
+        min-height: 80px;
+      }
+      .error {
+        color: var(--error);
+        font-size: 13px;
+      }
+      .hint {
+        color: var(--text-secondary);
+        font-size: 12px;
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>LMmaster 한국어 로컬 AI 데모</h1>
+    <p class="subtitle">
+      기존 웹앱이 endpoint URL과 API 키만 바꿔서 호출하는 시나리오를 확인해 보세요.
+    </p>
+
+    <div class="status" id="status" data-state="checking">
+      <span class="dot"></span>
+      <span id="status-text">게이트웨이를 찾고 있어요…</span>
+    </div>
+
+    <div class="panel">
+      <div>
+        <label for="base-url">Gateway baseUrl</label>
+        <input id="base-url" type="text" value="http://127.0.0.1:43117/v1" />
+        <div class="hint">LMmaster 데스크톱에서 게이트웨이가 띄운 포트와 일치해야 해요.</div>
+      </div>
+      <div>
+        <label for="api-key">API 키 (lm-…)</label>
+        <input id="api-key" type="text" placeholder="LMmaster Settings → 새 키 만들기에서 발급받은 값" />
+      </div>
+      <div>
+        <label for="model">모델</label>
+        <input id="model" type="text" value="exaone-4.0-1.2b-instruct" />
+      </div>
+      <div>
+        <label for="prompt">메시지</label>
+        <textarea id="prompt">안녕하세요. 한국어로 한 줄 짜리 응원 문구 부탁드려요.</textarea>
+      </div>
+      <button id="send" type="button">보내볼게요</button>
+      <div>
+        <label>응답</label>
+        <div id="response" class="response"></div>
+        <p id="error" class="error"></p>
+      </div>
+    </div>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

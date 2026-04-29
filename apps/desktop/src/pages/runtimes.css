@@ -1,0 +1,367 @@
+/* Runtimes 페이지 — Phase 4.c. design-system tokens만 사용. */
+
+.runtimes-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-8);
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Page header ───────────────────────────────────────────────── */
+
+.runtimes-page-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.runtimes-page-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.runtimes-page-title {
+  margin: 0;
+  font-size: var(--fs-22);
+  font-weight: var(--weight-semi);
+  letter-spacing: -0.01em;
+}
+
+.runtimes-page-subtitle {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+}
+
+.runtimes-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  font-size: var(--fs-13);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.runtimes-summary-sep {
+  color: var(--text-muted);
+}
+
+.runtimes-summary-label {
+  color: var(--text-secondary);
+  margin-left: var(--space-1);
+}
+
+/* ── Shell — 좌측 sidebar(320px) + 우측 main(flex). ───────────── */
+
+.runtimes-shell {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: var(--space-6);
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 960px) {
+  .runtimes-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Sidebar — 어댑터 카드 column. ──────────────────────────── */
+
+.runtimes-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-y: auto;
+}
+
+.runtimes-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-emphasized),
+    background var(--dur-fast) var(--ease-emphasized);
+}
+
+.runtimes-card:hover {
+  border-color: var(--primary-a-3);
+}
+
+.runtimes-card.is-active {
+  border: 1.5px solid var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-a-2);
+}
+
+.runtimes-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.runtimes-card-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.runtimes-card-title {
+  margin: 0;
+  font-size: var(--fs-14);
+  font-weight: var(--weight-semi);
+  color: var(--text);
+}
+
+.runtimes-card-meta {
+  display: flex;
+  gap: var(--space-3);
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.runtimes-card-version,
+.runtimes-card-port {
+  color: var(--text-muted);
+}
+
+.runtimes-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.runtimes-card-line {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text);
+}
+
+.runtimes-card-line-warn {
+  color: var(--warn);
+}
+
+.runtimes-card-line-muted {
+  color: var(--text-muted);
+}
+
+.runtimes-card-footer {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.runtimes-card-action {
+  flex: 1;
+  appearance: none;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-12);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.runtimes-card-action:disabled {
+  cursor: not-allowed;
+}
+
+/* ── Main — 모델 목록. ──────────────────────────────────────── */
+
+.runtimes-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  padding: var(--space-4);
+  min-height: 0;
+}
+
+.runtimes-toolbar {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.runtimes-search {
+  flex: 1;
+  height: 32px;
+  padding: 0 var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  color: var(--text);
+  font-size: var(--fs-13);
+}
+
+.runtimes-search:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 1px;
+  border-color: var(--primary);
+}
+
+.runtimes-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-12);
+  color: var(--text-secondary);
+}
+
+.runtimes-sort select {
+  appearance: none;
+  height: 32px;
+  padding: 0 var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  color: var(--text);
+  font-size: var(--fs-13);
+  cursor: pointer;
+}
+
+.runtimes-sort-label {
+  color: var(--text-muted);
+}
+
+/* ── 모델 목록 표 ─────────────────────────────────────────── */
+
+.runtimes-table-header {
+  display: grid;
+  grid-template-columns: 1fr 96px 96px;
+  gap: var(--space-3);
+  padding: 0 var(--space-2);
+  font-size: var(--fs-12);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-1);
+}
+
+.runtimes-col-size,
+.runtimes-col-digest {
+  text-align: right;
+}
+
+.runtimes-vlist {
+  flex: 1;
+  min-height: 0;
+}
+
+.runtimes-row {
+  display: grid;
+  grid-template-columns: 1fr 96px 96px;
+  gap: var(--space-3);
+  align-items: center;
+  height: 100%;
+  padding: 0 var(--space-2);
+  font-size: var(--fs-13);
+  color: var(--text);
+}
+
+.runtimes-cell-name {
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runtimes-cell-size {
+  text-align: right;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.runtimes-cell-digest {
+  text-align: right;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+}
+
+.runtimes-table-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+}
+
+/* ── Empty states ────────────────────────────────────────── */
+
+.runtimes-empty {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+}
+
+.runtimes-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  height: 100%;
+}
+
+.runtimes-empty-title {
+  margin: 0;
+  font-size: var(--fs-14);
+  font-weight: var(--weight-semi);
+  color: var(--text);
+}
+
+.runtimes-empty-body {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-13);
+}
+
+.runtimes-empty-cta {
+  appearance: none;
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--primary-a-2);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-2);
+  color: var(--primary);
+  font-size: var(--fs-13);
+  cursor: pointer;
+  font-weight: var(--weight-medium);
+}
+
+.runtimes-empty-cta:hover {
+  background: var(--primary-a-3);
+}
+
+.runtimes-empty-cta:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
