@@ -45,7 +45,8 @@ export interface CreatedKey {
 export type KeyApiError =
   | { kind: "empty-alias" }
   | { kind: "store"; message: string }
-  | { kind: "internal"; message: string };
+  | { kind: "internal"; message: string }
+  | { kind: "empty-scope" };
 
 /** 신규 API 키 발급. plaintext_once는 1회만 노출. */
 export async function createApiKey(args: {
@@ -77,6 +78,21 @@ export async function updateApiKeyPipelines(args: {
 }): Promise<void> {
   return invoke<void>("update_api_key_pipelines", {
     req: { id: args.id, enabled_pipelines: args.enabled_pipelines },
+  });
+}
+
+/**
+ * Phase 13'.c — scope 전체 교체. 평문 재발급 없이 필터만 갱신해요.
+ *
+ * 정책: models / endpoints가 둘 다 비어 있으면 backend가 `empty-scope`로 거부.
+ * revoked 키도 편집 가능 (단, UI에서 별도 막아줘요).
+ */
+export async function updateApiKeyScope(args: {
+  id: string;
+  scope: ApiKeyScope;
+}): Promise<void> {
+  return invoke<void>("update_api_key_scope", {
+    req: { id: args.id, scope: args.scope },
   });
 }
 

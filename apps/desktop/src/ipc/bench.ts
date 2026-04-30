@@ -88,6 +88,13 @@ export async function getLastBenchReport(args: {
   });
 }
 
+/** 최근 측정한 모델 N개 일괄 — Diagnostics 카드 (Phase 13'.b). 최신 → 오래된 순. */
+export async function listRecentBenchReports(
+  limit?: number,
+): Promise<BenchReport[]> {
+  return invoke<BenchReport[]>("list_recent_bench_reports", { limit });
+}
+
 /** bench:started — UI 진행 spinner 트리거. */
 export async function onBenchStarted(
   cb: (event: { model_id: string }) => void,

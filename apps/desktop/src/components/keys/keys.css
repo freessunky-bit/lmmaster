@@ -349,3 +349,29 @@
   font-size: var(--fs-12);
   line-height: var(--lh-loose);
 }
+
+
+/* ── Edit modal extras (Phase 13'.c) ─────────────────────────── */
+
+.keys-modal-subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+}
+
+.keys-field.is-readonly {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.keys-field-readonly {
+  color: var(--text-secondary);
+  font-size: var(--fs-13);
+}
+
+.keys-row-actions {
+  display: inline-flex;
+  gap: var(--space-2);
+}

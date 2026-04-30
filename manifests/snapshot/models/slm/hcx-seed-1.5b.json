@@ -1,0 +1,89 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "hcx-seed-1.5b",
+      "display_name": "HyperCLOVA X SEED 1.5B Instruct (네이버)",
+      "category": "slm",
+      "model_family": "hyperclovax",
+      "source": {
+        "type": "hugging-face",
+        "repo": "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B",
+        "file": "HyperCLOVAX-SEED-Text-Instruct-1.5B-Q4_K_M.gguf"
+      },
+      "hub_id": null,
+      "tier": "new",
+      "runner_compatibility": ["llama-cpp", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 1100,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "HyperCLOVAX-SEED-Text-Instruct-1.5B-Q4_K_M.gguf"
+        },
+        {
+          "label": "Q8_0",
+          "size_mb": 2200,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "HyperCLOVAX-SEED-Text-Instruct-1.5B-Q8_0.gguf"
+        }
+      ],
+      "min_vram_mb": null,
+      "rec_vram_mb": 2048,
+      "min_ram_mb": 4096,
+      "rec_ram_mb": 8192,
+      "install_size_mb": 1100,
+      "context_guidance": "16K context. 한국어 + 한국 문화 벤치 강세. 엣지 / 1.5B 사이즈로 노트북에서도 실시간.",
+      "language_strength": 9,
+      "roleplay_strength": 5,
+      "coding_strength": 4,
+      "tool_support": false,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "HyperCLOVA X SEED 라이선스 (사용 전 모델 카드 약관 확인 필수)",
+      "maturity": "beta",
+      "portable_suitability": 10,
+      "on_device_suitability": 10,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "community",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "노트북 / 모바일급에서 한국어 비서",
+        "한국 문화 / 시사 Q&A",
+        "실시간 한국어 응답 (CPU에서도 가능)"
+      ],
+      "warnings": [
+        "라이선스가 표준 OSS와 다름 — 상업 사용 전 모델 카드 약관 확인 권장.",
+        "Ollama 공식 라이브러리 미등록 — llama.cpp 또는 LM Studio로 GGUF 직접 로드."
+      ],
+      "community_insights": {
+        "strengths_ko": [
+          "한국어 자연스러움 + 한국 문화 지식 — 1.5B SLM 중 최상위",
+          "16K context로 짧은 문서 요약 가능",
+          "엣지 디바이스 / 사양 낮은 노트북에서도 실시간",
+          "네이버가 공식 출시 — 향후 fine-tune 생태계 기대"
+        ],
+        "weaknesses_ko": [
+          "1.5B 한계로 긴 추론 / 코드는 약함",
+          "라이선스가 일반 OSS보다 제한적 — 상업 사용 시 약관 검토 필요",
+          "Ollama 공식 미지원이라 setup 단계가 EXAONE보다 한 단계 많음"
+        ],
+        "use_cases_ko": [
+          "한국어 일상 비서 (모바일 / 엣지)",
+          "한국 문화 / 시사 Q&A",
+          "한국어 fine-tune 베이스 모델"
+        ],
+        "curator_note_ko": "EXAONE 1.2B와 비슷한 사이즈지만 네이버 데이터셋이라 한국 시사 / 문화에서 강점. 단 라이선스가 표준 OSS가 아니라 상업화 전 약관 확인 필수. 가벼운 한국어 비서로는 매력적.",
+        "sources": [
+          "huggingface.co/naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

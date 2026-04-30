@@ -74,10 +74,7 @@ impl Default for HfMetaCache {
 }
 
 /// 단일 모델 HF metadata fetch.
-pub async fn fetch_one(
-    http: &reqwest::Client,
-    repo: &str,
-) -> Result<HfMeta, anyhow::Error> {
+pub async fn fetch_one(http: &reqwest::Client, repo: &str) -> Result<HfMeta, anyhow::Error> {
     let url = format!("https://huggingface.co/api/models/{repo}");
     let resp = http
         .get(&url)

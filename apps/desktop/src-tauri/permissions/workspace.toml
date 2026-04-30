@@ -11,3 +11,10 @@ commands.allow = ["get_workspace_fingerprint"]
 identifier = "allow-check-workspace-repair"
 description = "Apply 3-tier repair (cache invalidate / runtimes invalidate) and persist fingerprint."
 commands.allow = ["check_workspace_repair"]
+
+# Phase 13'.b — Diagnostics "복구 이력" 카드용.
+
+[[permission]]
+identifier = "allow-get-repair-history"
+description = "Read the workspace repair history (JSONL append-only) for Diagnostics."
+commands.allow = ["get_repair_history"]

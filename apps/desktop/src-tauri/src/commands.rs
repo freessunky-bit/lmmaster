@@ -182,6 +182,37 @@ impl CatalogState {
     }
 }
 
+// ── Phase 13'.b — Diagnostics 실 데이터 IPC ──────────────────────
+
+/// 게이트웨이 60s latency sparkline (30 bucket 평균 ms).
+///
+/// 정책 (Phase 13'.b):
+/// - middleware가 record한 metrics를 ring buffer에서 산출. 빈 bucket은 0.
+/// - Diagnostics 페이지의 LatencySparkline 차트가 5초 polling.
+#[tauri::command]
+pub fn get_gateway_latency_sparkline(
+    metrics: tauri::State<'_, Arc<core_gateway::GatewayMetrics>>,
+) -> Vec<u32> {
+    metrics.latency_sparkline()
+}
+
+/// 최근 N개 게이트웨이 요청 메타. 최근 → 오래된 순서.
+#[tauri::command]
+pub fn get_gateway_recent_requests(
+    metrics: tauri::State<'_, Arc<core_gateway::GatewayMetrics>>,
+    limit: Option<u32>,
+) -> Vec<core_gateway::RequestRecord> {
+    metrics.recent_requests(limit.unwrap_or(5) as usize)
+}
+
+/// 메모리 percentiles snapshot (p50 / p95 / count) — Diagnostics 카드 sub-metric.
+#[tauri::command]
+pub fn get_gateway_percentiles(
+    metrics: tauri::State<'_, Arc<core_gateway::GatewayMetrics>>,
+) -> core_gateway::Percentiles {
+    metrics.percentiles()
+}
+
 /// 카탈로그 — entries 필터(category Optional). 추천은 별도 호출.
 ///
 /// Phase 13'.e.2: 각 entry에 HF metadata (`hf_meta`) 머지 — 큐레이션 시점엔 비어있는데

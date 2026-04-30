@@ -148,6 +148,18 @@ impl KeyManager {
             .update_enabled_pipelines(id, enabled_pipelines)?)
     }
 
+    /// Phase 13'.c — `scope` 전체 교체. 평문 재발급 없이 필터만 조정.
+    ///
+    /// 정책: revoked 상태도 편집 허용. key_prefix/key_hash/created_at은 보존.
+    /// 호출자가 빈 scope (모든 호출 차단) 거부 책임.
+    pub fn update_scope(&self, id: &str, new_scope: Scope) -> Result<(), KeyManagerError> {
+        Ok(self
+            .store
+            .lock()
+            .expect("KeyStore poisoned")
+            .update_scope(id, &new_scope)?)
+    }
+
     /// Auth 미들웨어용 검증.
     ///
     /// `origin`이 `None`이면 origin 검증 스킵 (서버-사이드 호출 시나리오 — `Origin` 헤더 없음).
@@ -602,6 +614,60 @@ mod tests {
             } => assert_eq!(enabled_pipelines, Some(vec![])),
             other => panic!("expected Allowed, got {other:?}"),
         }
+    }
+
+    // ── Phase 13'.c — update_scope 전체 교체 ───────────────────────────
+
+    #[test]
+    fn update_scope_replaces_all_filters() {
+        let m = KeyManager::open_memory().unwrap();
+        let issued = m
+            .issue(IssueRequest {
+                alias: "edit-target".into(),
+                scope: web_scope(),
+            })
+            .unwrap();
+        let new_scope = Scope {
+            models: vec!["exaone-*".into()],
+            endpoints: vec!["/v1/embeddings".into()],
+            allowed_origins: vec!["https://app.example.com".into()],
+            ..Default::default()
+        };
+        m.update_scope(&issued.id, new_scope).unwrap();
+        let rows = m.list().unwrap();
+        let row = rows.into_iter().find(|r| r.id == issued.id).unwrap();
+        assert_eq!(row.scope.models, vec!["exaone-*"]);
+        assert_eq!(row.scope.endpoints, vec!["/v1/embeddings"]);
+    }
+
+    #[test]
+    fn update_scope_then_verify_uses_new_filters() {
+        let m = KeyManager::open_memory().unwrap();
+        let issued = m
+            .issue(IssueRequest {
+                alias: "live-edit".into(),
+                scope: web_scope(),
+            })
+            .unwrap();
+        // 새 scope: chat 차단 + embeddings 허용.
+        let new_scope = Scope {
+            models: vec!["*".into()],
+            endpoints: vec!["/v1/embeddings".into()],
+            allowed_origins: vec!["http://localhost:5173".into()],
+            ..Default::default()
+        };
+        m.update_scope(&issued.id, new_scope).unwrap();
+        // 이전에는 통과하던 chat 경로가 이제 거부되어야 한다 — 평문은 그대로.
+        let r = m
+            .verify(
+                &issued.plaintext_once,
+                Some("http://localhost:5173"),
+                "/v1/chat/completions",
+                Some("x"),
+                OffsetDateTime::now_utc(),
+            )
+            .unwrap();
+        assert_eq!(r, AuthOutcome::EndpointDenied);
     }
 
     #[test]

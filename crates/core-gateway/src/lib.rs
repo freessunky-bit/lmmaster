@@ -38,6 +38,7 @@ pub use config::GatewayConfig;
 pub use pipeline_layer::{PipelineLayer, PipelineMiddleware};
 pub use state::AppState;
 pub use upstream::{ModelDescriptor, StaticProvider, UpstreamProvider, UpstreamRoute};
+pub use usage_log::{record_metrics, GatewayMetrics, Percentiles, RequestRecord};
 
 /// Gateway router 빌드.
 ///
@@ -64,10 +65,16 @@ pub fn build_router(_cfg: GatewayConfig, state: AppState) -> Router {
         models_router = models_router.layer(auth_layer);
     }
 
+    // Phase 13'.b — metrics middleware. TraceLayer와 분리해서 lock contention 회피.
+    // 외측에 mount해 모든 요청이 RequestId 부여 후 metrics 기록되도록.
+    let metrics_layer =
+        middleware::from_fn_with_state(state.metrics.clone(), usage_log::record_metrics);
+
     Router::new()
         .merge(routes::health::router())
         .merge(chat_router)
         .merge(models_router)
+        .layer(metrics_layer)
         .layer(
             ServiceBuilder::new()
                 .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))

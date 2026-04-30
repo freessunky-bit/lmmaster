@@ -17,6 +17,7 @@ import {
 
 import { HelpButton } from "../HelpButton";
 
+import { ApiKeyEditModal } from "./ApiKeyEditModal";
 import { ApiKeyIssueModal } from "./ApiKeyIssueModal";
 
 import "./keys.css";
@@ -25,6 +26,7 @@ export function ApiKeysPanel() {
   const { t } = useTranslation();
   const [keys, setKeys] = useState<ApiKeyView[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<ApiKeyView | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -140,13 +142,23 @@ export function ApiKeysPanel() {
                 </td>
                 <td>
                   {!k.revoked_at && (
-                    <button
-                      type="button"
-                      className="keys-button-secondary"
-                      onClick={() => handleRevoke(k.id)}
-                    >
-                      {t("keys.actions.revoke")}
-                    </button>
+                    <div className="keys-row-actions">
+                      <button
+                        type="button"
+                        className="keys-button-secondary"
+                        onClick={() => setEditTarget(k)}
+                        data-testid={`keys-edit-${k.id}`}
+                      >
+                        {t("keys.actions.edit")}
+                      </button>
+                      <button
+                        type="button"
+                        className="keys-button-secondary"
+                        onClick={() => handleRevoke(k.id)}
+                      >
+                        {t("keys.actions.revoke")}
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -159,6 +171,14 @@ export function ApiKeysPanel() {
         <ApiKeyIssueModal
           onClose={() => setShowModal(false)}
           onCreated={handleCreated}
+        />
+      )}
+
+      {editTarget && (
+        <ApiKeyEditModal
+          apiKey={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={refresh}
         />
       )}
     </section>

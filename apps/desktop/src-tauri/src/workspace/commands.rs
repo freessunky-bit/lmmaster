@@ -135,7 +135,85 @@ pub async fn check_workspace_repair(
     // green tier (이전 fingerprint와 동일)면 저장 변경 없으니 명시 save.
     save_fingerprint(&workspace_root, &current)?;
 
+    // Phase 13'.b — green이 아닐 때 (실제 repair 발생) JSONL에 기록.
+    // Diagnostics 페이지의 "복구 이력" 카드가 read.
+    if !matches!(report.tier, RepairTier::Green) {
+        let _ = append_repair_log_entry(&app, &report);
+    }
+
     Ok(report)
+}
+
+/// Phase 13'.b — repair history 한 entry. JSONL append 형식.
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
+pub struct RepairHistoryEntry {
+    /// RFC3339.
+    pub at: String,
+    /// "yellow" | "red".
+    pub tier: String,
+    /// 무효화된 캐시 종류 개수.
+    pub invalidated_caches: u32,
+    /// 사용자 향 한 문장 메모.
+    pub note: String,
+}
+
+fn append_repair_log_entry(app: &AppHandle, report: &RepairReport) -> Result<(), std::io::Error> {
+    let path = repair_log_path(app)?;
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let entry = RepairHistoryEntry {
+        at: OffsetDateTime::now_utc()
+            .format(&time::format_description::well_known::Rfc3339)
+            .unwrap_or_default(),
+        tier: format!("{:?}", report.tier).to_lowercase(),
+        invalidated_caches: report.invalidated_caches.len() as u32,
+        note: format!("{} caches invalidated", report.invalidated_caches.len()),
+    };
+    let line = serde_json::to_string(&entry)
+        .map_err(|e| std::io::Error::other(format!("repair history serialize: {e}")))?;
+    use std::io::Write;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)?;
+    writeln!(file, "{line}")?;
+    Ok(())
+}
+
+fn repair_log_path(app: &AppHandle) -> Result<std::path::PathBuf, std::io::Error> {
+    let base = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| std::io::Error::other(format!("app_data_dir: {e}")))?;
+    Ok(base.join("workspace").join("repair-log.jsonl"))
+}
+
+/// Phase 13'.b — Diagnostics가 표시할 repair 이력 (가장 최근 N개, 최신 → 오래된).
+#[tauri::command]
+pub async fn get_repair_history(
+    app: AppHandle,
+    limit: Option<u32>,
+) -> Result<Vec<RepairHistoryEntry>, WorkspaceApiError> {
+    let n = limit.unwrap_or(10).min(100) as usize;
+    let path = repair_log_path(&app).map_err(|e| WorkspaceApiError::Disk {
+        message: e.to_string(),
+    })?;
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+    let body = std::fs::read_to_string(&path).map_err(|e| WorkspaceApiError::Disk {
+        message: e.to_string(),
+    })?;
+    let mut entries: Vec<RepairHistoryEntry> = body
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .filter_map(|l| serde_json::from_str(l).ok())
+        .collect();
+    // 마지막 entry가 가장 최신 (append-only) — 역순.
+    entries.reverse();
+    entries.truncate(n);
+    Ok(entries)
 }
 
 fn empty_manifest(host: &shared_types::HostFingerprint) -> WorkspaceManifest {

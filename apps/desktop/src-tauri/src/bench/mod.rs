@@ -8,5 +8,5 @@ pub mod cache_store;
 pub mod commands;
 pub mod registry;
 
-pub use commands::{cancel_bench, get_last_bench_report, start_bench};
+pub use commands::{cancel_bench, get_last_bench_report, list_recent_bench_reports, start_bench};
 pub use registry::BenchRegistry;

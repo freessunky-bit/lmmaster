@@ -12,3 +12,20 @@ commands.allow = ["ping"]
 identifier = "allow-get-gateway-status"
 description = "Snapshot the current gateway state (port + status + error). Frontend uses this to recover from missed gateway://ready events."
 commands.allow = ["get_gateway_status"]
+
+# Phase 13'.b — Diagnostics 실 데이터 IPC. middleware가 record한 latency/request 메타 read.
+
+[[permission]]
+identifier = "allow-get-gateway-latency-sparkline"
+description = "Read the gateway 60s latency sparkline (30 averaged buckets) for Diagnostics chart."
+commands.allow = ["get_gateway_latency_sparkline"]
+
+[[permission]]
+identifier = "allow-get-gateway-recent-requests"
+description = "Read the last N gateway requests (method/path/status/ms) for Diagnostics access log."
+commands.allow = ["get_gateway_recent_requests"]
+
+[[permission]]
+identifier = "allow-get-gateway-percentiles"
+description = "Read the gateway latency p50/p95 snapshot for Diagnostics card."
+commands.allow = ["get_gateway_percentiles"]

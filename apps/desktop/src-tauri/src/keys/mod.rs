@@ -6,5 +6,7 @@
 pub mod commands;
 pub mod migrate;
 
-pub use commands::{create_api_key, list_api_keys, revoke_api_key};
+pub use commands::{
+    create_api_key, list_api_keys, revoke_api_key, update_api_key_pipelines, update_api_key_scope,
+};
 pub use migrate::{provision, KeyStoreMode, MigrationOutcome};

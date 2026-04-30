@@ -1,0 +1,13 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 13'.c — Crash 뷰어 IPC.
+
+[[permission]]
+identifier = "allow-list-crash-reports"
+description = "List crash report files (mtime DESC, size + timestamp metadata only)."
+commands.allow = ["list_crash_reports"]
+
+[[permission]]
+identifier = "allow-read-crash-log"
+description = "Read a single crash log file by safe filename (path traversal blocked, 1 MB cap)."
+commands.allow = ["read_crash_log"]

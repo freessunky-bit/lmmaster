@@ -158,6 +158,11 @@ pub async fn run(
     } else {
         tracing::warn!("KeyManager not yet managed — gateway runs without auth");
     }
+    // Phase 13'.b — Tauri state로 manage된 GatewayMetrics 주입. Diagnostics IPC가 같은
+    // 인스턴스를 read하므로 middleware의 record가 즉시 IPC에 노출됨.
+    if let Some(metrics) = app.try_state::<Arc<core_gateway::GatewayMetrics>>() {
+        state = state.with_metrics((*metrics).clone());
+    }
     let mut router = core_gateway::build_router(core_gateway::GatewayConfig::default(), state);
 
     // Phase 6'.d / 8'.c.2 — PipelinesState chain_swap을 PipelineLayer에 mount.

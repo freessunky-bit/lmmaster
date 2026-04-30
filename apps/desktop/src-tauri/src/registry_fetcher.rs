@@ -165,9 +165,7 @@ impl RegistryFetcherService {
             //   기존엔 reload_from_bundled (디스크 재읽기)였지만, 그건 원격 갱신을 반영 못 함.
             //   이제: 원격 catalog.json → CatalogState::swap_from_bundle_body.
             let catalog_swapped = if let Some(body) = catalog_body {
-                if let Some(state) =
-                    handle.try_state::<Arc<crate::commands::CatalogState>>()
-                {
+                if let Some(state) = handle.try_state::<Arc<crate::commands::CatalogState>>() {
                     match state.swap_from_bundle_body(&body) {
                         Ok(count) => {
                             tracing::info!(
@@ -197,9 +195,7 @@ impl RegistryFetcherService {
                 }
                 // catalog가 hot-swap 안 됐으면 (예: app manifest만 갱신) bundled에서 재로드.
                 if !catalog_swapped {
-                    if let Some(state) =
-                        handle.try_state::<Arc<crate::commands::CatalogState>>()
-                    {
+                    if let Some(state) = handle.try_state::<Arc<crate::commands::CatalogState>>() {
                         if let Err(e) = state.reload_from_bundled(&handle) {
                             tracing::debug!(
                                 error = %e,

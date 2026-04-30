@@ -44,3 +44,21 @@ export async function getWorkspaceFingerprint(): Promise<WorkspaceStatus> {
 export async function checkWorkspaceRepair(): Promise<RepairReport> {
   return invoke<RepairReport>("check_workspace_repair");
 }
+
+// ── Phase 13'.b — 복구 이력 (Diagnostics 카드) ──
+
+export interface RepairHistoryEntry {
+  /** RFC3339. */
+  at: string;
+  /** "yellow" | "red". green은 기록 안 함. */
+  tier: string;
+  invalidated_caches: number;
+  note: string;
+}
+
+/** 최근 N개 복구 기록. JSONL append-only를 backend가 read. 최신 → 오래된. */
+export async function getRepairHistory(
+  limit?: number,
+): Promise<RepairHistoryEntry[]> {
+  return invoke<RepairHistoryEntry[]>("get_repair_history", { limit });
+}

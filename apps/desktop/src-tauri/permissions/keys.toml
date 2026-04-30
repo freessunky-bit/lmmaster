@@ -23,3 +23,10 @@ commands.allow = ["revoke_api_key"]
 identifier = "allow-update-api-key-pipelines"
 description = "Update the per-key pipelines override (matrix of enabled flags)."
 commands.allow = ["update_api_key_pipelines"]
+
+# Phase 13'.c — scope (models/endpoints/origins/expiry) 전체 편집.
+
+[[permission]]
+identifier = "allow-update-api-key-scope"
+description = "Replace the entire scope (models/endpoints/origins/expiry/pipelines) of an existing key. Plaintext is preserved."
+commands.allow = ["update_api_key_scope"]

@@ -1,0 +1,90 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "codestral-22b",
+      "display_name": "Codestral 22B (Mistral 코드 특화)",
+      "category": "coding",
+      "model_family": "mistral",
+      "source": {
+        "type": "hugging-face",
+        "repo": "bartowski/Codestral-22B-v0.1-GGUF",
+        "file": "Codestral-22B-v0.1-Q4_K_M.gguf"
+      },
+      "hub_id": "codestral:22b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 13500,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Codestral-22B-v0.1-Q4_K_M.gguf"
+        },
+        {
+          "label": "Q5_K_M",
+          "size_mb": 16000,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Codestral-22B-v0.1-Q5_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 14336,
+      "rec_vram_mb": 18432,
+      "min_ram_mb": 24576,
+      "rec_ram_mb": 32768,
+      "install_size_mb": 13500,
+      "context_guidance": "32K context. 80+ 언어 코드 지원. FIM (Fill-in-Middle) — IDE 보조에 강함. RTX 4090 / A6000급 권장.",
+      "language_strength": 4,
+      "roleplay_strength": 2,
+      "coding_strength": 10,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "Mistral AI Non-Production License (비상업 — 상업 사용 시 별도 라이선스 필요)",
+      "maturity": "stable",
+      "portable_suitability": 4,
+      "on_device_suitability": 3,
+      "fine_tune_suitability": 6,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "다언어 코드 베이스 (Python / Rust / Go / TS / Java / C++)",
+        "FIM IDE 보조 — 함수 중간 완성",
+        "테스트 코드 자동 작성"
+      ],
+      "warnings": [
+        "Mistral Non-Production License — 학습 / 개인 / 학술은 OK이나 *상업 제품에 임베드는 별도 계약 필요*. 사내 도구로만 사용 권장."
+      ],
+      "community_insights": {
+        "strengths_ko": [
+          "80+ 언어 코드 — Qwen 2.5 Coder가 약한 함수형 / 시스템 언어에서도 강함",
+          "FIM (Fill-in-Middle) 공식 지원 — IDE 인라인 보조에 최적",
+          "32K context로 monorepo 일부 분석 가능",
+          "Mistral 7B 검증된 베이스 + 코드 corpus 학습"
+        ],
+        "weaknesses_ko": [
+          "라이선스가 비상업 — 사내 도구 한정 권장",
+          "한국어 자연어 매우 약함 (코드 주석은 영어가 자연)",
+          "22B로 RTX 4090급 필요 — 노트북에서는 어려움"
+        ],
+        "use_cases_ko": [
+          "사내 IDE 보조 (Python / Rust / Go)",
+          "Qwen Coder가 약한 시스템 언어 (C++ / Haskell / OCaml)",
+          "FIM 기반 함수 완성"
+        ],
+        "curator_note_ko": "Qwen 2.5 Coder 7B가 가벼운 코드 보조라면 Codestral 22B는 시스템 언어 / FIM이 핵심일 때 추천. 단 *Mistral 라이선스가 비상업*이라 상업 제품 임베드는 거부. 사내 도구로만 안전.",
+        "sources": [
+          "huggingface.co/bartowski/Codestral-22B-v0.1-GGUF",
+          "ollama.com/library/codestral",
+          "mistral.ai/news/codestral"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

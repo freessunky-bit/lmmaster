@@ -12,9 +12,20 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { StatusPill } from "@lmmaster/design-system/react";
+import { listRecentBenchReports, type BenchReport } from "../ipc/bench";
 import {
+  listCrashReports,
+  readCrashLog,
+  type CrashSummary,
+} from "../ipc/crash";
+import {
+  getGatewayLatencySparkline,
+  getGatewayPercentiles,
+  getGatewayRecentRequests,
   getGatewayStatus,
   type GatewayState,
+  type Percentiles,
+  type RequestRecord,
 } from "../ipc/gateway";
 import { listApiKeys } from "../ipc/keys";
 import {
@@ -25,7 +36,9 @@ import {
   type Severity,
 } from "../ipc/scanner";
 import {
+  getRepairHistory,
   getWorkspaceFingerprint,
+  type RepairHistoryEntry,
   type WorkspaceStatus,
 } from "../ipc/workspace";
 
@@ -40,56 +53,24 @@ const NAV_EVENT = "lmmaster:navigate";
 /** 종합 health 3 tier — 4 섹션 status 합산. */
 type HealthTier = "green" | "yellow" | "red";
 
-// ── MOCK 데이터 (v1.x에서 IPC로 교체) ───────────────────────────────
+// MOCK 모두 제거 — Phase 13'.b. 실 IPC로 wire (gateway middleware + bench cache + repair JSONL).
 
-/** MOCK: 게이트웨이 60s latency sparkline. v1.x: gateway latency IPC. */
-const MOCK_GATEWAY_LATENCY_MS = [
-  18, 22, 19, 25, 24, 21, 19, 23, 28, 24, 22, 20, 19, 21, 24, 23, 25, 22, 20, 21,
-  24, 26, 23, 22, 20, 19, 18, 20, 22, 24,
-];
-
-// 활성 키 수 — 2026-04-30 audit fix로 listApiKeys()에서 직접 산출. MOCK 제거.
-
-interface RecentRequest {
-  ts: string;
-  method: string;
-  path: string;
-  status: number;
-  ms: number;
+/** UNIX epoch ms → "13:42:08" 형식. */
+function formatTime(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
-/** MOCK: 마지막 5 request log. v1.x: 게이트웨이 access log SQLite IPC. */
-const MOCK_RECENT_REQUESTS: RecentRequest[] = [
-  { ts: "13:42:08", method: "POST", path: "/v1/chat/completions", status: 200, ms: 412 },
-  { ts: "13:42:01", method: "GET", path: "/v1/models", status: 200, ms: 14 },
-  { ts: "13:41:54", method: "POST", path: "/v1/chat/completions", status: 200, ms: 1102 },
-  { ts: "13:41:38", method: "POST", path: "/v1/chat/completions", status: 200, ms: 587 },
-  { ts: "13:41:21", method: "GET", path: "/v1/models", status: 200, ms: 11 },
-];
 
-interface BenchEntry {
-  modelId: string;
-  displayName: string;
-  tps: number;
+/** RFC3339 → "YYYY-MM-DD". */
+function formatDate(iso: string): string {
+  if (!iso) return "-";
+  const t = Date.parse(iso);
+  if (isNaN(t)) return iso;
+  const d = new Date(t);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
-/** MOCK: 가장 최근 측정한 모델 5개 token/sec. v1.x: getLastBenchReport batch. */
-const MOCK_BENCH_ENTRIES: BenchEntry[] = [
-  { modelId: "exaone:1.2b", displayName: "EXAONE 4.0 1.2B", tps: 142.3 },
-  { modelId: "qwen2.5:3b", displayName: "Qwen 2.5 3B", tps: 86.5 },
-  { modelId: "hyperclova-x-seed:8b", displayName: "HyperCLOVA-X SEED 8B", tps: 38.1 },
-  { modelId: "deepseek-coder:6.7b", displayName: "DeepSeek Coder 6.7B", tps: 44.2 },
-  { modelId: "qwen2.5-coder:7b", displayName: "Qwen 2.5 Coder 7B", tps: 41.0 },
-];
-
-interface RepairHistoryRow {
-  date: string;
-  tier: HealthTier;
-  invalidatedCaches: number;
-}
-/** MOCK: repair history. v1.x: workspace repair log IPC. */
-const MOCK_REPAIR_HISTORY: RepairHistoryRow[] = [
-  { date: "2026-04-25", tier: "yellow", invalidatedCaches: 2 },
-  { date: "2026-03-12", tier: "yellow", invalidatedCaches: 1 },
-];
 
 // ── 헬퍼 ────────────────────────────────────────────────────────────
 
@@ -135,9 +116,16 @@ export function Diagnostics() {
   const [gw, setGw] = useState<GatewayState>({ port: null, status: "booting", error: null });
   const [ws, setWs] = useState<WorkspaceStatus | null>(null);
   const [scanLoading, setScanLoading] = useState<boolean>(false);
-  // Phase 9'.x audit fix — Diagnostics에 가짜 활성 키 카운트 노출하던 것을 실제 listApiKeys()
-  // 결과로 교체. revoked 제외 카운트.
+  // Phase 9'.x audit fix — 활성 키 카운트 listApiKeys() 실데이터.
   const [activeKeyCount, setActiveKeyCount] = useState<number | null>(null);
+  // Phase 13'.b — Diagnostics 4 MOCK 제거 → 실 IPC.
+  const [latencySparkline, setLatencySparkline] = useState<number[]>([]);
+  const [percentiles, setPercentiles] = useState<Percentiles | null>(null);
+  const [recentRequests, setRecentRequests] = useState<RequestRecord[]>([]);
+  const [recentBench, setRecentBench] = useState<BenchReport[]>([]);
+  const [repairHistory, setRepairHistory] = useState<RepairHistoryEntry[]>([]);
+  const [crashes, setCrashes] = useState<CrashSummary[]>([]);
+  const [crashesNotInitialized, setCrashesNotInitialized] = useState(false);
 
   // 첫 마운트 — IPC 일괄 fetch.
   useEffect(() => {
@@ -173,9 +161,64 @@ export function Diagnostics() {
       } catch (e) {
         console.warn("listApiKeys failed:", e);
       }
+      // Phase 13'.b — bench / repair history는 한 번만 (변동 적음).
+      try {
+        const reports = await listRecentBenchReports(5);
+        if (!cancelled) setRecentBench(reports);
+      } catch (e) {
+        console.warn("listRecentBenchReports failed:", e);
+      }
+      try {
+        const hist = await getRepairHistory(10);
+        if (!cancelled) setRepairHistory(hist);
+      } catch (e) {
+        console.warn("getRepairHistory failed:", e);
+      }
+      // Phase 13'.c — crash report 목록 (1회 fetch, panic 발생 시에만 변동).
+      try {
+        const list = await listCrashReports(20);
+        if (!cancelled) {
+          setCrashes(list);
+          setCrashesNotInitialized(false);
+        }
+      } catch (e) {
+        const errKind = (e as { kind?: string })?.kind;
+        if (errKind === "not-initialized") {
+          if (!cancelled) setCrashesNotInitialized(true);
+        } else {
+          console.warn("listCrashReports failed:", e);
+        }
+      }
     })();
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  // Phase 13'.b — gateway latency sparkline + 최근 요청 + percentiles는 5초 polling (라이브성).
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      if (cancelled) return;
+      try {
+        const [sparkline, recent, p] = await Promise.all([
+          getGatewayLatencySparkline(),
+          getGatewayRecentRequests(5),
+          getGatewayPercentiles(),
+        ]);
+        if (cancelled) return;
+        setLatencySparkline(sparkline);
+        setRecentRequests(recent);
+        setPercentiles(p);
+      } catch (e) {
+        if (!cancelled) console.warn("gateway metrics polling failed:", e);
+      }
+    };
+    void tick();
+    const id = window.setInterval(tick, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
     };
   }, []);
 
@@ -242,9 +285,17 @@ export function Diagnostics() {
           tier={scanTier}
           onRescan={onRescan}
         />
-        <GatewaySection gw={gw} tier={gatewayTier} activeKeyCount={activeKeyCount} />
-        <BenchSection entries={MOCK_BENCH_ENTRIES} onStartNewBench={onStartNewBench} />
-        <WorkspaceSection ws={ws} tier={wsTier} history={MOCK_REPAIR_HISTORY} />
+        <GatewaySection
+          gw={gw}
+          tier={gatewayTier}
+          activeKeyCount={activeKeyCount}
+          latencySparkline={latencySparkline}
+          percentiles={percentiles}
+          recentRequests={recentRequests}
+        />
+        <BenchSection entries={recentBench} onStartNewBench={onStartNewBench} />
+        <WorkspaceSection ws={ws} tier={wsTier} history={repairHistory} />
+        <CrashSection crashes={crashes} notInitialized={crashesNotInitialized} />
       </div>
     </div>
   );
@@ -313,12 +364,18 @@ interface GatewaySectionProps {
   gw: GatewayState;
   tier: HealthTier;
   activeKeyCount: number | null;
+  latencySparkline: number[];
+  percentiles: Percentiles | null;
+  recentRequests: RequestRecord[];
 }
 
 function GatewaySection({
   gw,
   tier,
   activeKeyCount,
+  latencySparkline,
+  percentiles,
+  recentRequests,
 }: GatewaySectionProps) {
   const { t } = useTranslation();
   const titleId = "diag-section-gateway-title";
@@ -349,23 +406,26 @@ function GatewaySection({
             })}
           </span>
         </div>
-        <LatencySparkline samples={MOCK_GATEWAY_LATENCY_MS} />
+        <LatencySparkline
+          samples={latencySparkline}
+          percentiles={percentiles}
+        />
         <h4 className="diag-section-subtitle">
           {t("screens.diagnostics.sections.gateway.recentRequests")}
         </h4>
-        {MOCK_RECENT_REQUESTS.length === 0 ? (
+        {recentRequests.length === 0 ? (
           <p className="diag-empty">
             {t("screens.diagnostics.sections.gateway.noRequests")}
           </p>
         ) : (
           <ul className="diag-gateway-requests" role="list">
-            {MOCK_RECENT_REQUESTS.map((r, idx) => (
+            {recentRequests.map((r) => (
               <li
-                key={`${r.ts}-${idx}`}
+                key={`${r.ts_ms}-${r.path}`}
                 role="listitem"
                 className="diag-gateway-request num"
               >
-                <span className="diag-req-ts">{r.ts}</span>
+                <span className="diag-req-ts">{formatTime(r.ts_ms)}</span>
                 <span className="diag-req-method">{r.method}</span>
                 <span className="diag-req-path">{r.path}</span>
                 <span className="diag-req-status">{r.status}</span>
@@ -381,10 +441,12 @@ function GatewaySection({
 
 interface LatencySparklineProps {
   samples: number[];
+  percentiles?: Percentiles | null;
 }
 
-function LatencySparkline({ samples }: LatencySparklineProps) {
+function LatencySparkline({ samples, percentiles }: LatencySparklineProps) {
   const { t } = useTranslation();
+  const allZero = samples.length === 0 || samples.every((v) => v === 0);
   const max = Math.max(...samples, 1);
   const min = Math.min(...samples, 0);
   const w = 240;
@@ -398,8 +460,16 @@ function LatencySparkline({ samples }: LatencySparklineProps) {
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(" ");
-  const avg = samples.reduce((a, b) => a + b, 0) / Math.max(samples.length, 1);
-  const ariaLabel = `${t("screens.diagnostics.sections.gateway.latency")} — 평균 ${avg.toFixed(0)}ms, 최대 ${max}ms`;
+  const nonZero = samples.filter((v) => v > 0);
+  const avg =
+    nonZero.length > 0
+      ? nonZero.reduce((a, b) => a + b, 0) / nonZero.length
+      : 0;
+  const ariaLabel = allZero
+    ? `${t("screens.diagnostics.sections.gateway.latency")} — 최근 60초 동안 요청 없음`
+    : `${t("screens.diagnostics.sections.gateway.latency")} — 평균 ${avg.toFixed(0)}ms, 최대 ${max}ms${
+        percentiles ? `, p50 ${percentiles.p50_ms}ms, p95 ${percentiles.p95_ms}ms` : ""
+      }`;
   return (
     <div className="diag-sparkline-wrap">
       <span className="diag-sparkline-label">
@@ -430,19 +500,21 @@ function LatencySparkline({ samples }: LatencySparklineProps) {
 // ── 좌하 — 벤치 ───────────────────────────────────────────────────
 
 interface BenchSectionProps {
-  entries: BenchEntry[];
+  entries: BenchReport[];
   onStartNewBench: () => void;
 }
 
 function BenchSection({ entries, onStartNewBench }: BenchSectionProps) {
   const { t } = useTranslation();
   const titleId = "diag-section-bench-title";
-  const max = Math.max(...entries.map((e) => e.tps), 1);
+  const max = Math.max(...entries.map((e) => e.tg_tps), 1);
 
   const ariaLabel =
     entries.length === 0
       ? t("screens.diagnostics.sections.bench.empty")
-      : entries.map((e) => `${e.displayName} ${e.tps.toFixed(1)} 토큰/초`).join(", ");
+      : entries
+          .map((e) => `${e.model_id} ${e.tg_tps.toFixed(1)} 토큰/초`)
+          .join(", ");
 
   return (
     <section
@@ -474,10 +546,15 @@ function BenchSection({ entries, onStartNewBench }: BenchSectionProps) {
             data-testid="diag-bench-chart"
           >
             {entries.map((e) => {
-              const widthPct = Math.max(2, (e.tps / max) * 100);
+              const widthPct = Math.max(2, (e.tg_tps / max) * 100);
+              const display =
+                e.quant_label != null ? `${e.model_id} (${e.quant_label})` : e.model_id;
               return (
-                <div key={e.modelId} className="diag-bench-bar-row">
-                  <span className="diag-bench-bar-name">{e.displayName}</span>
+                <div
+                  key={`${e.model_id}-${e.quant_label ?? "_"}-${e.host_fingerprint_short}`}
+                  className="diag-bench-bar-row"
+                >
+                  <span className="diag-bench-bar-name">{display}</span>
                   <span className="diag-bench-bar-track">
                     <span
                       className="diag-bench-bar-fill"
@@ -485,7 +562,7 @@ function BenchSection({ entries, onStartNewBench }: BenchSectionProps) {
                     />
                   </span>
                   <span className="diag-bench-bar-num num">
-                    {e.tps.toFixed(1)} tok/s
+                    {e.tg_tps.toFixed(1)} tok/s
                   </span>
                 </div>
               );
@@ -502,7 +579,7 @@ function BenchSection({ entries, onStartNewBench }: BenchSectionProps) {
 interface WorkspaceSectionProps {
   ws: WorkspaceStatus | null;
   tier: HealthTier;
-  history: RepairHistoryRow[];
+  history: RepairHistoryEntry[];
 }
 
 function WorkspaceSection({ ws, tier, history }: WorkspaceSectionProps) {
@@ -569,18 +646,131 @@ function WorkspaceSection({ ws, tier, history }: WorkspaceSectionProps) {
             </thead>
             <tbody>
               {history.map((h, i) => (
-                <tr key={`${h.date}-${i}`}>
-                  <td className="num">{h.date}</td>
+                <tr key={`${h.at}-${i}`}>
+                  <td className="num">{formatDate(h.at)}</td>
                   <td>
                     <span className={`diag-tier-chip diag-tier-chip-${h.tier}`}>
                       {h.tier}
                     </span>
                   </td>
-                  <td className="num">{h.invalidatedCaches}</td>
+                  <td className="num">{h.invalidated_caches}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ── 풀폭 (5번째 row) — 크래시 리포트 ──────────────────────────────
+
+interface CrashSectionProps {
+  crashes: CrashSummary[];
+  notInitialized: boolean;
+}
+
+function CrashSection({ crashes, notInitialized }: CrashSectionProps) {
+  const { t } = useTranslation();
+  const [expandedFilename, setExpandedFilename] = useState<string | null>(null);
+  const [expandedBody, setExpandedBody] = useState<string | null>(null);
+  const [expandedError, setExpandedError] = useState<string | null>(null);
+  const titleId = "diag-section-crash-title";
+
+  const handleToggle = useCallback(
+    async (filename: string) => {
+      if (expandedFilename === filename) {
+        setExpandedFilename(null);
+        setExpandedBody(null);
+        setExpandedError(null);
+        return;
+      }
+      setExpandedFilename(filename);
+      setExpandedBody(null);
+      setExpandedError(null);
+      try {
+        const body = await readCrashLog(filename);
+        setExpandedBody(body);
+      } catch (e) {
+        const kind = (e as { kind?: string })?.kind;
+        if (kind === "too-large") {
+          setExpandedError(t("screens.diagnostics.sections.crash.tooLarge"));
+        } else {
+          console.warn("readCrashLog failed:", e);
+          setExpandedError(t("screens.diagnostics.sections.crash.errorReading"));
+        }
+      }
+    },
+    [expandedFilename, t],
+  );
+
+  return (
+    <section
+      className="diag-section diag-section-fullrow"
+      aria-labelledby={titleId}
+      data-testid="diag-section-crash"
+    >
+      <header className="diag-section-header">
+        <h3 id={titleId} className="diag-section-title">
+          {t("screens.diagnostics.sections.crash.title")}
+        </h3>
+      </header>
+      <div className="diag-section-body">
+        <p className="diag-section-subtitle-prose">
+          {t("screens.diagnostics.sections.crash.subtitle")}
+        </p>
+        {notInitialized ? (
+          <p className="diag-empty">
+            {t("screens.diagnostics.sections.crash.notInitialized")}
+          </p>
+        ) : crashes.length === 0 ? (
+          <p className="diag-empty">
+            {t("screens.diagnostics.sections.crash.empty")}
+          </p>
+        ) : (
+          <ul className="diag-crash-list" role="list" data-testid="diag-crash-list">
+            {crashes.map((c) => {
+              const tsLabel = c.ts_rfc3339 ?? formatTime(c.mtime_ms);
+              const isOpen = expandedFilename === c.filename;
+              const kb = (c.size_bytes / 1024).toFixed(1);
+              return (
+                <li key={c.filename} className="diag-crash-item" role="listitem">
+                  <div className="diag-crash-row">
+                    <span className="diag-crash-ts num">{tsLabel}</span>
+                    <span className="diag-crash-name num">{c.filename}</span>
+                    <span className="diag-crash-size num">
+                      {t("screens.diagnostics.sections.crash.size", { kb })}
+                    </span>
+                    <button
+                      type="button"
+                      className="diag-section-action"
+                      onClick={() => void handleToggle(c.filename)}
+                      data-testid={`diag-crash-toggle-${c.filename}`}
+                      aria-expanded={isOpen}
+                    >
+                      {isOpen
+                        ? t("screens.diagnostics.sections.crash.hide")
+                        : t("screens.diagnostics.sections.crash.view")}
+                    </button>
+                  </div>
+                  {isOpen && (
+                    <div className="diag-crash-body">
+                      {expandedError ? (
+                        <p className="diag-crash-error" role="alert">
+                          {expandedError}
+                        </p>
+                      ) : expandedBody == null ? (
+                        <p className="diag-empty">…</p>
+                      ) : (
+                        <pre className="diag-crash-pre num">{expandedBody}</pre>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
     </section>

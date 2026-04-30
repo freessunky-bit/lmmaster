@@ -763,6 +763,17 @@
           "lastRepair": "Last cleanup",
           "never": "Never cleaned",
           "history": "Cleanup history"
+        },
+        "crash": {
+          "title": "Crash reports",
+          "subtitle": "We log unexpected errors automatically. Most recent first.",
+          "empty": "No recent crashes.",
+          "notInitialized": "Crash directory not ready yet. Try restarting the app.",
+          "view": "View",
+          "hide": "Hide",
+          "size": "{{kb}} KB",
+          "errorReading": "Couldn't read the crash file.",
+          "tooLarge": "File too large to display."
         }
       }
     },
@@ -974,7 +985,8 @@
     "neverUsed": "Never used",
     "actions": {
       "revoke": "Revoke",
-      "revokeConfirm": "Revoke this key? Revoked keys stop working immediately."
+      "revokeConfirm": "Revoke this key? Revoked keys stop working immediately.",
+      "edit": "Edit filters"
     },
     "empty": {
       "title": "No keys yet",
@@ -1016,7 +1028,21 @@
       "emptyAlias": "Enter an alias.",
       "emptyOrigin": "Add at least one origin.",
       "createFailed": "Couldn't create key. Retry.",
-      "revokeFailed": "Couldn't revoke key."
+      "revokeFailed": "Couldn't revoke key.",
+      "updateFailed": "Couldn't save filters. Retry?",
+      "emptyScope": "Keep at least one model or endpoint pattern. An empty scope blocks every call."
+    },
+    "editModal": {
+      "title": "Edit filters",
+      "subtitle": "Update filters without re-issuing the plaintext key. Alias and ID stay the same.",
+      "aliasLabel": "Alias",
+      "prefixLabel": "Key prefix",
+      "endpointsLabel": "Allowed path patterns",
+      "endpointsHint": "Comma-separated. e.g., /v1/chat/completions, /v1/embeddings",
+      "expiresLabel": "Expiry (RFC3339, leave empty for none)",
+      "expiresPlaceholder": "e.g., 2099-12-31T23:59:59Z",
+      "save": "Save",
+      "cancel": "Cancel"
     }
   },
   "bench": {

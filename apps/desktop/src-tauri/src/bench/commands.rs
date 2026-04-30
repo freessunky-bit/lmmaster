@@ -231,6 +231,20 @@ pub fn cancel_bench(bench_registry: tauri::State<'_, Arc<BenchRegistry>>, model_
     bench_registry.cancel(&model_id);
 }
 
+/// 최근 측정한 모델 N개 일괄 조회 — Diagnostics 페이지 카드 (Phase 13'.b).
+///
+/// 정책: bench cache 디렉터리 mtime 정렬, 상위 N개 deserialize. limit 누락 시 5.
+#[tauri::command]
+pub async fn list_recent_bench_reports(
+    app: AppHandle,
+    limit: Option<u32>,
+) -> Result<Vec<BenchReport>, BenchApiError> {
+    let n = limit.unwrap_or(5).min(50) as usize;
+    cache_store::list_recent(&app, n).map_err(|e| BenchApiError::Internal {
+        message: e.to_string(),
+    })
+}
+
 /// 최근 측정 결과 — 캐시에서. 없으면 None.
 #[tauri::command]
 pub async fn get_last_bench_report(
