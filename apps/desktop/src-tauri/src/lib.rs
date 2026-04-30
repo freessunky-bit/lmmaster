@@ -9,6 +9,7 @@
 pub mod bench;
 pub mod chat;
 pub mod commands;
+pub mod crash;
 pub mod gateway;
 pub mod hf_meta;
 pub mod install;
@@ -83,6 +84,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::ping,
             commands::get_gateway_status,
+            commands::get_gateway_latency_sparkline,
+            commands::get_gateway_recent_requests,
+            commands::get_gateway_percentiles,
             commands::detect_environment,
             commands::start_scan,
             commands::get_last_scan,
@@ -97,12 +101,15 @@ pub fn run() {
             bench::commands::start_bench,
             bench::commands::cancel_bench,
             bench::commands::get_last_bench_report,
+            bench::commands::list_recent_bench_reports,
             keys::commands::create_api_key,
             keys::commands::list_api_keys,
             keys::commands::revoke_api_key,
             keys::commands::update_api_key_pipelines,
+            keys::commands::update_api_key_scope,
             workspace::commands::get_workspace_fingerprint,
             workspace::commands::check_workspace_repair,
+            workspace::commands::get_repair_history,
             workspace::portable::start_workspace_export,
             workspace::portable::cancel_workspace_export,
             workspace::portable::start_workspace_import,
@@ -153,11 +160,19 @@ pub fn run() {
             workspaces::rename_workspace,
             workspaces::delete_workspace,
             workspaces::set_active_workspace,
+            crash::list_crash_reports,
+            crash::read_crash_log,
         ])
         .setup(|app| {
             // 1. Gateway supervisor.
             let handle = gateway::GatewayHandle::new();
             app.manage(handle.clone());
+
+            // 1.b. GatewayMetrics — Phase 13'.b. middleware가 record, Diagnostics IPC가 read.
+            //      Tauri state로 manage해서 gateway::run이 build_router 시 주입 + IPC도 동일 인스턴스 read.
+            let gateway_metrics: Arc<core_gateway::GatewayMetrics> =
+                Arc::new(core_gateway::GatewayMetrics::new());
+            app.manage(Arc::clone(&gateway_metrics));
 
             // 2. Install registry — Arc로 manage하면 command 안에서 clone 후 Drop guard 캡처 가능.
             let registry: Arc<InstallRegistry> = Arc::new(InstallRegistry::new());
@@ -207,12 +222,8 @@ pub fn run() {
                 // 첫 실행 — 앱 시작 직후 (3초 grace).
                 tokio::time::sleep(std::time::Duration::from_secs(3)).await;
                 loop {
-                    let entries: Vec<model_registry::ModelEntry> = catalog_for_hf
-                        .snapshot()
-                        .entries()
-                        .iter()
-                        .cloned()
-                        .collect();
+                    let entries: Vec<model_registry::ModelEntry> =
+                        catalog_for_hf.snapshot().entries().to_vec();
                     let (_ok, _fail) =
                         hf_meta::refresh_all(&http, &cache_for_hf, &entries).await;
                     // 6시간 주기.

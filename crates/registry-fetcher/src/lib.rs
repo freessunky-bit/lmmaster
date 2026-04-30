@@ -10,6 +10,7 @@
 pub mod cache;
 pub mod error;
 pub mod fetcher;
+pub mod signature;
 pub mod source;
 
 use std::path::PathBuf;
@@ -18,6 +19,7 @@ use std::time::Duration;
 pub use cache::{Cache, CachePutInput, CacheRow};
 pub use error::FetcherError;
 pub use fetcher::{FetchedManifest, FetcherCore};
+pub use signature::{SignatureError, SignatureVerifier};
 pub use source::{default_sources, SourceConfig, SourceTier};
 
 const DEFAULT_TTL_SEC: u64 = 3600;

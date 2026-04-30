@@ -141,6 +141,12 @@ fn panic_message(info: &PanicHookInfo<'_>) -> String {
     "(unknown payload type)".to_string()
 }
 
+/// crash report 디렉터리 위치를 외부로 노출 — Phase 13'.c IPC가 read 시 사용.
+/// `install` 시 caller가 등록한 값. None이면 crash 디렉터리 미설정.
+pub fn crash_dir() -> Option<PathBuf> {
+    CRASH_DIR.lock().ok().and_then(|g| g.clone())
+}
+
 /// crash report 작성. RFC3339 timestamp 기반 unique 파일명.
 fn write_crash_report(
     dir: &Path,

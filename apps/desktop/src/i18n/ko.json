@@ -763,6 +763,17 @@
           "lastRepair": "마지막 정리",
           "never": "정리한 적 없어요",
           "history": "정리 기록"
+        },
+        "crash": {
+          "title": "크래시 리포트",
+          "subtitle": "예기치 못한 오류를 자동으로 기록해요. 최근 항목부터 보여드려요.",
+          "empty": "최근 크래시 기록이 없어요",
+          "notInitialized": "크래시 디렉터리가 아직 준비되지 않았어요. 앱을 다시 실행해 볼래요?",
+          "view": "내용 보기",
+          "hide": "닫을게요",
+          "size": "{{kb}} KB",
+          "errorReading": "크래시 파일을 읽는 데 실패했어요",
+          "tooLarge": "파일이 너무 커서 화면에 띄울 수 없어요"
         }
       }
     },
@@ -974,7 +985,8 @@
     "neverUsed": "사용 기록 없음",
     "actions": {
       "revoke": "회수할게요",
-      "revokeConfirm": "이 키를 회수할게요. 회수된 키는 더 이상 호출할 수 없어요."
+      "revokeConfirm": "이 키를 회수할게요. 회수된 키는 더 이상 호출할 수 없어요.",
+      "edit": "필터 편집"
     },
     "empty": {
       "title": "아직 발급한 키가 없어요",
@@ -1016,7 +1028,21 @@
       "emptyAlias": "별칭을 입력해 주세요",
       "emptyOrigin": "허용할 사이트 주소를 1개 이상 추가해 주세요",
       "createFailed": "키 발급에 실패했어요. 다시 시도해 볼래요?",
-      "revokeFailed": "키 회수에 실패했어요"
+      "revokeFailed": "키 회수에 실패했어요",
+      "updateFailed": "필터를 저장하지 못했어요. 다시 시도해 볼래요?",
+      "emptyScope": "허용 모델 또는 경로 패턴을 1개 이상 남겨 주세요. 모두 비우면 이 키로는 아무 것도 호출할 수 없어요."
+    },
+    "editModal": {
+      "title": "필터 편집",
+      "subtitle": "키 평문을 새로 만들지 않고 필터만 갱신해요. 키 별칭과 ID는 그대로예요.",
+      "aliasLabel": "별칭",
+      "prefixLabel": "키 prefix",
+      "endpointsLabel": "허용할 경로 패턴",
+      "endpointsHint": "쉼표로 구분. 예: /v1/chat/completions, /v1/embeddings",
+      "expiresLabel": "만료 시각 (RFC3339, 비우면 무기한)",
+      "expiresPlaceholder": "예: 2099-12-31T23:59:59Z",
+      "save": "저장할게요",
+      "cancel": "취소"
     }
   },
   "bench": {

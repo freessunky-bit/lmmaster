@@ -438,3 +438,81 @@
   color: var(--error);
   border: 1px solid var(--error-a-3);
 }
+
+/* ── Phase 13'.c — Crash 섹션 (full-row) ─────────────────────────── */
+
+.diag-section-fullrow {
+  grid-column: 1 / -1;
+}
+
+.diag-section-subtitle-prose {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+}
+
+.diag-crash-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.diag-crash-row {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) 1fr minmax(60px, auto) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+}
+
+.diag-crash-ts {
+  color: var(--text-secondary);
+  font-size: var(--fs-12);
+}
+
+.diag-crash-name {
+  color: var(--text-primary);
+  font-size: var(--fs-13);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diag-crash-size {
+  color: var(--text-secondary);
+  font-size: var(--fs-12);
+}
+
+.diag-crash-body {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.diag-crash-pre {
+  margin: 0;
+  font-size: var(--fs-12);
+  line-height: var(--lh-loose);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.diag-crash-error {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--error-a-2);
+  color: var(--error);
+  border-radius: var(--radius-2);
+  font-size: var(--fs-13);
+}

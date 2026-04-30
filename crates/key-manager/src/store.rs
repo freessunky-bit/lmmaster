@@ -261,6 +261,25 @@ impl KeyStore {
         Ok(())
     }
 
+    /// Phase 13'.c — `scope` 전체 교체.
+    ///
+    /// 정책:
+    /// - 기존 row가 없으면 `NotFound`.
+    /// - revoked 상태라도 편집 허용 (재활성 시나리오 v1.x 대비).
+    /// - `key_prefix` / `key_hash` / `created_at`은 보존 — 키 평문 재발급 없이 필터만 조정.
+    /// - 호출자(IPC)가 새 scope 유효성 검증 책임 (예: 빈 endpoints/models는 거부).
+    pub fn update_scope(&self, id: &str, new_scope: &Scope) -> Result<(), StoreError> {
+        let scope_json = serde_json::to_string(new_scope)?;
+        let n = self.conn.execute(
+            "UPDATE api_keys SET scope_json = ?1 WHERE id = ?2",
+            params![scope_json, id],
+        )?;
+        if n == 0 {
+            return Err(StoreError::NotFound(id.to_string()));
+        }
+        Ok(())
+    }
+
     /// 회수 — idempotent. 이미 revoked면 no-op (revoked_at 유지).
     pub fn revoke(&self, id: &str, at: OffsetDateTime) -> Result<(), StoreError> {
         let s = format_dt(&at)?;
@@ -661,6 +680,59 @@ mod tests {
         let s = KeyStore::open_memory().unwrap();
         let r = s.update_enabled_pipelines("missing", Some(vec!["pii-redact".into()]));
         assert!(matches!(r, Err(StoreError::NotFound(_))));
+    }
+
+    // ── Phase 13'.c — update_scope 전체 교체 ───────────────────────────
+
+    #[test]
+    fn update_scope_replaces_all_fields_preserves_hash_and_prefix() {
+        let s = KeyStore::open_memory().unwrap();
+        let row = make_row("a", "lm-original", "alias");
+        s.insert(&row).unwrap();
+        let new_scope = Scope {
+            models: vec!["exaone-*".into()],
+            endpoints: vec!["/v1/embeddings".into()],
+            allowed_origins: vec!["https://app.example.com".into()],
+            expires_at: Some("2099-12-31T23:59:59Z".into()),
+            ..Default::default()
+        };
+        s.update_scope("a", &new_scope).unwrap();
+        let r = s.find_by_id("a").unwrap().unwrap();
+        assert_eq!(r.scope.models, vec!["exaone-*"]);
+        assert_eq!(r.scope.endpoints, vec!["/v1/embeddings"]);
+        assert_eq!(r.scope.allowed_origins, vec!["https://app.example.com"]);
+        assert_eq!(r.scope.expires_at.as_deref(), Some("2099-12-31T23:59:59Z"));
+        // key_prefix / key_hash 보존.
+        assert_eq!(r.key_prefix, "lm-original");
+        assert_eq!(r.key_hash, "$argon2id$dummy");
+    }
+
+    #[test]
+    fn update_scope_unknown_id_returns_not_found() {
+        let s = KeyStore::open_memory().unwrap();
+        let new_scope = Scope::default();
+        let r = s.update_scope("missing", &new_scope);
+        assert!(matches!(r, Err(StoreError::NotFound(_))));
+    }
+
+    #[test]
+    fn update_scope_works_on_revoked_keys() {
+        // 정책: revoked 상태도 scope 편집 허용. 회수된 키를 재활성화하지는 않음.
+        let s = KeyStore::open_memory().unwrap();
+        let row = make_row("a", "lm-x", "alias");
+        s.insert(&row).unwrap();
+        s.revoke("a", OffsetDateTime::now_utc()).unwrap();
+        let new_scope = Scope {
+            models: vec!["new-model".into()],
+            ..Default::default()
+        };
+        s.update_scope("a", &new_scope).unwrap();
+        let r = s.find_by_id("a").unwrap().unwrap();
+        assert_eq!(r.scope.models, vec!["new-model"]);
+        assert!(
+            r.revoked_at.is_some(),
+            "revoked 상태는 scope 편집 후에도 유지"
+        );
     }
 
     /// 기존 평문 (legacy) JSON column을 가진 row가 새 코드에서도 deserialize 되어야 해요.

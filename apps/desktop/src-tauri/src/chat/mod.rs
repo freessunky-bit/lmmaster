@@ -79,7 +79,9 @@ pub async fn start_chat(
         RuntimeKind::LmStudio => {
             // LM Studio 채팅은 gateway의 OpenAI-compat path 그대로 가능. v1.x에서 직접 어댑터 추가.
             let _ = channel.send(ChatEvent::Failed {
-                message: "LM Studio 채팅은 다음 업데이트에 지원돼요. 우선 Ollama 모델로 시도해 주세요.".into(),
+                message:
+                    "LM Studio 채팅은 다음 업데이트에 지원돼요. 우선 Ollama 모델로 시도해 주세요."
+                        .into(),
             });
             Err(ChatApiError::UnsupportedRuntime {
                 runtime: "lm-studio".into(),

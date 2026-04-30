@@ -12,6 +12,7 @@ use key_manager::KeyManager;
 use tokio::sync::Semaphore;
 
 use crate::upstream::UpstreamProvider;
+use crate::usage_log::GatewayMetrics;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -20,6 +21,9 @@ pub struct AppState {
     pub http: reqwest::Client,
     /// `None` = auth 미들웨어 비활성 (Phase 0/2 호환). v1.0 완성 시 항상 Some 권장.
     pub key_manager: Option<Arc<KeyManager>>,
+    /// Phase 13'.b — 모든 요청의 latency / 메타를 기록하는 미들웨어용 메트릭 store.
+    /// `Arc<GatewayMetrics>` — middleware가 record, IPC가 read.
+    pub metrics: Arc<GatewayMetrics>,
 }
 
 impl AppState {
@@ -35,11 +39,18 @@ impl AppState {
             semaphore: Arc::new(Semaphore::new(1)),
             http,
             key_manager: None,
+            metrics: Arc::new(GatewayMetrics::new()),
         }
     }
 
     pub fn with_key_manager(mut self, km: Arc<KeyManager>) -> Self {
         self.key_manager = Some(km);
+        self
+    }
+
+    /// Phase 13'.b — 외부에서 만든 metrics store 주입 (Tauri state로 공유 시).
+    pub fn with_metrics(mut self, metrics: Arc<GatewayMetrics>) -> Self {
+        self.metrics = metrics;
         self
     }
 

@@ -21,6 +21,10 @@ pub enum KeyApiError {
     Store { message: String },
     #[error("내부 오류: {message}")]
     Internal { message: String },
+    #[error(
+        "scope의 endpoints / models 둘 다 비어 있으면 모든 호출이 차단돼요. 최소 1개는 채워주세요."
+    )]
+    EmptyScope,
 }
 
 impl From<key_manager::KeyManagerError> for KeyApiError {
@@ -52,6 +56,17 @@ pub struct UpdateKeyPipelinesRequest {
     pub id: String,
     /// `None` = 전역 토글 따름. `Some(Vec)` = 명시 화이트리스트 (빈 vec은 모두 비활성).
     pub enabled_pipelines: Option<Vec<String>>,
+}
+
+/// Phase 13'.c — scope 전체 교체 요청.
+///
+/// 정책:
+/// - models / endpoints가 둘 다 비어있는 scope는 거부 (호출이 모두 차단되는 무용 키 방지).
+/// - 평문 재발급 없이 필터만 갱신.
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateKeyScopeRequest {
+    pub id: String,
+    pub scope: Scope,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -145,6 +160,24 @@ pub fn update_api_key_pipelines(
     Ok(())
 }
 
+/// Phase 13'.c — scope 전체 교체.
+///
+/// 정책:
+/// - 평문 재발급 없이 models / endpoints / allowed_origins / expires_at / enabled_pipelines 갱신.
+/// - 빈 scope (models + endpoints 둘 다 빔)는 `EmptyScope`로 거부 — 무용 키 방지.
+/// - revoked 키도 편집 허용 (재활성은 별도 정책 — v1은 unsupported).
+#[tauri::command]
+pub fn update_api_key_scope(
+    km: tauri::State<'_, Arc<KeyManager>>,
+    req: UpdateKeyScopeRequest,
+) -> Result<(), KeyApiError> {
+    if req.scope.models.is_empty() && req.scope.endpoints.is_empty() {
+        return Err(KeyApiError::EmptyScope);
+    }
+    km.update_scope(&req.id, req.scope)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -162,5 +195,11 @@ mod tests {
         })
         .unwrap();
         assert_eq!(v["kind"], "store");
+    }
+
+    #[test]
+    fn empty_scope_kind_serializes_kebab() {
+        let v = serde_json::to_value(KeyApiError::EmptyScope).unwrap();
+        assert_eq!(v["kind"], "empty-scope");
     }
 }

@@ -32,6 +32,9 @@ tracing = { workspace = true }
 backon = { workspace = true }
 time = { workspace = true }
 
+# Phase 13'.g (ADR-0047) — minisign Ed25519 서명 검증. zero-deps verify-only crate.
+minisign-verify = "0.2"
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "test-util"] }
 wiremock = "0.6"

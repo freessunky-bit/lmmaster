@@ -16,3 +16,10 @@ commands.allow = ["cancel_bench"]
 identifier = "allow-get-last-bench-report"
 description = "Read the cached BenchReport for a (model, runtime, host) tuple."
 commands.allow = ["get_last_bench_report"]
+
+# Phase 13'.b — Diagnostics "최근 측정한 모델 N개" 카드용.
+
+[[permission]]
+identifier = "allow-list-recent-bench-reports"
+description = "List the most recent N benchmark reports (sorted by mtime) — for Diagnostics."
+commands.allow = ["list_recent_bench_reports"]
