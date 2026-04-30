@@ -53,6 +53,115 @@ The recommend strip surfaces the top 3 models that fit your PC. Below it, catego
 
 ---
 
+<!-- section: chat -->
+# Chat with your model
+
+Verify a downloaded model right inside LMmaster — and learn how to call the same model from external tools (Ollama CLI, LM Studio).
+
+## In-app chat
+
+- Click **Chat** in the sidebar. Downloaded Ollama models appear in the dropdown automatically.
+- Press **Enter** to send. **Shift+Enter** inserts a newline.
+- Tokens stream in. When done, the elapsed time (e.g. `2.4s`) is shown.
+- Multi-turn history is included automatically. Click **Start over** to clear.
+- Auto-scroll pauses while you read older messages. New replies surface a **To bottom ↓** button.
+
+## External tools
+
+LMmaster stores models inside the Ollama daemon (`%USERPROFILE%\.ollama\models` / `~/.ollama/models`).
+
+### 1) Ollama CLI
+
+```bash
+ollama list
+ollama run sam860/exaone-4.0:1.2b
+ollama run sam860/exaone-4.0:1.2b "Hello in Korean please"
+
+# OpenAI-compatible endpoint (for external apps)
+curl http://localhost:11434/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"sam860/exaone-4.0:1.2b","messages":[{"role":"user","content":"hi"}]}'
+```
+
+- LMmaster's **Local API** keys can be used to route through the LMmaster gateway, which also applies your Pipelines.
+- Ollama keeps the model in memory for 5 minutes. First call is slow, subsequent calls are fast.
+
+### 2) LM Studio desktop app
+
+LM Studio uses its own GGUF folder. Easiest path: **download the same model directly inside LM Studio** — Ollama and LM Studio keep models separately. Advanced users can symlink `~/.ollama/models/blobs/sha256-<digest>` into LM Studio's folder.
+
+### 3) llama.cpp / koboldcpp
+
+```bash
+./llama-server -m ~/.ollama/models/blobs/sha256-<digest> -c 4096 -ngl 99
+# then http://localhost:8080 exposes an OpenAI-compatible endpoint
+```
+
+---
+
+<!-- section: model-tuning -->
+# Per-model recommended settings
+
+Same model, different parameters → very different output quality. Here are curated recommendations.
+
+## Common parameters
+
+| Parameter | What it controls | Recommended |
+|---|---|---|
+| **temperature** | Creativity vs consistency | Factual 0.2–0.5 / Chat 0.7 / Creative 0.85–1.0 |
+| **top_p** | Token pool | 0.9–0.95 |
+| **top_k** | Token count | 40 |
+| **repeat_penalty** | Anti-repeat | 1.05–1.15 (Korean particles repeat often → 1.1) |
+| **num_ctx** | Context length | 4096 safe / 8192 for long Korean docs |
+
+## Per-model (via Ollama)
+
+### EXAONE 4.0 1.2B Instruct (Korean assistant)
+- system prompt: `You are a precise, friendly Korean AI assistant. Say "I don't know" honestly.`
+- temperature 0.7 / top_p 0.95 / repeat_penalty 1.1 / num_ctx 8192
+- Use the `sam860/exaone-4.0:1.2b` Ollama Hub wrapper (chat template baked in).
+
+### EXAONE 3.5 7.8B Instruct (Korean reasoning)
+- temperature 0.6 / top_p 0.95 / repeat_penalty 1.1 / num_ctx 8192
+- Strong Korean reasoning + summarization. Weak coding.
+
+### Qwen 2.5 Coder 3B Instruct (coding)
+- system prompt: `You are an expert software engineer. Use fenced code blocks.`
+- temperature 0.2–0.4 / top_p 0.9 / repeat_penalty 1.05 / num_ctx 8192–16384
+
+### Llama 3.2 3B Instruct (general lightweight)
+- system prompt: `You are a helpful assistant.`
+- temperature 0.7 / top_p 0.9 / repeat_penalty 1.1 / num_ctx 8192
+
+### Polyglot-Ko 12.8B (roleplay / Korean base)
+- **No instruct template** — use few-shot examples instead of system prompt.
+- temperature 0.85 / top_p 0.95 / repeat_penalty 1.15 / num_ctx 4096
+
+### HyperCLOVA X SEED 8B (Naver)
+- temperature 0.6 / top_p 0.95 / repeat_penalty 1.1 / num_ctx 8192
+- Strong on Korean culture / current events. Check Naver license for commercial use.
+
+## Adjusting from the chat page
+
+LMmaster v1 chat uses defaults. For finer control, run from Ollama CLI:
+
+```
+/set parameter temperature 0.4
+/set parameter num_ctx 16384
+```
+
+Or build a custom Modelfile via the Workbench 5-step flow.
+
+## When something looks off
+
+- **Endless repetition** → bump repeat_penalty to 1.1–1.2.
+- **Replies too short** → set num_predict 4096+.
+- **Answering in English instead of Korean** → add `Reply in Korean.` to the system prompt.
+- **Garbled tokens (`[|user|]` etc.)** → chat template missing in the GGUF. Switch to a Hub wrapper like `sam860/exaone-4.0`.
+- **Too slow** → reduce num_ctx (8192 → 4096), pick a smaller model, or enable GPU offload (`-ngl 99`).
+
+---
+
 <!-- section: workbench -->
 # Workbench
 

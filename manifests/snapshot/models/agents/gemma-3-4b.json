@@ -1,0 +1,56 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "gemma-3-4b-it",
+      "display_name": "Gemma 3 4B Instruct",
+      "category": "agent-general",
+      "model_family": "gemma",
+      "source": {
+        "type": "hugging-face",
+        "repo": "google/gemma-3-4b-it-qat-q4_0-gguf",
+        "file": "gemma-3-4b-it-q4_0.gguf"
+      },
+      "hub_id": "gemma3:4b",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_0",
+          "size_mb": 3300,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "gemma-3-4b-it-q4_0.gguf"
+        }
+      ],
+      "min_vram_mb": 4096,
+      "rec_vram_mb": 6144,
+      "min_ram_mb": 8192,
+      "rec_ram_mb": 16384,
+      "install_size_mb": 3300,
+      "context_guidance": "최대 128K context. 멀티모달 (이미지 입력) 지원이지만 v1 카탈로그는 텍스트만 노출. 한국어 + 코드 + 추론 균형형.",
+      "language_strength": 8,
+      "roleplay_strength": 6,
+      "coding_strength": 7,
+      "tool_support": true,
+      "vision_support": true,
+      "structured_output_support": true,
+      "license": "Gemma Terms of Use",
+      "maturity": "stable",
+      "portable_suitability": 7,
+      "on_device_suitability": 8,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "한국어 일반 비서",
+        "구조화 JSON 출력",
+        "긴 문서 요약 (128K context)"
+      ],
+      "warnings": []
+    }
+  ]
+}

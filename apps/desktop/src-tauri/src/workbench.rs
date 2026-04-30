@@ -363,8 +363,15 @@ pub async fn run_workbench(
             return run;
         }
     };
-    if !run_stage_quantize(&run, &config, &quant_output, &cancel, &channel, quantizer.as_ref())
-        .await
+    if !run_stage_quantize(
+        &run,
+        &config,
+        &quant_output,
+        &cancel,
+        &channel,
+        quantizer.as_ref(),
+    )
+    .await
     {
         registry.finish(&run_id).await;
         if cancel.is_cancelled() {
@@ -398,7 +405,16 @@ pub async fn run_workbench(
             return run;
         }
     };
-    if !run_stage_lora(&run, &config, &lora_output, &cancel, &channel, trainer.as_ref()).await {
+    if !run_stage_lora(
+        &run,
+        &config,
+        &lora_output,
+        &cancel,
+        &channel,
+        trainer.as_ref(),
+    )
+    .await
+    {
         registry.finish(&run_id).await;
         if cancel.is_cancelled() {
             run.mark_cancelled();

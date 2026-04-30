@@ -12,3 +12,8 @@ commands.allow = ["get_telemetry_config"]
 identifier = "allow-set-telemetry-enabled"
 description = "Toggle the telemetry opt-in flag. First opt-in issues an anonymous UUID. Disabling preserves the UUID for re-enable reuse."
 commands.allow = ["set_telemetry_enabled"]
+
+[[permission]]
+identifier = "allow-submit-telemetry-event"
+description = "Submit a single telemetry event to GlitchTip (best-effort, queue + retry on failure)."
+commands.allow = ["submit_telemetry_event"]

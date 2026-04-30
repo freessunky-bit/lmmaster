@@ -1,0 +1,14 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# 사용자 in-app 채팅 IPC — Ollama /api/chat 스트리밍 wrapper. 외부 웹앱은 여전히
+# gateway /v1/chat/completions (with API key) 사용 — 별개 경로.
+
+[[permission]]
+identifier = "allow-start-chat"
+description = "Start a streaming chat with a specified model. Streams ChatEvent (Delta/Completed/Cancelled/Failed)."
+commands.allow = ["start_chat"]
+
+[[permission]]
+identifier = "allow-cancel-all-chats"
+description = "Cancel all in-flight chats — used on page navigation or window close."
+commands.allow = ["cancel_all_chats"]

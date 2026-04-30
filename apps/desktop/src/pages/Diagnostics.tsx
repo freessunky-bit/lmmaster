@@ -16,6 +16,7 @@ import {
   getGatewayStatus,
   type GatewayState,
 } from "../ipc/gateway";
+import { listApiKeys } from "../ipc/keys";
 import {
   getLastScan,
   startScan,
@@ -47,8 +48,7 @@ const MOCK_GATEWAY_LATENCY_MS = [
   24, 26, 23, 22, 20, 19, 18, 20, 22, 24,
 ];
 
-/** MOCK: 활성 키 수. v1.x: listApiKeys() 결과 length. */
-const MOCK_ACTIVE_KEY_COUNT = 3;
+// 활성 키 수 — 2026-04-30 audit fix로 listApiKeys()에서 직접 산출. MOCK 제거.
 
 interface RecentRequest {
   ts: string;
@@ -135,6 +135,9 @@ export function Diagnostics() {
   const [gw, setGw] = useState<GatewayState>({ port: null, status: "booting", error: null });
   const [ws, setWs] = useState<WorkspaceStatus | null>(null);
   const [scanLoading, setScanLoading] = useState<boolean>(false);
+  // Phase 9'.x audit fix — Diagnostics에 가짜 활성 키 카운트 노출하던 것을 실제 listApiKeys()
+  // 결과로 교체. revoked 제외 카운트.
+  const [activeKeyCount, setActiveKeyCount] = useState<number | null>(null);
 
   // 첫 마운트 — IPC 일괄 fetch.
   useEffect(() => {
@@ -157,6 +160,18 @@ export function Diagnostics() {
         if (!cancelled) setWs(fp);
       } catch (e) {
         console.warn("getWorkspaceFingerprint failed:", e);
+      }
+      try {
+        const keys = await listApiKeys();
+        if (!cancelled) {
+          // revoked 키 제외 — gateway 호출 가능한 active 카운트.
+          const active = keys.filter(
+            (k) => (k as { revoked_at?: string | null }).revoked_at == null,
+          ).length;
+          setActiveKeyCount(active);
+        }
+      } catch (e) {
+        console.warn("listApiKeys failed:", e);
       }
     })();
     return () => {
@@ -227,7 +242,7 @@ export function Diagnostics() {
           tier={scanTier}
           onRescan={onRescan}
         />
-        <GatewaySection gw={gw} tier={gatewayTier} />
+        <GatewaySection gw={gw} tier={gatewayTier} activeKeyCount={activeKeyCount} />
         <BenchSection entries={MOCK_BENCH_ENTRIES} onStartNewBench={onStartNewBench} />
         <WorkspaceSection ws={ws} tier={wsTier} history={MOCK_REPAIR_HISTORY} />
       </div>
@@ -297,9 +312,14 @@ function ScanSection({ scan, loading, tier, onRescan }: ScanSectionProps) {
 interface GatewaySectionProps {
   gw: GatewayState;
   tier: HealthTier;
+  activeKeyCount: number | null;
 }
 
-function GatewaySection({ gw, tier }: GatewaySectionProps) {
+function GatewaySection({
+  gw,
+  tier,
+  activeKeyCount,
+}: GatewaySectionProps) {
   const { t } = useTranslation();
   const titleId = "diag-section-gateway-title";
   const detail = gw.port != null ? `:${gw.port}` : null;
@@ -323,9 +343,9 @@ function GatewaySection({ gw, tier }: GatewaySectionProps) {
       </header>
       <div className="diag-section-body">
         <div className="diag-gateway-meta">
-          <span className="diag-gateway-keys num">
+          <span className="diag-gateway-keys num" data-testid="diag-active-key-count">
             {t("screens.diagnostics.sections.gateway.activeKeys", {
-              count: MOCK_ACTIVE_KEY_COUNT,
+              count: activeKeyCount ?? 0,
             })}
           </span>
         </div>

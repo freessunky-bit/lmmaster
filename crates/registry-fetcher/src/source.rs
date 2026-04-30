@@ -81,24 +81,27 @@ impl SourceConfig {
 
 /// LMmaster 권장 기본 source 목록.
 ///
-/// 호출자(주로 `apps/desktop/src-tauri`)가 GitHub release tag / jsDelivr commit hash를
-/// 빌드 시점에 채워 넣는다. v1은 commit-pinned snapshot을 사용.
+/// 정책 (Phase 13'.a 보강 리서치):
+/// - **jsDelivr 1순위 → GitHub Releases 2순위 → Bundled fallback** — 한국 latency 우선
+///   (jsDelivr Seoul/Incheon POP 2-3ms, GitHub 100-200ms).
+/// - Repo: `freessunky-bit/lmmaster` (현 GitHub URL).
+/// - jsDelivr ref는 commit hash 또는 tag 권장 — 빌드 시점에 호출자가 결정.
+///   `@main`은 매 push마다 캐시 무효 + 영구캐시 의미 사라져 비추 (research §1 함정).
 pub fn default_sources(github_tag: &str, jsdelivr_ref: &str) -> Vec<SourceConfig> {
     vec![
-        // Vendor 미사용 시 비워둘 수 있다. v1 manifest에 vendor mirror 없으므로 기본 미포함.
-        SourceConfig {
-            tier: SourceTier::Github,
-            url_template: format!(
-                "https://github.com/lmmaster/lmmaster/releases/download/manifests-{github_tag}/{{id}}.json"
-            ),
-            timeout: Duration::from_secs(8),
-        },
         SourceConfig {
             tier: SourceTier::Jsdelivr,
             url_template: format!(
-                "https://cdn.jsdelivr.net/gh/lmmaster/lmmaster@{jsdelivr_ref}/manifests/apps/{{id}}.json"
+                "https://cdn.jsdelivr.net/gh/freessunky-bit/lmmaster@{jsdelivr_ref}/manifests/apps/{{id}}.json"
             ),
             timeout: Duration::from_secs(6),
+        },
+        SourceConfig {
+            tier: SourceTier::Github,
+            url_template: format!(
+                "https://github.com/freessunky-bit/lmmaster/releases/download/manifests-{github_tag}/{{id}}.json"
+            ),
+            timeout: Duration::from_secs(8),
         },
         SourceConfig {
             tier: SourceTier::Bundled,
@@ -178,12 +181,15 @@ mod tests {
     }
 
     #[test]
-    fn default_sources_skip_bundled_url() {
+    fn default_sources_jsdelivr_first_then_github_then_bundled() {
+        // Phase 13'.a 보강 리서치 — 한국 latency 우선으로 jsDelivr 1순위 swap.
         let s = default_sources("2026.04.27", "abc123");
         assert_eq!(s.len(), 3);
-        assert_eq!(s[0].tier, SourceTier::Github);
-        assert_eq!(s[1].tier, SourceTier::Jsdelivr);
+        assert_eq!(s[0].tier, SourceTier::Jsdelivr);
+        assert_eq!(s[1].tier, SourceTier::Github);
         assert_eq!(s[2].tier, SourceTier::Bundled);
-        assert!(s[1].url_template.contains("@abc123"));
+        assert!(s[0].url_template.contains("@abc123"));
+        assert!(s[0].url_template.contains("freessunky-bit/lmmaster"));
+        assert!(s[1].url_template.contains("freessunky-bit/lmmaster"));
     }
 }

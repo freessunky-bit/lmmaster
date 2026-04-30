@@ -21,6 +21,44 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.catalog-refresh-cluster {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.catalog-refresh-meta {
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+}
+
+.catalog-refresh-btn {
+  appearance: none;
+  height: 28px;
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  font: inherit;
+  font-size: var(--fs-12);
+  cursor: pointer;
+}
+.catalog-refresh-btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--primary-a-3);
+}
+.catalog-refresh-btn:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 1px;
+}
+.catalog-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .catalog-page-title {
@@ -116,6 +154,29 @@
   background: var(--primary-a-2);
   color: var(--primary);
   border-color: var(--primary-a-3);
+}
+
+/* Phase 13'.e.3 — 🔥 NEW 탭 — count 배지 + 약간 강조. */
+.catalog-category.is-new {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.catalog-category-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 6px;
+  margin-left: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--warn-a-2);
+  color: var(--warn);
+  font-size: var(--fs-11);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Main ──────────────────────────────────────────────────────── */
@@ -631,6 +692,143 @@
   cursor: pointer;
 }
 
+.bench-chip-action.is-primary {
+  background: var(--primary);
+  color: var(--bg);
+  border-color: var(--primary);
+  height: 24px;
+  padding: 0 var(--space-3);
+  font-weight: 600;
+}
+.bench-chip-action.is-primary:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+.bench-chip-action.is-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── 모델 풀 진행 패널 ────────────────────────────────────────── */
+
+.model-pull-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-2);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  margin-bottom: var(--space-3);
+}
+
+.model-pull-panel.is-running {
+  border-color: var(--info);
+  background: var(--info-a-2);
+}
+
+.model-pull-panel.is-done {
+  border-color: var(--primary);
+  background: var(--primary-a-2);
+}
+
+.model-pull-panel.is-warn {
+  border-color: var(--warn);
+  background: var(--warn-a-2);
+}
+
+.model-pull-panel.is-error {
+  border-color: var(--error);
+  background: var(--error-a-2);
+}
+
+.model-pull-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.model-pull-status {
+  font-size: var(--fs-13);
+  color: var(--text);
+}
+
+.model-pull-pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.model-pull-bar {
+  width: 100%;
+  height: 6px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--white-a-2);
+  overflow: hidden;
+}
+
+.model-pull-bar::-webkit-progress-bar {
+  background: var(--white-a-2);
+  border-radius: var(--radius-pill);
+}
+
+.model-pull-bar::-webkit-progress-value {
+  background: var(--primary);
+  border-radius: var(--radius-pill);
+}
+
+.model-pull-bar::-moz-progress-bar {
+  background: var(--primary);
+  border-radius: var(--radius-pill);
+}
+
+.model-pull-meta {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+}
+
+.model-pull-text {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text);
+}
+
+.model-pull-stalled {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  background: var(--white-a-2);
+}
+.model-pull-stalled.is-warn {
+  color: var(--warn);
+  background: var(--warn-a-2);
+}
+
+.model-pull-action {
+  appearance: none;
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  color: inherit;
+  font: inherit;
+  font-size: var(--fs-12);
+  padding: 0 var(--space-3);
+  height: 24px;
+  cursor: pointer;
+}
+.model-pull-action:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
 .bench-chip-badge {
   display: inline-flex;
   align-items: center;
@@ -640,6 +838,124 @@
   background: var(--white-a-2);
   color: var(--text-muted);
   font-size: var(--fs-11);
+}
+
+/* Phase 13'.e.2 — HF metadata pill row (drawer 상단). */
+.catalog-drawer-hfmeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.catalog-drawer-hfmeta-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--fs-11);
+}
+
+.catalog-drawer-hfmeta-pill.is-new {
+  background: var(--warn-a-2);
+  color: var(--warn);
+  font-weight: 700;
+}
+
+/* Phase 13'.e.4 — 커뮤니티 인사이트 collapsible panel. */
+.catalog-drawer-insights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.catalog-drawer-insights-toggle {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 36px;
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  font: inherit;
+  font-size: var(--fs-13);
+  font-weight: 600;
+  cursor: pointer;
+}
+.catalog-drawer-insights-toggle:hover {
+  background: var(--surface-2);
+  border-color: var(--primary-a-3);
+}
+.catalog-drawer-insights-toggle:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 1px;
+}
+
+.catalog-drawer-insights-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+}
+
+.catalog-drawer-insights-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.catalog-drawer-insights-title {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.catalog-drawer-insights-list {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--fs-13);
+  color: var(--text);
+  line-height: var(--lh-loose);
+}
+.catalog-drawer-insights-list.is-pos li::marker {
+  color: var(--primary);
+}
+.catalog-drawer-insights-list.is-neg li::marker {
+  color: var(--warn);
+}
+
+.catalog-drawer-insights-note {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text);
+  line-height: var(--lh-loose);
+}
+
+.catalog-drawer-insights-sources {
+  margin: 0;
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.catalog-drawer-insights-stale {
+  margin: 0;
+  padding: var(--space-2);
+  font-size: var(--fs-12);
+  color: var(--warn);
+  background: var(--warn-a-2);
+  border-radius: var(--radius-2);
 }
 
 /* ── Empty state ──────────────────────────────────────────────── */
@@ -701,6 +1017,59 @@
   font-size: var(--fs-16);
   font-weight: var(--weight-semi);
   color: var(--text);
+}
+
+.catalog-drawer-header-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.catalog-drawer-install,
+.catalog-drawer-chat {
+  appearance: none;
+  height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-2);
+  font: inherit;
+  font-size: var(--fs-12);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Install Center .install-action.is-primary 와 통일 — primary-a-2 wash + primary text.
+   풀-컬러 녹색 배경은 흰색 텍스트 대비 부족 (사용자 리포트 2026-04-30). */
+.catalog-drawer-install {
+  background: var(--primary-a-2);
+  color: var(--primary);
+  border-color: var(--primary-a-3);
+}
+
+.catalog-drawer-install:hover:not(:disabled) {
+  background: var(--primary-a-3);
+}
+
+.catalog-drawer-install:focus-visible,
+.catalog-drawer-chat:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
+.catalog-drawer-install:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.catalog-drawer-chat {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.catalog-drawer-chat:hover {
+  background: var(--surface-2);
+  border-color: var(--primary-a-3);
 }
 
 .catalog-drawer-close {

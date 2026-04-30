@@ -16,7 +16,12 @@ import {
   type ModelEntry,
   type Recommendation,
 } from "../ipc/catalog";
-import { onCatalogRefreshed } from "../ipc/catalog-refresh";
+import {
+  getLastCatalogRefresh,
+  onCatalogRefreshed,
+  refreshCatalogNow,
+  type LastRefresh,
+} from "../ipc/catalog-refresh";
 import type { CustomModel } from "../ipc/workbench";
 
 import { CustomModelsSection } from "../components/catalog/CustomModelsSection";
@@ -28,8 +33,17 @@ import { HelpButton } from "../components/HelpButton";
 
 import "./catalog.css";
 
-const CATEGORY_KEYS: (ModelCategory | "all")[] = [
+/**
+ * 사이드바 탭 키 — Phase 13'.e.3에서 "new" 추가.
+ *
+ * "new"는 ModelCategory가 아니라 *tier 필터*. 사용자가 "🔥 NEW"를 누르면 모든 카테고리에서
+ * tier=new인 entry만 가져와 보여줌. category 그대로면 tier 무시.
+ */
+type SidebarTabKey = ModelCategory | "all" | "new";
+
+const SIDEBAR_TABS: SidebarTabKey[] = [
   "all",
+  "new",
   "agent-general",
   "roleplay",
   "coding",
@@ -46,13 +60,52 @@ export function CatalogPage() {
   const [entries, setEntries] = useState<ModelEntry[]>([]);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [recLoading, setRecLoading] = useState(false);
-  const [category, setCategory] = useState<ModelCategory | "all">("all");
+  const [category, setCategory] = useState<SidebarTabKey>("all");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Set<FilterKey>>(new Set());
   const [sort, setSort] = useState<SortKey>("score");
   const [selected, setSelected] = useState<ModelEntry | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<LastRefresh | null>(null);
+  const [refreshBusy, setRefreshBusy] = useState(false);
 
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
+
+  // 카탈로그 갱신 상태 추적 — 헤더에 "마지막 갱신" 표시 + 수동 트리거.
+  useEffect(() => {
+    let cancelled = false;
+    let unlisten: (() => void) | null = null;
+    (async () => {
+      try {
+        const r = await getLastCatalogRefresh();
+        if (!cancelled) setLastRefresh(r);
+      } catch {
+        /* ignore */
+      }
+      try {
+        unlisten = await onCatalogRefreshed((p) => {
+          if (!cancelled) setLastRefresh(p);
+        });
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, []);
+
+  const handleManualRefresh = async () => {
+    setRefreshBusy(true);
+    try {
+      const r = await refreshCatalogNow();
+      setLastRefresh(r);
+    } catch (e) {
+      console.warn("refreshCatalogNow failed:", e);
+    } finally {
+      setRefreshBusy(false);
+    }
+  };
 
   // 1) 카탈로그 로드 — 한 번만. Home에서 preselect한 모델 ID가 있으면 자동으로 drawer 열기.
   //    Phase 1' integration: catalog://refreshed event 시 entries 다시 fetch.
@@ -105,12 +158,13 @@ export function CatalogPage() {
     };
   }, []);
 
-  // 2) 추천 — 카테고리 바뀔 때만 (all → agent-general default).
+  // 2) 추천 — 카테고리 바뀔 때만 (all/new → agent-general default).
   useEffect(() => {
     let cancelled = false;
     setRecLoading(true);
+    // "new" 탭은 tier 필터지 카테고리가 아님 — 추천은 agent-general 기본.
     const targetCat: ModelCategory =
-      category === "all" ? "agent-general" : category;
+      category === "all" || category === "new" ? "agent-general" : category;
     getRecommendation(targetCat)
       .then((rec) => {
         if (!cancelled) {
@@ -150,9 +204,15 @@ export function CatalogPage() {
 
   const visible = useMemo(() => {
     let list = entries;
-    if (category !== "all") {
+    if (category === "new") {
+      // 🔥 NEW 탭 — tier === "new"인 entries만. 모든 카테고리 합산.
+      // deprecated는 노출 안 함 (사용자 보호).
+      list = list.filter((e) => e.tier === "new");
+    } else if (category !== "all") {
       list = list.filter((e) => e.category === category);
     }
+    // deprecated tier는 어느 탭에서도 메인 노출 안 함 — 별도 "안 권장" 필터로 v1.x.
+    list = list.filter((e) => e.tier !== "deprecated");
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
@@ -200,6 +260,26 @@ export function CatalogPage() {
             hint={t("screens.help.catalog") ?? undefined}
             testId="catalog-help"
           />
+          <div className="catalog-refresh-cluster">
+            <span
+              className="catalog-refresh-meta"
+              data-testid="catalog-last-refresh"
+            >
+              {lastRefresh
+                ? `마지막 갱신: ${formatRelative(lastRefresh.at_ms)}`
+                : "아직 갱신 전이에요"}
+            </span>
+            <button
+              type="button"
+              className="catalog-refresh-btn"
+              onClick={handleManualRefresh}
+              disabled={refreshBusy}
+              data-testid="catalog-refresh-btn"
+              title="모델 카탈로그 + Ollama / LM Studio 버전 정보를 한 번에 받아와요. 6시간마다 자동 갱신, 수동 트리거도 OK."
+            >
+              {refreshBusy ? "갱신하고 있어요…" : "다시 불러오기"}
+            </button>
+          </div>
         </div>
         <p className="catalog-page-subtitle">{t("catalog.subtitle")}</p>
       </header>
@@ -222,18 +302,27 @@ export function CatalogPage() {
             aria-label={t("catalog.title")}
             role="radiogroup"
           >
-            {CATEGORY_KEYS.map((key) => (
-              <button
-                key={key}
-                type="button"
-                role="radio"
-                aria-checked={category === key}
-                className={`catalog-category${category === key ? " is-active" : ""}`}
-                onClick={() => setCategory(key)}
-              >
-                {t(`catalog.category.${key}`)}
-              </button>
-            ))}
+            {SIDEBAR_TABS.map((key) => {
+              const isNew = key === "new";
+              const newCount = isNew
+                ? entries.filter((e) => e.tier === "new").length
+                : 0;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="radio"
+                  aria-checked={category === key}
+                  className={`catalog-category${category === key ? " is-active" : ""}${isNew ? " is-new" : ""}`}
+                  onClick={() => setCategory(key)}
+                >
+                  {t(`catalog.category.${key}`, key === "new" ? "🔥 새 모델" : key)}
+                  {isNew && newCount > 0 && (
+                    <span className="catalog-category-count num">{newCount}</span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
         </aside>
 
@@ -308,18 +397,21 @@ export function CatalogPage() {
       <ModelDetailDrawer
         model={selected}
         onClose={() => setSelected(null)}
-        onInstall={(modelId) => {
-          try {
-            window.localStorage.setItem("lmmaster.install.preselect", modelId);
-          } catch {
-            /* ignore */
-          }
-          window.dispatchEvent(new CustomEvent("lmmaster:nav", { detail: "install" }));
-          setSelected(null);
-        }}
       />
     </div>
   );
+}
+
+/** UNIX ms → "방금" / "N분 전" / "YYYY-MM-DD" 한국어. */
+function formatRelative(ms: number): string {
+  if (!ms) return "-";
+  const diff = Date.now() - ms;
+  if (diff < 60_000) return "방금";
+  if (diff < 60 * 60_000) return `${Math.round(diff / 60_000)}분 전`;
+  if (diff < 24 * 60 * 60_000) return `${Math.round(diff / 60 / 60_000)}시간 전`;
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 function sortEntries(

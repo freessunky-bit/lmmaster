@@ -120,3 +120,9 @@ v1 ship 전 안정성 측면 3가지가 미정이었어요:
 - [SQLite WAL — Write-Ahead Logging](https://www.sqlite.org/wal.html)
 - [Rust std::panic::set_hook](https://doc.rust-lang.org/std/panic/fn.set_hook.html)
 - LMmaster 결정 노트: `docs/research/phase-8p-9p-10p-residual-plan.md` §1.6.2
+
+### Patch 회귀 fix (2026-04-29)
+
+- 회귀: `tauri-plugin-single-instance 2.0.0` Windows IPC 핸들 null pointer dereference (`STATUS_STACK_BUFFER_OVERRUN`, Rust 1.86+ stable에서 표면화).
+- Fix: [PR #2452](https://github.com/tauri-apps/plugins-workspace/pull/2452) — Windows 핸들 null-check 5라인 추가, `single-instance-v2.2.2`에 머지. 본 프로젝트는 `cargo update -p tauri-plugin-single-instance`로 lock을 `2.0.0` → `2.4.1`로 갱신하여 해결 (Cargo.toml caret `"2"` 명세는 그대로 유지).
+- 결정 노트: `docs/research/phase-resume-single-instance-fix-decision.md` (6 섹션 — 5 alternatives rejected: 정확 핀 / git rev pin / 자체 mutex / fork sanitize / panic-safe wrapper).

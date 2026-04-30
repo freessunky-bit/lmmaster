@@ -862,3 +862,96 @@
   color: var(--danger, var(--text));
   font-size: var(--fs-13);
 }
+
+/* ── LoRA bootstrap 패널 (Phase 9'.b) ─────────────────────────── */
+
+.lora-bootstrap-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+}
+
+.lora-bootstrap-panel.is-ready {
+  border-color: var(--primary-a-3);
+  background: var(--primary-a-2);
+}
+
+.lora-bootstrap-panel.is-running {
+  border-color: var(--info);
+  background: var(--info-a-2);
+}
+
+.lora-bootstrap-panel.is-warn {
+  border-color: var(--warn);
+  background: var(--warn-a-2);
+}
+
+.lora-bootstrap-panel.is-error {
+  border-color: var(--error);
+  background: var(--error-a-2);
+}
+
+.lora-bootstrap-panel.is-consent {
+  border-color: var(--primary-a-3);
+  background: var(--surface-2);
+}
+
+.lora-bootstrap-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.lora-bootstrap-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--fs-11);
+  font-weight: 600;
+}
+.lora-bootstrap-pill.is-on {
+  background: var(--primary-a-3);
+  color: var(--primary);
+}
+
+.lora-bootstrap-meta {
+  font-size: var(--fs-12);
+  color: var(--text-secondary);
+}
+
+.lora-bootstrap-text {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text);
+}
+
+.lora-bootstrap-list {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--fs-13);
+  color: var(--text);
+  line-height: var(--lh-loose);
+}
+
+.lora-bootstrap-log {
+  margin: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: var(--space-2);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}

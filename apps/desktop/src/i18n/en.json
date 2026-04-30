@@ -3,6 +3,7 @@
     "home": "Home",
     "catalog": "Model Catalog",
     "install": "Install Center",
+    "chat": "Chat",
     "runtimes": "Runtimes",
     "workspace": "Workspace",
     "projects": "Projects",
@@ -786,6 +787,8 @@
       "sections": {
         "getting-started": "Getting Started",
         "catalog": "Model Catalog",
+        "chat": "Chat with your model",
+        "model-tuning": "Per-model settings",
         "workbench": "Workbench",
         "knowledge": "Knowledge (RAG)",
         "api-keys": "API Keys + External Apps",
@@ -842,6 +845,7 @@
     "search": { "placeholder": "Search by model name" },
     "category": {
       "all": "All",
+      "new": "🔥 New",
       "agent-general": "General Assistant",
       "roleplay": "Roleplay",
       "coding": "Coding",
@@ -926,7 +930,14 @@
     "quantRecommended": "Recommended",
     "install": {
       "cta": "Install this model",
-      "aria": "Open install page for {{name}}"
+      "aria": "Pull {{name}}",
+      "starting": "Starting…",
+      "running": "Downloading…",
+      "cancel": "Cancel",
+      "done": "Done. Want to run the 30-second measure?",
+      "cancelled": "Download cancelled",
+      "retry": "Try again",
+      "lmsRedirect": "LM Studio downloads happen inside its app. Search the model name there to find it."
     }
   },
   "workspace": {

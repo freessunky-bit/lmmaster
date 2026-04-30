@@ -26,3 +26,25 @@ commands.allow = ["list_ingests"]
 identifier = "allow-knowledge-workspace-stats"
 description = "Return document and chunk counts for a knowledge workspace."
 commands.allow = ["knowledge_workspace_stats"]
+
+# Phase 9'.a — 임베딩 모델 카탈로그 + HuggingFace 다운로드 IPC.
+
+[[permission]]
+identifier = "allow-list-embedding-models"
+description = "List available embedding models (bge-m3 / kure-v1 / multilingual-e5-small) with download / active state."
+commands.allow = ["list_embedding_models"]
+
+[[permission]]
+identifier = "allow-set-active-embedding-model"
+description = "Switch the active embedding model used by knowledge ingest + search."
+commands.allow = ["set_active_embedding_model"]
+
+[[permission]]
+identifier = "allow-download-embedding-model"
+description = "Download an embedding model from HuggingFace (sha256 verify + atomic rename). Streams DownloadEvent."
+commands.allow = ["download_embedding_model"]
+
+[[permission]]
+identifier = "allow-cancel-embedding-download"
+description = "Cancel an in-flight embedding model download by kind (idempotent)."
+commands.allow = ["cancel_embedding_download"]

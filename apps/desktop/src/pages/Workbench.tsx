@@ -22,6 +22,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { HelpButton } from "../components/HelpButton";
+import { LoraBootstrapPanel } from "../components/workbench/LoraBootstrapPanel";
 import {
   cancelWorkbenchRun,
   isTerminalEvent,
@@ -815,6 +816,10 @@ interface LoraStepProps extends StepCommonProps {
 
 function LoraStep({ config, dispatch, status, onStart, onBack, onNext }: LoraStepProps) {
   const { t } = useTranslation();
+  // Phase 9'.b — 실 모드 (실 LLaMA-Factory venv) 가능 여부 + 부트스트랩 진입.
+  // config.use_real_lora 필드는 backend WorkbenchConfig에 이미 있음 (Phase 9'.b 추가).
+  // patch에서 undefined면 mock 모드로 fallback.
+  const realEnabled = (config as unknown as { use_real_lora?: boolean }).use_real_lora ?? false;
   return (
     <section className="workbench-step" role="region" aria-labelledby="wb-step-lora-title">
       <header className="workbench-step-header">
@@ -823,6 +828,16 @@ function LoraStep({ config, dispatch, status, onStart, onBack, onNext }: LoraSte
         </h3>
         <p className="workbench-step-subtitle">{t("screens.workbench.lora.subtitle")}</p>
       </header>
+
+      <LoraBootstrapPanel
+        realModeEnabled={realEnabled}
+        onRealModeChange={(enabled) =>
+          dispatch({
+            type: "SET_CONFIG",
+            patch: { use_real_lora: enabled } as Partial<WorkbenchConfig>,
+          })
+        }
+      />
 
       <div className="workbench-form">
         <label className="workbench-field">

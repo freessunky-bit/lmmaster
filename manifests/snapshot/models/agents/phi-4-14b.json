@@ -1,0 +1,82 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "phi-4-14b",
+      "display_name": "Phi-4 14B (Microsoft)",
+      "category": "agent-general",
+      "model_family": "phi",
+      "source": {
+        "type": "hugging-face",
+        "repo": "microsoft/phi-4-gguf",
+        "file": "phi-4-Q4_K_M.gguf"
+      },
+      "hub_id": "phi4:14b",
+      "tier": "new",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 9100,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "phi-4-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 12288,
+      "rec_vram_mb": 16384,
+      "min_ram_mb": 16384,
+      "rec_ram_mb": 24576,
+      "install_size_mb": 9100,
+      "context_guidance": "최대 16K context. 추론/수학 강함. 영어 중심이지만 한국어도 통함. Microsoft Research에서 합성 데이터 위주 학습.",
+      "language_strength": 7,
+      "roleplay_strength": 6,
+      "coding_strength": 9,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "MIT",
+      "maturity": "stable",
+      "portable_suitability": 5,
+      "on_device_suitability": 5,
+      "fine_tune_suitability": 6,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "수학/추론 문제 풀이",
+        "영어 코드 생성/리뷰",
+        "구조화 데이터 추출"
+      ],
+      "warnings": [
+        "한국어 답변 자연스러움은 EXAONE/Bllossom보다 떨어짐. 영어 + 사실 답변 위주 권장."
+      ],
+      "community_insights": {
+        "strengths_ko": [
+          "동급 14B 중 수학/추론 점수 최상위 (MMLU-Pro / GPQA 강함)",
+          "MIT 라이선스 — 상용/연구 모두 자유",
+          "Microsoft phi-3 시리즈 학습법 계승 + 합성 데이터 활용"
+        ],
+        "weaknesses_ko": [
+          "한국어 자연스러움 약함 — 답변에 영어 섞임",
+          "롤플레이/창작은 부족 — 사실 답변 위주",
+          "VRAM 12GB+ 필요 — 보급형 GPU엔 부담"
+        ],
+        "use_cases_ko": [
+          "수학/추론 / 코딩 작업",
+          "영어 사실 답변 봇",
+          "구조화 출력 (JSON / 테이블)"
+        ],
+        "curator_note_ko": "Microsoft가 합성 데이터로 만든 모델 — '교과서 같은 답변'이 특징. 한국어 자연스러움보다 정확성을 원하면 강추. 한국어 일상은 EXAONE/Bllossom이 우위.",
+        "sources": [
+          "huggingface.co/microsoft/phi-4",
+          "ollama.com/library/phi4"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "qwen-2.5-coder-7b-instruct",
+      "display_name": "Qwen 2.5 Coder 7B Instruct",
+      "category": "coding",
+      "model_family": "qwen",
+      "source": {
+        "type": "hugging-face",
+        "repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+        "file": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf"
+      },
+      "hub_id": "qwen2.5-coder:7b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 4700,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 6144,
+      "rec_vram_mb": 8192,
+      "min_ram_mb": 8192,
+      "rec_ram_mb": 16384,
+      "install_size_mb": 4700,
+      "context_guidance": "최대 128K context. fill-in-the-middle + 다언어 코드 지원. 한국어 주석/설명도 잘 받음.",
+      "language_strength": 7,
+      "roleplay_strength": 4,
+      "coding_strength": 9,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "Apache-2.0",
+      "maturity": "stable",
+      "portable_suitability": 7,
+      "on_device_suitability": 7,
+      "fine_tune_suitability": 8,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "TypeScript / Python / Rust 코드 작성",
+        "코드 리뷰 / 리팩터",
+        "한국어 주석 + 영어 코드 혼용"
+      ],
+      "warnings": [],
+      "community_insights": {
+        "strengths_ko": [
+          "동급 코딩 모델 중 EvalPlus / HumanEval+ 최상위 점수",
+          "128K context — 긴 코드베이스 분석 가능",
+          "fill-in-the-middle 학습으로 자동완성 자연스러움",
+          "Apache 2.0 — 상용 자유"
+        ],
+        "weaknesses_ko": [
+          "일반 대화는 약함 — 코드 외 질문엔 어색",
+          "롤플레이 / 창작 X",
+          "한국어 응답 자연스러움은 EXAONE보다 살짝 떨어짐"
+        ],
+        "use_cases_ko": [
+          "IDE 보조 (Cursor / Continue 등)",
+          "코드 리뷰 자동화",
+          "스크립트 / 설정 파일 작성"
+        ],
+        "curator_note_ko": "코딩 워크로드 권장 1순위. 3B는 가볍지만 답변이 짧고, 7B가 균형 좋음. 32B 변종은 VRAM 24GB+ 필요해서 추가 등재 보류.",
+        "sources": [
+          "huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct",
+          "evalplus.github.io/leaderboard.html",
+          "ollama.com/library/qwen2.5-coder"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

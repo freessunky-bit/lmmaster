@@ -1,0 +1,14 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 0 / Phase 4: gateway lifecycle status RPC.
+# Frontend App.tsx가 첫 mount 시 호출 — 부팅 시 race-safe state snapshot.
+
+[[permission]]
+identifier = "allow-ping"
+description = "Liveness probe — returns a static OK string. Used by frontend smoke tests."
+commands.allow = ["ping"]
+
+[[permission]]
+identifier = "allow-get-gateway-status"
+description = "Snapshot the current gateway state (port + status + error). Frontend uses this to recover from missed gateway://ready events."
+commands.allow = ["get_gateway_status"]

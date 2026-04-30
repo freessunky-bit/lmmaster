@@ -23,10 +23,12 @@ import guideEn from "../i18n/guide-en-v1.md?raw";
 
 import "./guide.css";
 
-/** 8 섹션 — 마크다운 마커와 일치해야 해요 (`<!-- section: id -->`). */
+/** 가이드 섹션 — 마크다운 마커와 일치해야 해요 (`<!-- section: id -->`). */
 const SECTION_IDS = [
   "getting-started",
   "catalog",
+  "chat",
+  "model-tuning",
   "workbench",
   "knowledge",
   "api-keys",
@@ -40,6 +42,7 @@ type SectionId = (typeof SECTION_IDS)[number];
 /** 섹션 → 페이지 이동 매핑. CTA "이 기능 사용해 보기"가 dispatch하는 nav 키. */
 const SECTION_NAV_MAP: Partial<Record<SectionId, string>> = {
   catalog: "catalog",
+  chat: "chat",
   workbench: "workbench",
   knowledge: "workspace",
   "api-keys": "keys",
@@ -51,6 +54,17 @@ const SECTION_NAV_MAP: Partial<Record<SectionId, string>> = {
 const SECTION_KEYWORDS: Record<SectionId, string[]> = {
   "getting-started": ["시작", "마법사", "wizard", "onboarding", "ㅅㅈ"],
   catalog: ["카탈로그", "추천", "모델", "ㅁㄷ", "model"],
+  chat: ["채팅", "대화", "chat", "ollama", "lm studio", "외부", "cli", "ㅊㅌ"],
+  "model-tuning": [
+    "권장",
+    "세팅",
+    "설정",
+    "temperature",
+    "system prompt",
+    "context",
+    "튜닝",
+    "ㅁㄷㅅㅌ",
+  ],
   workbench: ["워크벤치", "양자화", "lora", "training", "fine-tune", "ㅇㅈㅎ"],
   knowledge: ["RAG", "지식", "자료", "검색", "ingest", "ㅈㄹ"],
   "api-keys": ["API", "키", "외부", "웹앱", "external", "ㅋ"],

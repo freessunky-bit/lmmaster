@@ -5,6 +5,12 @@
   flex-direction: column;
   gap: var(--space-5);
   padding: var(--space-6);
+  /* app-shell `.content`가 minmax(0,1fr) + overflow:hidden이라 가이드 페이지 자체에 스크롤
+     컨테이너 필요. 긴 마크다운(외부 도구 사용법 / 모델 권장 세팅 등)이 viewport보다 길면
+     이전엔 잘렸던 문제 해결. */
+  height: 100%;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 /* ── Top bar ───────────────────────────────────────────────────────── */
