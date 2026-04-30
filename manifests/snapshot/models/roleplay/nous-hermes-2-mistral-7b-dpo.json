@@ -1,0 +1,86 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "nous-hermes-2-mistral-7b-dpo",
+      "display_name": "Nous Hermes 2 — Mistral 7B DPO",
+      "category": "roleplay",
+      "model_family": "mistral",
+      "source": {
+        "type": "hugging-face",
+        "repo": "NousResearch/Nous-Hermes-2-Mistral-7B-DPO-GGUF",
+        "file": "Nous-Hermes-2-Mistral-7B-DPO-Q4_K_M.gguf"
+      },
+      "hub_id": "nous-hermes2:7b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 4400,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Nous-Hermes-2-Mistral-7B-DPO-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 6144,
+      "rec_vram_mb": 8192,
+      "min_ram_mb": 8192,
+      "rec_ram_mb": 16384,
+      "install_size_mb": 4400,
+      "context_guidance": "Mistral 7B 베이스 + Hermes 2 instruction-tune + DPO. RP / 캐릭터 / 창작에 강함. Polyglot-Ko 12.8B의 영어/instruct 대안.",
+      "language_strength": 6,
+      "roleplay_strength": 9,
+      "coding_strength": 5,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "Apache-2.0",
+      "maturity": "stable",
+      "portable_suitability": 7,
+      "on_device_suitability": 7,
+      "fine_tune_suitability": 8,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "general-chat",
+      "commercial": true,
+      "use_case_examples": [
+        "캐릭터 롤플레이 (영어 1순위)",
+        "감성 글쓰기 / 창작",
+        "ChatML 시스템 프롬프트 기반 페르소나"
+      ],
+      "warnings": [],
+      "intents": ["roleplay-narrative"],
+      "domain_scores": {
+        "roleplay-narrative": 80.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "RP 동급 최상위 — Hermes 2 라인업의 instruct + DPO 강점",
+          "Apache-2 — 상업 RP 제품 자유",
+          "ChatML 시스템 프롬프트 기반 페르소나 일관성 좋음",
+          "Mistral 7B 베이스 — 일반 게이밍 PC에서 가능"
+        ],
+        "weaknesses_ko": [
+          "한국어 RP는 Polyglot-Ko 12.8B에 밀림 — 영어 RP 1순위",
+          "RP가 *주력*이라 일반 비서로는 EXAONE / Llama 3.1보다 어색"
+        ],
+        "use_cases_ko": [
+          "영어 RP / 캐릭터 챗봇",
+          "영어 창작 / 감성 글쓰기",
+          "instruction-tuned RP 베이스 (Polyglot-Ko 베이스 모델 대안)"
+        ],
+        "curator_note_ko": "한국어 RP는 Polyglot-Ko 12.8B, 영어 RP는 Nous Hermes 2. Apache-2라 상업 자유 — RP 챗봇 제품 시드로 좋음. Stheno L3 8B(NSFW)와 분리 — Hermes 2는 일반 RP, Stheno는 성인 RP.",
+        "sources": [
+          "huggingface.co/NousResearch/Nous-Hermes-2-Mistral-7B-DPO",
+          "ollama.com/library/nous-hermes2"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

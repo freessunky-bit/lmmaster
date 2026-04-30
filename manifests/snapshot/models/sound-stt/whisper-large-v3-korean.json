@@ -55,7 +55,11 @@
         "회의록 자동 작성",
         "음성 명령 인식"
       ],
-      "warnings": []
+      "warnings": [],
+      "intents": ["voice-stt"],
+      "domain_scores": {
+        "voice-stt": 78.0
+      }
     }
   ]
 }

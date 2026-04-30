@@ -158,6 +158,11 @@ mod tests {
             hub_id: None,
             tier: crate::manifest::ModelTier::default(),
             community_insights: None,
+            intents: vec![],
+            domain_scores: Default::default(),
+            purpose: Default::default(),
+            commercial: true,
+            content_warning: None,
         }
     }
 

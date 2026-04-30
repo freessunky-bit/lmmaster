@@ -1,6 +1,6 @@
 # ADR-0047 — minisign-verify로 카탈로그 번들 서명 검증 (infrastructure)
 
-* **상태**: 채택 (2026-04-30)
+* **상태**: 채택 (2026-04-30 인프라, 2026-05-01 wiring 완료) — Phase 13'.g(인프라) + 13'.g.2.a(option_env! pubkey loader) + 13'.g.2.b(resolve_signature_url helper) + 13'.g.2.c(FetcherCore wiring + caller 통합 + Diagnostics SignatureSection) + 13'.g.2.d(CI 서명 파이프라인 YAML) 모두 머지 완료. v1 ship 가능.
 * **컨텍스트**: Phase 13'.a로 카탈로그 번들이 jsDelivr → GitHub raw 흐름으로 사용자 PC에 도달. 무서명이라 GitHub repo가 손되거나 jsDelivr 캐시가 오염되면 *임의 카탈로그가 사용자 PC에 들어옴*. 서명 검증 추가 필수. 단 v1 ship 전 실 키페어 + CI 서명 파이프라인 통합은 별도 운영 작업이라 본 ADR은 *infrastructure only* — verify 코드 + 결정 보존, wiring은 v1.x.
 * **결정 노트**: `docs/research/phase-13pg-catalog-signature-decision.md`
 

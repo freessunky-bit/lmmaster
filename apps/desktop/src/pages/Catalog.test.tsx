@@ -18,6 +18,8 @@ vi.mock("react-i18next", () => ({
 vi.mock("../ipc/catalog", () => ({
   getCatalog: vi.fn(),
   getRecommendation: vi.fn(),
+  // Phase 13'.h — Chat 페이지가 추가한 vision 진입에서도 모듈이 로드되니 mock 노출.
+  runtimeModelId: vi.fn().mockReturnValue("mocked-runtime-id"),
 }));
 
 vi.mock("../ipc/catalog-refresh", () => ({
@@ -270,12 +272,12 @@ describe("CatalogPage 정렬", () => {
     await user.selectOptions(sortSelect, "size");
 
     // 카드 순서 — 작은 것부터 (exaone 760 < qwen 760(동률, 알파벳) < polyglot 7700).
+    // Phase 13'.h 이후 카드 안에 button 2개("이 모델로 시작" 추가) — listitem textContent로 검색.
     await waitFor(() => {
       const titles = screen
         .getAllByRole("listitem")
-        .map((el) => within(el as HTMLElement).queryByRole("button")?.textContent ?? "")
+        .map((el) => el.textContent ?? "")
         .filter((t) => t.includes("EXAONE") || t.includes("Qwen") || t.includes("Polyglot"));
-      // Polyglot이 마지막이어야 함.
       expect(titles[titles.length - 1]).toContain("Polyglot");
     });
   });

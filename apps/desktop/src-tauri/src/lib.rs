@@ -12,6 +12,7 @@ pub mod commands;
 pub mod crash;
 pub mod gateway;
 pub mod hf_meta;
+pub mod hf_search;
 pub mod install;
 pub mod keys;
 pub mod knowledge;
@@ -154,6 +155,7 @@ pub fn run() {
             telemetry::state::submit_telemetry_event,
             registry_fetcher::refresh_catalog_now,
             registry_fetcher::get_last_catalog_refresh,
+            registry_fetcher::get_catalog_signature_status,
             workspaces::list_workspaces,
             workspaces::get_active_workspace,
             workspaces::create_workspace,
@@ -162,6 +164,8 @@ pub fn run() {
             workspaces::set_active_workspace,
             crash::list_crash_reports,
             crash::read_crash_log,
+            hf_search::search_hf_models,
+            hf_search::register_hf_model,
         ])
         .setup(|app| {
             // 1. Gateway supervisor.

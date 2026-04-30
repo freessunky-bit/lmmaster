@@ -8,6 +8,8 @@ license.workspace = true
 shared-types.workspace = true
 runtime-manager.workspace = true
 bench-harness.workspace = true
+# Phase 13'.h.2.a (ADR-0050) — chat_stream의 ChatMessage/ChatEvent/ChatOutcome 공유.
+adapter-ollama.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 tokio-stream.workspace = true

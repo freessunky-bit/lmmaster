@@ -37,6 +37,58 @@ gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD --body "여기에-비밀키-패
 
 ---
 
+## 1.b Catalog minisign 서명 키 (Phase 13'.g.2 — v1.x ship 직전 필수)
+
+**목적**: `.github/workflows/sign-catalog.yml`이 `manifests/apps/catalog.json` 변경 시 자동 서명. registry-fetcher의 `SignatureVerifier`가 사용자 PC에서 verify해서 변조 차단.
+
+### 1.b.1 비밀키 + 패스워드 + 공개키 등록
+
+```bash
+# rsign2 설치 (CLI 호스트에서):
+cargo install rsign2 --locked
+
+# 새 keypair 생성 (이미 만들었으면 skip):
+mkdir -p ~/.lmmaster
+rsign generate \
+  -p ~/.lmmaster/catalog-minisign.pub \
+  -s ~/.lmmaster/catalog-minisign.key
+
+# 비밀키 등록:
+gh secret set CATALOG_MINISIGN_SECRET_KEY < ~/.lmmaster/catalog-minisign.key
+
+# 패스워드 (생성 시 입력한 것):
+gh secret set CATALOG_MINISIGN_PASSWORD --body "키-생성-시-패스워드"
+
+# 공개키 (self-check 용):
+gh secret set CATALOG_MINISIGN_PUBKEY < ~/.lmmaster/catalog-minisign.pub
+```
+
+### 1.b.2 빌드 시점 환경변수 등록 (사용자 PC 빌드용)
+
+`SignatureVerifier::from_embedded()`가 사용자 빌드 시점에 임베드.
+
+```bash
+# 공개키 본문 (RWQ로 시작하는 한 줄 — 주석 줄 제외)을 환경변수로:
+export LMMASTER_CATALOG_PUBKEY="$(grep -v '^untrusted' ~/.lmmaster/catalog-minisign.pub)"
+# 키 회전 90일 overlap 시:
+export LMMASTER_CATALOG_PUBKEY_SECONDARY="$(grep -v '^untrusted' ~/.lmmaster/catalog-minisign-prev.pub)"
+
+# 그 후 cargo build / pnpm build 실행 — option_env! 매크로가 자동 임베드.
+```
+
+### 1.b.3 자동 commit + push 권한 (선택)
+
+기본은 `GITHUB_TOKEN`으로 시도. branch protection이 직접 push를 차단하면 PAT가 필요해요:
+
+```bash
+# Personal Access Token (Settings → Developer settings → PAT) 발급 후:
+gh secret set CI_PUSH_TOKEN --body "ghp_xxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+> 키를 분실하거나 변조 의심 시: ① 새 keypair 생성, ② secondary로 임베드 + 90일 overlap, ③ 90일 후 primary 교체.
+
+---
+
 ## 2. GlitchTip telemetry DSN (옵션)
 
 자체 운영하는 GlitchTip 서버를 두고 텔레메트리를 받고 싶을 때만 등록해요. 미등록 시 LMmaster는 이벤트를 큐에만 적재하고 외부 통신을 하지 않아요(ADR-0013 외부 통신 0 일관).

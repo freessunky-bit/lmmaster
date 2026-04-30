@@ -61,7 +61,19 @@
         "지식 질의응답",
         "에이전트 워크플로 (도구 호출)"
       ],
-      "warnings": []
+      "warnings": [],
+      "intents": [
+        "ko-conversation",
+        "ko-rag",
+        "agent-tool-use",
+        "translation-ko-en"
+      ],
+      "domain_scores": {
+        "ko-conversation": 82.0,
+        "ko-rag": 72.0,
+        "agent-tool-use": 70.0,
+        "translation-ko-en": 75.0
+      }
     }
   ]
 }

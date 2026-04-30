@@ -8,7 +8,44 @@
 
 ## 우선순위 1 — 다음 진입 후보 (세션 즉시 시작 가능)
 
-### Phase 13'.f.2 — 큐레이션 잔여 18 모델 + RP/임베딩 카테고리 schema
+### ~~Phase 13'.h.2.a — LM Studio chat + vision 어댑터~~ — **2026-05-01 머지 완료**
+
+### Phase 13'.h.2.b/c — llama.cpp server 자동 spawn + mmproj sidecar (v2)
+
+* **상태**: v2 마이그레이션 (v1.x ship 후 검토)
+* **이유**: Ollama + LM Studio 두 어댑터로 카탈로그 `vision_support` 모델(gemma-3-4b)이 작동 — 일반 사용자 vision 흐름 거의 100% 커버. llama.cpp 직접 사용자(고급)는 외부 `llama-server` 수동 실행 + `--mmproj` 파일 별도 다운로드 필요한 환경이라 sidecar 자동화의 ROI가 v1 ship 직전 시점에 낮음.
+* **선행 의존성**: ✅ 13'.h.1 (Ollama) + 13'.h.2.a (LM Studio).
+* **예상 작업량**: 8-10h (server 모드 spawn + LLaVA mmproj 검증 + 어댑터 분기 + sidecar 패키징).
+
+작업 스코프 (v2):
+1. `runner-llama-cpp` server 모드 spawn (Tauri sidecar 또는 외부 binary attach).
+2. mmproj 파일 별도 다운로드 + 페어링 검증 (vision 모델은 GGUF + mmproj 두 파일).
+3. `adapter-llama-cpp::chat_stream` images payload 변환 (LLaVA endpoint 또는 OpenAI compat).
+4. chat IPC LlamaCpp 분기 — 현재 unsupported. 어댑터 후처리 후 wiring.
+5. e2e 검증 — 사용자 PC 실 binary 필요한 영역.
+
+---
+
+### ~~Phase 13'.g.2.c — FetcherCore wiring + Diagnostics 빨간 카드~~ — **2026-05-01 머지 완료**
+
+### ~~Phase 13'.g.2.d — CI 서명 파이프라인~~ — **2026-05-01 머지 완료** (`.github/workflows/sign-catalog.yml`)
+
+---
+
+### Phase 13'.g.2.d — CI 서명 파이프라인
+
+* **선행 의존성**: ✅ 13'.g.2.b 머지 후 진입.
+* **예상 작업량**: 2-3h.
+
+작업 스코프: `.github/workflows/sign-catalog.yml` 신규 — main branch push 시 트리거, secret minisign keypair로 `rsign sign`, `.minisig` 자동 업로드.
+
+---
+
+### Phase 13'.f.2.2 — 큐레이션 잔여 14 모델 + NSFW/NC 라벨 (legacy 항목 — 13'.f.2.2.1 + 13'.f.2.3로 분할 완료)
+
+---
+
+### Phase 13'.f.2 — 큐레이션 잔여 18 모델 + RP/임베딩 카테고리 schema (legacy 항목 — 13'.f.2.1/2.2로 분할 완료)
 
 * **상태**: pending
 * **선행 의존성**: 없음 — 즉시 진입 가능. catalog schema 변경은 model-registry crate.
@@ -127,6 +164,31 @@
 ---
 
 ## 우선순위 3 — 운영 / 인프라
+
+### Tauri Updater 호환 빌드 — 옵션 B (배포 빌드)
+
+* **상태**: pending. 옵션 A (무서명 NSIS installer) 완료 후 정식 배포 흐름.
+* **선행 의존성**: 없음. 단 GitHub Releases 자동 업데이트를 원할 때만 필요.
+* **예상 작업량**: 1-2h (keypair 생성 + env + 빌드 + Releases 워크플로 step 검증).
+
+작업 스코프:
+1. **minisign keypair 생성** — `rsign generate -p ~/.lmmaster.pub -s ~/.lmmaster.key`. password는 강한 패스프레이즈.
+2. **`tauri.conf.json::plugins.updater.pubkey` 교체** — 현재 등록된 pubkey가 *짝이 맞는 secret*과 함께 보관 중인지 확인. 없으면 위에서 만든 새 pubkey로 교체.
+3. **`TAURI_SIGNING_PRIVATE_KEY` + `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` env 설정** — secret key 파일 내용 + password.
+4. **`createUpdaterArtifacts` 다시 `true`로 복귀** — 옵션 A 진행 시 임시로 `false`로 둠.
+5. **`pnpm tauri build` 재실행** — `.exe` + `.sig` + `latest.json` 산출.
+6. **GitHub Releases 자동화** — `.github/workflows/release.yml` 신규. tag push 트리거 → 빌드 → release 생성 → assets 업로드 (.exe, .sig, latest.json). updater endpoints가 GitHub Releases를 가리키므로 (tauri.conf.json::plugins.updater.endpoints) 사용자 PC에서 자동 업데이트 흐름 완성.
+7. **Phase 13'.g.2와 통합 결정** — catalog signing (ADR-0047)과 updater signing이 동일 keypair 사용? 분리? Tauri Updater pubkey는 minisign 형식 동일하므로 *같은 키 재사용 가능*하지만 "역할 분리" 관점에서 분리 권장.
+
+진입 조건:
+- 옵션 A로 무서명 빌드가 한 번 성공해서 빌드 환경이 검증된 상태.
+- minisign keypair secret 보관 정책 결정 (1Password / GitHub Encrypted Secret).
+
+위험 노트:
+- pubkey 교체 시 *기존 사용자가 업데이트 못 받음* — 일단 v0.0.1 → v0.1 첫 정식 릴리즈 전에 확정해야 함.
+- secret 유출 시 즉시 keypair 회전 + 새 pubkey 임베드한 hotfix 릴리즈 필수.
+
+---
 
 ### Code signing (Windows / macOS)
 

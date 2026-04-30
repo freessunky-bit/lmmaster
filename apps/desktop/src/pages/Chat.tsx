@@ -28,6 +28,7 @@ import {
   type ModelEntry,
   type RuntimeKind,
 } from "../ipc/catalog";
+import { processImageForVision } from "../lib/image";
 import { listRuntimeModels, type RuntimeModelView } from "../ipc/runtimes";
 
 import "./chat.css";
@@ -43,6 +44,15 @@ interface DisplayMessage {
   tookMs?: number;
   /** 실패 시 사용자 향 카피. */
   errorMessage?: string;
+  /** Phase 13'.h — 첨부 이미지 미리보기 (data URL). UI 전용, backend 전송은 base64. */
+  imagePreviews?: string[];
+}
+
+interface AttachedImage {
+  /** UI 미리보기 — data URL. */
+  previewUrl: string;
+  /** Ollama 전송 — base64 (data URL prefix 제외). */
+  base64: string;
 }
 
 const DEFAULT_RUNTIME: RuntimeKind = "ollama";
@@ -54,6 +64,9 @@ export function ChatPage() {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
+  const [attached, setAttached] = useState<AttachedImage[]>([]);
+  const [attachError, setAttachError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -159,14 +172,35 @@ export function ChatPage() {
     return list;
   }, [entries, localModels, runtimeIdsByModelId]);
 
+  // Phase 13'.h — 선택된 모델의 카탈로그 정보. vision_support 판정용.
+  const selectedEntry = useMemo<ModelEntry | null>(() => {
+    if (!selectedRuntimeId) return null;
+    return (
+      entries.find(
+        (e) =>
+          e.hub_id === selectedRuntimeId ||
+          runtimeModelId(e, null, "ollama") === selectedRuntimeId,
+      ) ?? null
+    );
+  }, [selectedRuntimeId, entries]);
+  const visionEnabled = selectedEntry?.vision_support ?? false;
+
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text || !selectedRuntimeId || running) return;
+    if ((!text && attached.length === 0) || !selectedRuntimeId || running)
+      return;
     setInput("");
+    const currentAttached = attached;
+    setAttached([]);
+    setAttachError(null);
     const userMsg: DisplayMessage = {
       id: crypto.randomUUID(),
       role: "user",
       content: text,
+      imagePreviews:
+        currentAttached.length > 0
+          ? currentAttached.map((a) => a.previewUrl)
+          : undefined,
     };
     const assistantMsg: DisplayMessage = {
       id: crypto.randomUUID(),
@@ -181,7 +215,14 @@ export function ChatPage() {
     const history: ChatMessage[] = messages
       .filter((m) => !m.streaming && !m.errorMessage)
       .map((m) => ({ role: m.role, content: m.content }));
-    const turn: ChatMessage[] = [...history, { role: "user", content: text }];
+    const userTurn: ChatMessage = {
+      role: "user",
+      content: text,
+      ...(currentAttached.length > 0
+        ? { images: currentAttached.map((a) => a.base64) }
+        : {}),
+    };
+    const turn: ChatMessage[] = [...history, userTurn];
 
     try {
       const outcome = await startChat({
@@ -220,7 +261,39 @@ export function ChatPage() {
     } finally {
       setRunning(false);
     }
-  }, [input, selectedRuntimeId, running, messages]);
+  }, [input, selectedRuntimeId, running, messages, attached]);
+
+  const handleAttachFiles = useCallback(
+    async (files: FileList | null) => {
+      if (!files || files.length === 0) return;
+      setAttachError(null);
+      const next: AttachedImage[] = [];
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) {
+          setAttachError("이미지 파일만 첨부할 수 있어요.");
+          continue;
+        }
+        try {
+          const processed = await processImageForVision(file);
+          next.push({
+            previewUrl: `data:image/jpeg;base64,${processed.base64}`,
+            base64: processed.base64,
+          });
+        } catch (e) {
+          console.warn("processImageForVision failed:", e);
+          setAttachError("이미지를 읽지 못했어요. 다른 파일로 시도해 볼래요?");
+        }
+      }
+      if (next.length > 0) {
+        setAttached((prev) => [...prev, ...next]);
+      }
+    },
+    [],
+  );
+
+  const handleRemoveAttachment = useCallback((idx: number) => {
+    setAttached((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
 
   const handleStop = useCallback(async () => {
     try {
@@ -322,6 +395,21 @@ export function ChatPage() {
                     </span>
                   )}
                 </div>
+                {m.imagePreviews && m.imagePreviews.length > 0 && (
+                  <div
+                    className="chat-bubble-images"
+                    data-testid="chat-bubble-images"
+                  >
+                    {m.imagePreviews.map((src, i) => (
+                      <img
+                        key={i}
+                        src={src}
+                        alt={`첨부 이미지 ${i + 1}`}
+                        className="chat-bubble-image"
+                      />
+                    ))}
+                  </div>
+                )}
                 {m.errorMessage ? (
                   <p className="chat-bubble-text chat-bubble-error">
                     {m.errorMessage}
@@ -352,6 +440,40 @@ export function ChatPage() {
       </div>
 
       <footer className="chat-input-row">
+        {attached.length > 0 && (
+          <div
+            className="chat-attachments-row"
+            data-testid="chat-attachments-row"
+          >
+            {attached.map((a, idx) => (
+              <div key={idx} className="chat-attachment">
+                <img
+                  src={a.previewUrl}
+                  alt={`첨부 ${idx + 1}`}
+                  className="chat-attachment-thumb"
+                />
+                <button
+                  type="button"
+                  className="chat-attachment-remove"
+                  onClick={() => handleRemoveAttachment(idx)}
+                  aria-label={`첨부 ${idx + 1} 제거`}
+                  data-testid={`chat-attachment-remove-${idx}`}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {attachError && (
+          <p
+            className="chat-attach-error"
+            role="alert"
+            data-testid="chat-attach-error"
+          >
+            {attachError}
+          </p>
+        )}
         <textarea
           className="chat-input"
           placeholder="메시지를 입력해 주세요. Enter로 보내고, Shift+Enter로 줄바꿈할 수 있어요."
@@ -362,6 +484,33 @@ export function ChatPage() {
           rows={3}
         />
         <div className="chat-input-actions">
+          {visionEnabled && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  void handleAttachFiles(e.target.files);
+                  e.target.value = "";
+                }}
+                data-testid="chat-attach-input"
+              />
+              <button
+                type="button"
+                className="chat-action is-attach"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!selectedRuntimeId || running}
+                aria-label="이미지 첨부"
+                data-testid="chat-attach-button"
+                title="이 모델은 이미지 분석을 지원해요. 사진을 첨부해 보세요."
+              >
+                📎
+              </button>
+            </>
+          )}
           {running ? (
             <button
               type="button"
@@ -375,7 +524,9 @@ export function ChatPage() {
               type="button"
               className="chat-action is-primary"
               onClick={handleSend}
-              disabled={!input.trim() || !selectedRuntimeId}
+              disabled={
+                (!input.trim() && attached.length === 0) || !selectedRuntimeId
+              }
             >
               보낼게요
             </button>

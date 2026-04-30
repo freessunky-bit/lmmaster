@@ -1,0 +1,91 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-05-01T00:00:00Z",
+  "entries": [
+    {
+      "id": "mythomax-l2-13b",
+      "display_name": "MythoMax L2 13B (RP 클래식)",
+      "category": "roleplay",
+      "model_family": "llama",
+      "source": {
+        "type": "hugging-face",
+        "repo": "TheBloke/MythoMax-L2-13B-GGUF",
+        "file": "mythomax-l2-13b.Q4_K_M.gguf"
+      },
+      "hub_id": "mythomax:13b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 7900,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "mythomax-l2-13b.Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 10240,
+      "rec_vram_mb": 12288,
+      "min_ram_mb": 16384,
+      "rec_ram_mb": 24576,
+      "install_size_mb": 7900,
+      "context_guidance": "Llama 2 13B 베이스 + Mythomix/Mythologic 머지. RP/창작 클래식 — 2023~2024년 RP 커뮤니티 표준. 한국어 약함, 영어 RP 강함.",
+      "language_strength": 4,
+      "roleplay_strength": 9,
+      "coding_strength": 4,
+      "tool_support": false,
+      "vision_support": false,
+      "structured_output_support": false,
+      "license": "Llama 2 Community License",
+      "maturity": "stable",
+      "portable_suitability": 5,
+      "on_device_suitability": 6,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-05-01",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "general-chat",
+      "commercial": true,
+      "use_case_examples": [
+        "영어 캐릭터 RP (클래식)",
+        "영어 창작 / 시나리오",
+        "Llama 2 RP fine-tune 베이스"
+      ],
+      "warnings": [
+        "Llama 2 라이선스 — 700M+ 사용자 서비스 임베드 시 별도 라이선스 필요.",
+        "한국어 RP는 Polyglot-Ko 12.8B에 밀림 — 영어 RP 1순위.",
+        "Llama 2 베이스 — Llama 3 / Mistral 기반 RP보다 ~2년 구세대. 더 나은 선택은 Nous-Hermes-2."
+      ],
+      "intents": ["roleplay-narrative"],
+      "domain_scores": {
+        "roleplay-narrative": 78.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "RP 커뮤니티 클래식 — 캐릭터 일관성 + 응답 길이 안정적",
+          "Llama 2 13B 베이스 — RTX 3060 12GB / 4070 가능",
+          "fine-tune 변종 다수 (Mythomix, MythoMistral 등)"
+        ],
+        "weaknesses_ko": [
+          "Llama 2 베이스 — Llama 3 / Mistral보다 ~2년 구세대",
+          "한국어 RP는 Polyglot-Ko에 밀림",
+          "tool calling / structured output 없음"
+        ],
+        "use_cases_ko": [
+          "영어 RP (클래식 변종 선호 시)",
+          "Llama 2 호환 fine-tune 베이스",
+          "Nous-Hermes-2 대체 (메모리 12GB+ 환경)"
+        ],
+        "curator_note_ko": "RP 커뮤니티의 '클래식'이지만 신모델(Nous-Hermes-2 / Stheno) 대비 구세대. RP 입문/실험용으로는 좋지만 현재 production 권장은 Nous-Hermes-2 또는 Stheno(성인).",
+        "sources": [
+          "huggingface.co/Gryphe/MythoMax-L2-13b",
+          "huggingface.co/TheBloke/MythoMax-L2-13B-GGUF",
+          "ollama.com/library/mythomax"
+        ],
+        "last_reviewed_at": "2026-05-01T00:00:00Z"
+      }
+    }
+  ]
+}

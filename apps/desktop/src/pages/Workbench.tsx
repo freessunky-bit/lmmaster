@@ -23,6 +23,14 @@ import { useTranslation } from "react-i18next";
 
 import { HelpButton } from "../components/HelpButton";
 import { LoraBootstrapPanel } from "../components/workbench/LoraBootstrapPanel";
+import { PromptTemplateStep } from "../components/workbench/PromptTemplateStep";
+import { RagSeedStep } from "../components/workbench/RagSeedStep";
+import { WorkbenchContextBar } from "../components/workbench/WorkbenchContextBar";
+import {
+  parseWorkbenchHash,
+  type WorkbenchHashContext,
+} from "../components/workbench/hash";
+import { getCatalog, type ModelEntry } from "../ipc/catalog";
 import {
   cancelWorkbenchRun,
   isTerminalEvent,
@@ -245,6 +253,55 @@ export function Workbench() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const handleRef = useRef<StartWorkbenchHandle | null>(null);
 
+  // Phase 12'.a (ADR-0050) — Catalog → Workbench 컨텍스트 (URL hash) 전달.
+  // hash 없으면 기존 5단계 default 진입 (기존 사용자 0 영향).
+  const [hashCtx, setHashCtx] = useState<WorkbenchHashContext>({
+    model: null,
+    intent: null,
+  });
+  const [hashModel, setHashModel] = useState<ModelEntry | null>(null);
+  const stepperRef = useRef<HTMLOListElement | null>(null);
+
+  useEffect(() => {
+    const apply = () => setHashCtx(parseWorkbenchHash(window.location.hash));
+    apply();
+    window.addEventListener("hashchange", apply);
+    return () => window.removeEventListener("hashchange", apply);
+  }, []);
+
+  useEffect(() => {
+    if (!hashCtx.model) {
+      setHashModel(null);
+      return;
+    }
+    let cancelled = false;
+    getCatalog()
+      .then((view) => {
+        if (cancelled) return;
+        const found = view.entries.find((e) => e.id === hashCtx.model);
+        setHashModel(found ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setHashModel(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hashCtx.model]);
+
+  const goToCatalog = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.location.hash = "#/catalog";
+    }
+  }, []);
+
+  const advanceToFineTune = useCallback(() => {
+    stepperRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, []);
+
   // handle ref를 state.handle과 동기화 — cleanup에서 사용.
   useEffect(() => {
     handleRef.current = state.handle;
@@ -331,7 +388,32 @@ export function Workbench() {
         </span>
       </header>
 
-      <ol className="workbench-stepper" aria-label={t("screens.workbench.title")}>
+      {hashCtx.model && (
+        <WorkbenchContextBar
+          modelDisplayName={hashModel?.display_name ?? hashCtx.model}
+          intent={hashCtx.intent}
+          onChangeIntent={goToCatalog}
+          onChangeModel={goToCatalog}
+        />
+      )}
+
+      {hashModel && (
+        <PromptTemplateStep
+          model={hashModel}
+          intent={hashCtx.intent}
+          onAdvanceToFineTune={advanceToFineTune}
+        />
+      )}
+
+      {hashModel && (
+        <RagSeedStep model={hashModel} intent={hashCtx.intent} />
+      )}
+
+      <ol
+        ref={stepperRef}
+        className="workbench-stepper"
+        aria-label={t("screens.workbench.title")}
+      >
         {STEP_KEYS.map((key, idx) => (
           <li key={key} className="workbench-stepper-item">
             <button

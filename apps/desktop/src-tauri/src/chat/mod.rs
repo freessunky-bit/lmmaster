@@ -9,6 +9,7 @@ pub mod registry;
 
 use std::sync::Arc;
 
+use adapter_lmstudio::LmStudioAdapter;
 use adapter_ollama::{ChatEvent, ChatMessage, ChatOutcome, OllamaAdapter};
 use serde::Serialize;
 use shared_types::RuntimeKind;
@@ -77,15 +78,23 @@ pub async fn start_chat(
             Ok(outcome.into())
         }
         RuntimeKind::LmStudio => {
-            // LM Studio 채팅은 gateway의 OpenAI-compat path 그대로 가능. v1.x에서 직접 어댑터 추가.
-            let _ = channel.send(ChatEvent::Failed {
-                message:
-                    "LM Studio 채팅은 다음 업데이트에 지원돼요. 우선 Ollama 모델로 시도해 주세요."
-                        .into(),
-            });
-            Err(ChatApiError::UnsupportedRuntime {
-                runtime: "lm-studio".into(),
-            })
+            // Phase 13'.h.2.a (ADR-0050) — LM Studio OpenAI compat /v1/chat/completions SSE.
+            // adapter-lmstudio::chat_stream가 ChatMessage(images 포함) 그대로 받아 vision content array로 변환.
+            let adapter = LmStudioAdapter::new();
+            let channel_tx = channel.clone();
+            let outcome = adapter
+                .chat_stream(
+                    &model_id,
+                    &messages,
+                    move |event| {
+                        if let Err(e) = channel_tx.send(event) {
+                            tracing::debug!(error = %e, "lm-studio chat channel send failed");
+                        }
+                    },
+                    &cancel,
+                )
+                .await;
+            Ok(outcome.into())
         }
         other => Err(ChatApiError::UnsupportedRuntime {
             runtime: format!("{other:?}").to_lowercase(),

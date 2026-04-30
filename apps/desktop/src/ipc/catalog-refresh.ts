@@ -37,3 +37,18 @@ export async function onCatalogRefreshed(
 ): Promise<UnlistenFn> {
   return listen<LastRefresh>("catalog://refreshed", (e) => cb(e.payload));
 }
+
+// ── Phase 13'.g.2.c (ADR-0047) — Catalog minisign 서명 검증 상태 ────
+
+/** registry_fetcher::CatalogSignatureStatus 미러. kind discriminated union. */
+export type CatalogSignatureStatus =
+  | { kind: "disabled"; at_ms: number }
+  | { kind: "verified"; at_ms: number; source: string }
+  | { kind: "failed"; at_ms: number; reason: string }
+  | { kind: "missing-signature"; at_ms: number }
+  | { kind: "bundled-fallback"; at_ms: number };
+
+/** 마지막 catalog 서명 검증 결과 — 한 번도 검증 시도 안 됐으면 null. */
+export async function getCatalogSignatureStatus(): Promise<CatalogSignatureStatus | null> {
+  return invoke<CatalogSignatureStatus | null>("get_catalog_signature_status");
+}

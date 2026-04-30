@@ -440,6 +440,227 @@ impl BenchAdapter for LmStudioAdapter {
     }
 }
 
+// ── Chat streaming (Phase 13'.h.2.a, ADR-0050) ───────────────────────
+//
+// 정책:
+// - LM Studio는 OpenAI 호환 `/v1/chat/completions` SSE — Ollama와 다른 wire 형식.
+// - Vision: messages[i].content가 array — `[{type: "text"}, {type: "image_url"}]`. data URL 인라인.
+// - ChatMessage/ChatEvent/ChatOutcome은 adapter-ollama re-use — frontend 단일 시그니처.
+// - `[DONE]` 마커 감지 → ChatEvent::Completed.
+// - cancel은 stream drop으로 server abort.
+
+impl LmStudioAdapter {
+    /// 사용자 in-app 채팅 — OpenAI 호환 SSE 스트리밍.
+    pub async fn chat_stream(
+        &self,
+        model_id: &str,
+        messages: &[adapter_ollama::ChatMessage],
+        on_event: impl Fn(adapter_ollama::ChatEvent),
+        cancel: &CancellationToken,
+    ) -> adapter_ollama::ChatOutcome {
+        use adapter_ollama::{ChatEvent, ChatOutcome};
+
+        let started = Instant::now();
+        let openai_messages: Vec<OpenAIChatTurn> =
+            messages.iter().map(convert_message_to_openai).collect();
+
+        let body = OpenAIChatRequest {
+            model: model_id,
+            messages: openai_messages,
+            stream: true,
+        };
+        let send_fut = self
+            .http
+            .post(self.url("/v1/chat/completions"))
+            .json(&body)
+            .send();
+        let resp = tokio::select! {
+            biased;
+            () = cancel.cancelled() => {
+                on_event(ChatEvent::Cancelled);
+                return ChatOutcome::Cancelled;
+            }
+            r = send_fut => match r {
+                Ok(r) => r,
+                Err(e) => {
+                    let msg = format!("LM Studio 연결 실패: {e}");
+                    on_event(ChatEvent::Failed { message: msg.clone() });
+                    return ChatOutcome::Failed(msg);
+                }
+            }
+        };
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let text = resp.text().await.unwrap_or_default();
+            let msg = if status == reqwest::StatusCode::NOT_FOUND || text.contains("not found") {
+                format!("이 모델이 LM Studio에 로드돼 있지 않아요. (id={model_id})")
+            } else {
+                format!("LM Studio HTTP {status}: {text}")
+            };
+            on_event(ChatEvent::Failed {
+                message: msg.clone(),
+            });
+            return ChatOutcome::Failed(msg);
+        }
+
+        let mut stream = resp.bytes_stream();
+        let mut buffer: Vec<u8> = Vec::new();
+
+        loop {
+            tokio::select! {
+                () = cancel.cancelled() => {
+                    on_event(ChatEvent::Cancelled);
+                    return ChatOutcome::Cancelled;
+                }
+                next = stream.next() => {
+                    match next {
+                        Some(Ok(bytes)) => {
+                            buffer.extend_from_slice(&bytes);
+                            // SSE — 라인 단위 파싱.
+                            while let Some(pos) = buffer.iter().position(|b| *b == b'\n') {
+                                let line: Vec<u8> = buffer.drain(..=pos).collect();
+                                let trimmed = line.trim_ascii();
+                                if trimmed.is_empty() {
+                                    continue;
+                                }
+                                let payload = match trimmed.strip_prefix(b"data: ") {
+                                    Some(p) => p.trim_ascii(),
+                                    None => match trimmed.strip_prefix(b"data:") {
+                                        Some(p) => p.trim_ascii(),
+                                        None => continue,
+                                    },
+                                };
+                                if payload == b"[DONE]" {
+                                    on_event(ChatEvent::Completed {
+                                        took_ms: started.elapsed().as_millis() as u64,
+                                    });
+                                    return ChatOutcome::Completed;
+                                }
+                                let chunk: OpenAIChatChunk = match serde_json::from_slice(payload) {
+                                    Ok(c) => c,
+                                    Err(e) => {
+                                        tracing::debug!(error = %e, "lm-studio sse parse skip");
+                                        continue;
+                                    }
+                                };
+                                if let Some(choice) = chunk.choices.first() {
+                                    if let Some(text) = choice.delta.content.as_deref() {
+                                        if !text.is_empty() {
+                                            on_event(ChatEvent::Delta { text: text.to_string() });
+                                        }
+                                    }
+                                    if choice.finish_reason.is_some() {
+                                        on_event(ChatEvent::Completed {
+                                            took_ms: started.elapsed().as_millis() as u64,
+                                        });
+                                        return ChatOutcome::Completed;
+                                    }
+                                }
+                            }
+                        }
+                        Some(Err(e)) => {
+                            let msg = format!("LM Studio 응답 읽기 실패: {e}");
+                            on_event(ChatEvent::Failed { message: msg.clone() });
+                            return ChatOutcome::Failed(msg);
+                        }
+                        None => {
+                            on_event(ChatEvent::Completed {
+                                took_ms: started.elapsed().as_millis() as u64,
+                            });
+                            return ChatOutcome::Completed;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// adapter_ollama::ChatMessage → OpenAI compat turn 변환.
+/// images 필드가 비어있으면 plain text content. 있으면 content array (text + image_url parts).
+fn convert_message_to_openai(m: &adapter_ollama::ChatMessage) -> OpenAIChatTurn {
+    if let Some(images) = m.images.as_ref() {
+        if !images.is_empty() {
+            let mut parts: Vec<OpenAIContentPart> = Vec::with_capacity(images.len() + 1);
+            if !m.content.is_empty() {
+                parts.push(OpenAIContentPart::Text {
+                    text: m.content.clone(),
+                });
+            }
+            for img_b64 in images {
+                parts.push(OpenAIContentPart::ImageUrl {
+                    image_url: OpenAIImageUrl {
+                        url: format!("data:image/jpeg;base64,{img_b64}"),
+                    },
+                });
+            }
+            return OpenAIChatTurn {
+                role: m.role.clone(),
+                content: OpenAIContent::Array(parts),
+            };
+        }
+    }
+    OpenAIChatTurn {
+        role: m.role.clone(),
+        content: OpenAIContent::Text(m.content.clone()),
+    }
+}
+
+// ── OpenAI compat DTO (chat_stream 전용) ─────────────────────────────
+
+#[derive(Debug, Serialize)]
+struct OpenAIChatRequest<'a> {
+    model: &'a str,
+    messages: Vec<OpenAIChatTurn>,
+    stream: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct OpenAIChatTurn {
+    role: String,
+    content: OpenAIContent,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+enum OpenAIContent {
+    Text(String),
+    Array(Vec<OpenAIContentPart>),
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum OpenAIContentPart {
+    Text { text: String },
+    ImageUrl { image_url: OpenAIImageUrl },
+}
+
+#[derive(Debug, Serialize)]
+struct OpenAIImageUrl {
+    url: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAIChatChunk {
+    #[serde(default)]
+    choices: Vec<OpenAIChatChoice>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAIChatChoice {
+    #[serde(default)]
+    delta: OpenAIChatDelta,
+    #[serde(default)]
+    finish_reason: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct OpenAIChatDelta {
+    #[serde(default)]
+    content: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

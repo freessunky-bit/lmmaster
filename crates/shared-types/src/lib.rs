@@ -2,6 +2,9 @@
 //!
 //! 이 crate는 다른 LMmaster crate에 의존하지 않는다 (의존 방향 규칙).
 
+pub mod intents;
+pub use intents::{intent_label_ko, is_registered_intent, IntentId, INTENT_VOCABULARY};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

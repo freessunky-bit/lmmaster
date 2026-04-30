@@ -136,6 +136,43 @@ impl RegistryFetcher {
         self.core.cache.invalidate(manifest_id).await
     }
 
+    /// `manifest_id` + `tier`의 `.minisig` URL — Phase 13'.g.2.c (ADR-0047).
+    /// tier 미설정 시 `Ok(None)`.
+    pub fn signature_url_for(
+        &self,
+        manifest_id: &str,
+        tier: source::SourceTier,
+    ) -> Result<Option<String>, FetcherError> {
+        let Some(config) = self.core.sources.iter().find(|s| s.tier == tier) else {
+            return Ok(None);
+        };
+        Ok(Some(config.resolve_signature_url(manifest_id)?))
+    }
+
+    /// `.minisig` 본문 fetch — Phase 13'.g.2.c (ADR-0047).
+    /// 404 등 비-200 → `Ok(None)` (CI 서명 파이프라인 미작동).
+    pub async fn fetch_signature_text(
+        &self,
+        url: &str,
+        timeout: Duration,
+    ) -> Result<Option<String>, FetcherError> {
+        let resp = self.core.http.get(url).timeout(timeout).send().await?;
+        if !resp.status().is_success() {
+            return Ok(None);
+        }
+        let body = resp.text().await?;
+        Ok(Some(body))
+    }
+
+    /// source tier의 timeout — `.minisig` fetch에 같은 timeout 적용.
+    pub fn source_timeout(&self, tier: source::SourceTier) -> Option<Duration> {
+        self.core
+            .sources
+            .iter()
+            .find(|s| s.tier == tier)
+            .map(|s| s.timeout)
+    }
+
     /// FetchedManifest body를 임의 타입으로 파싱.
     pub fn parse<T: serde::de::DeserializeOwned>(
         &self,

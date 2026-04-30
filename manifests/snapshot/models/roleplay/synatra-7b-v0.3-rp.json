@@ -1,0 +1,90 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-05-01T00:00:00Z",
+  "entries": [
+    {
+      "id": "synatra-7b-v0.3-rp",
+      "display_name": "Synatra 7B v0.3 RP (한국어 RP, 비상업)",
+      "category": "roleplay",
+      "model_family": "mistral",
+      "source": {
+        "type": "hugging-face",
+        "repo": "maywell/Synatra-7B-v0.3-RP-GGUF",
+        "file": "Synatra-7B-v0.3-RP-Q4_K_M.gguf"
+      },
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 4400,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Synatra-7B-v0.3-RP-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 6144,
+      "rec_vram_mb": 8192,
+      "min_ram_mb": 8192,
+      "rec_ram_mb": 16384,
+      "install_size_mb": 4400,
+      "context_guidance": "Mistral 7B 베이스 + 한국어 RP 추가 학습. 한국어 캐릭터 / 챗봇에 강함. CC-BY-NC라 비상업 한정.",
+      "language_strength": 8,
+      "roleplay_strength": 9,
+      "coding_strength": 3,
+      "tool_support": false,
+      "vision_support": false,
+      "structured_output_support": false,
+      "license": "CC-BY-NC-4.0",
+      "maturity": "stable",
+      "portable_suitability": 7,
+      "on_device_suitability": 7,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-05-01",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "general-chat",
+      "commercial": false,
+      "use_case_examples": [
+        "한국어 캐릭터 RP (개인 / 학술 — 비상업)",
+        "한국어 감성 글쓰기 / 챗봇",
+        "Polyglot-Ko 12.8B 대안 (사양 낮을 때)"
+      ],
+      "warnings": [
+        "라이선스가 CC-BY-NC-4.0 — *상업 사용 거부*. 개인 / 학술 / 사내 비상업 도구 한정.",
+        "Ollama 공식 미등록 — llama.cpp 또는 LM Studio 필수.",
+        "Mistral 7B 베이스 — Polyglot-Ko 12.8B보다 사이즈 작아 응답 길이 / 깊이 한계."
+      ],
+      "intents": ["roleplay-narrative", "ko-conversation"],
+      "domain_scores": {
+        "roleplay-narrative": 80.0,
+        "ko-conversation": 72.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "한국어 RP — Polyglot-Ko 12.8B와 비등하면서 사양 낮음 (7B)",
+          "instruction-tuned + RP 학습 — 캐릭터 일관성 좋음",
+          "Mistral 7B 베이스 — 일반 게이밍 PC에서 가능"
+        ],
+        "weaknesses_ko": [
+          "*비상업 라이선스* — 상업 RP 제품 임베드 거부",
+          "응답 길이는 Polyglot-Ko 12.8B에 밀림",
+          "Ollama 공식 미지원 — setup 추가 단계"
+        ],
+        "use_cases_ko": [
+          "한국어 캐릭터 챗 / RP (개인 / 학술)",
+          "한국어 감성 글쓰기",
+          "Polyglot-Ko 부담 시 경량 대안"
+        ],
+        "curator_note_ko": "한국어 RP 7B 클래스에서 가장 인기. 비상업 한정이라 상업 RP는 Polyglot-Ko 12.8B(Apache-2) 또는 Llama 3 RP 변종으로. 한국어 + 사양 낮음 + 비상업 OK 환경에서 1순위.",
+        "sources": [
+          "huggingface.co/maywell/Synatra-7B-v0.3-RP",
+          "huggingface.co/maywell/Synatra-7B-v0.3-RP-GGUF"
+        ],
+        "last_reviewed_at": "2026-05-01T00:00:00Z"
+      }
+    }
+  ]
+}

@@ -12,6 +12,12 @@ export interface ChatMessage {
   /** "system" / "user" / "assistant". */
   role: "system" | "user" | "assistant";
   content: string;
+  /**
+   * Phase 13'.h (ADR-0050) — 멀티모달 이미지. base64 인코딩된 string 배열.
+   * 미지정 또는 빈 배열이면 텍스트 전용 (기존 호환). Ollama API: messages[i].images.
+   * `vision_support: true` 모델만 의미 있음.
+   */
+  images?: string[];
 }
 
 export type ChatEvent =

@@ -516,3 +516,42 @@
   border-radius: var(--radius-2);
   font-size: var(--fs-13);
 }
+
+/* ── Phase 13'.g.2.c — Catalog signature section (ADR-0047) ─────── */
+
+.diag-card-tone-ok {
+  border-left: 3px solid var(--primary-a-3);
+}
+
+.diag-card-tone-warn {
+  border-left: 3px solid rgba(255, 200, 60, 0.5);
+}
+
+.diag-card-tone-error {
+  border-left: 3px solid rgba(255, 100, 100, 0.6);
+}
+
+.diag-card-tone-neutral {
+  border-left: 3px solid var(--surface-3);
+}
+
+.diag-signature-message {
+  margin: var(--space-1) 0;
+  font-size: var(--fs-13);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.diag-card-tone-error .diag-signature-message {
+  color: rgba(255, 130, 130, 0.95);
+}
+
+.diag-card-tone-warn .diag-signature-message {
+  color: rgba(255, 220, 100, 0.95);
+}
+
+.diag-signature-meta {
+  margin: 0;
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+}

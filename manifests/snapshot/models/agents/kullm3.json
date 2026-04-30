@@ -1,0 +1,90 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "kullm3",
+      "display_name": "KULLM3 (한국어 강세, 비상업)",
+      "category": "agent-general",
+      "model_family": "kullm",
+      "source": {
+        "type": "hugging-face",
+        "repo": "nlpai-lab/KULLM3-GGUF",
+        "file": "KULLM3-Q4_K_M.gguf"
+      },
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 6500,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "KULLM3-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 7168,
+      "rec_vram_mb": 10240,
+      "min_ram_mb": 12288,
+      "rec_ram_mb": 16384,
+      "install_size_mb": 6500,
+      "context_guidance": "고려대 NLP & AI 연구실. SOLAR 10.7B 베이스 + 한국어 추가 학습 + DPO. 한국어 자연스러움 + 길이 + 사실성에서 EXAONE과 비교 우위.",
+      "language_strength": 10,
+      "roleplay_strength": 7,
+      "coding_strength": 5,
+      "tool_support": false,
+      "vision_support": false,
+      "structured_output_support": false,
+      "license": "CC-BY-NC-4.0",
+      "maturity": "stable",
+      "portable_suitability": 6,
+      "on_device_suitability": 7,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "general-chat",
+      "commercial": false,
+      "use_case_examples": [
+        "한국어 일반 비서 (개인 / 학술 / 사내 — 비상업)",
+        "한국어 글쓰기 / 요약 (긴 문장)",
+        "한국어 사실성 강한 Q&A"
+      ],
+      "warnings": [
+        "라이선스가 CC-BY-NC-4.0 — *상업 사용 거부*. 개인 / 학술 / 사내 비상업 도구 한정 권장.",
+        "Ollama 공식 라이브러리 미등록 — llama.cpp 또는 LM Studio로 GGUF 직접 로드.",
+        "tool calling / structured output 미지원 — 에이전트 워크플로엔 EXAONE / Llama 3.1 권장."
+      ],
+      "intents": ["ko-conversation", "ko-rag"],
+      "domain_scores": {
+        "ko-conversation": 86.0,
+        "ko-rag": 75.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "한국어 자연스러움 — EXAONE 7.8B와 비등하거나 일부 벤치마크 우위",
+          "고려대 검증 + DPO 학습으로 사실성 / 응답 길이 안정적",
+          "한국어 글쓰기 / 요약 / Q&A 종합 능력 SOTA급"
+        ],
+        "weaknesses_ko": [
+          "*비상업 라이선스* — 상업 제품 임베드 거부",
+          "tool calling / structured output 없음 — 에이전트 워크플로 부적합",
+          "Ollama 공식 미지원 — setup 추가 단계 필요"
+        ],
+        "use_cases_ko": [
+          "개인 / 학술 / 사내 한국어 비서 (비상업 한정)",
+          "한국어 글쓰기 / 요약 (긴 응답)",
+          "한국어 RAG 후처리 (자연스러운 답변 생성)"
+        ],
+        "curator_note_ko": "비상업 환경(개인 / 학술)에서 한국어 자연스러움 1순위 후보. 상업 필요 시 EXAONE 7.8B (Custom 라이선스, 개인/연구 OK) 또는 Llama 3.1 8B (Apache 비호환 Community)로 전환. tool 사용엔 부적합.",
+        "sources": [
+          "huggingface.co/nlpai-lab/KULLM3",
+          "github.com/nlpai-lab/KULLM"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

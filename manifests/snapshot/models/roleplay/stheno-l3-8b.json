@@ -1,0 +1,88 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-05-01T00:00:00Z",
+  "entries": [
+    {
+      "id": "stheno-l3-8b",
+      "display_name": "Stheno L3 8B (성인 RP)",
+      "category": "roleplay",
+      "model_family": "llama",
+      "source": {
+        "type": "hugging-face",
+        "repo": "Sao10K/L3-8B-Stheno-v3.2-GGUF",
+        "file": "L3-8B-Stheno-v3.2-Q4_K_M.gguf"
+      },
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 4900,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "L3-8B-Stheno-v3.2-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 6144,
+      "rec_vram_mb": 8192,
+      "min_ram_mb": 8192,
+      "rec_ram_mb": 16384,
+      "install_size_mb": 4900,
+      "context_guidance": "Llama 3 8B 베이스 + Stheno fine-tune. 성인 RP / 캐릭터 챗 특화. 사용자 명시 토글 OFF면 카탈로그에 hidden.",
+      "language_strength": 6,
+      "roleplay_strength": 10,
+      "coding_strength": 3,
+      "tool_support": false,
+      "vision_support": false,
+      "structured_output_support": false,
+      "license": "Llama 3 Community License",
+      "maturity": "stable",
+      "portable_suitability": 7,
+      "on_device_suitability": 7,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "community",
+        "verified_at": "2026-05-01",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "general-chat",
+      "commercial": true,
+      "content_warning": "rp-explicit",
+      "use_case_examples": [
+        "성인 캐릭터 RP",
+        "성인 창작 / 시나리오 생성",
+        "ChatML / Llama 3 시스템 프롬프트 페르소나"
+      ],
+      "warnings": [
+        "성인 콘텐츠 — 일반 사용엔 권장 안 해요. 용도가 명확할 때만 활성화해 주세요.",
+        "Llama 3 라이선스 — 700M+ 사용자 서비스 임베드 시 Meta 별도 라이선스 필요."
+      ],
+      "intents": ["roleplay-narrative"],
+      "domain_scores": {
+        "roleplay-narrative": 88.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "성인 RP 동급 최상위 — Sao10K Stheno 시리즈의 v3.2",
+          "Llama 3 8B 베이스 — 일반 게이밍 PC에서 가능 (RTX 3060 8GB)",
+          "캐릭터 일관성 + 응답 길이 안정적"
+        ],
+        "weaknesses_ko": [
+          "성인 콘텐츠 — 일반 비서 / 코딩 / RAG 부적합",
+          "한국어 RP는 Polyglot-Ko 12.8B에 밀림",
+          "tool calling / structured output 없음"
+        ],
+        "use_cases_ko": [
+          "성인 캐릭터 RP (영어 1순위)",
+          "성인 창작 / 시나리오"
+        ],
+        "curator_note_ko": "성인 RP를 위한 카탈로그의 첫 시드. 사용자 토글 ON 시 ⚠ 칩과 함께 노출. 일반 RP는 Nous Hermes 2 또는 Polyglot-Ko 권장.",
+        "sources": [
+          "huggingface.co/Sao10K/L3-8B-Stheno-v3.2",
+          "huggingface.co/Sao10K"
+        ],
+        "last_reviewed_at": "2026-05-01T00:00:00Z"
+      }
+    }
+  ]
+}

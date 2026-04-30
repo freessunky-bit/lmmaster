@@ -6,7 +6,8 @@
 //! - use_case_examples: Workbench 프롬프트 시드용 한국어 자연어 예시.
 
 use serde::{Deserialize, Serialize};
-use shared_types::{ModelCategory, RuntimeKind};
+use shared_types::{is_registered_intent, IntentId, ModelCategory, RuntimeKind};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelManifest {
@@ -84,6 +85,55 @@ pub struct ModelEntry {
     #[serde(default)]
     pub use_case_examples: Vec<String>,
 
+    /// 의도 태그 — 사용자 입력(intent picker)과 매칭되는 자유 태그. (Phase 11'.a, ADR-0048)
+    ///
+    /// 정책:
+    /// - 카테고리(`category`)와 별개 축. 한 모델이 여러 intent에 속할 수 있음 (N:N).
+    /// - validator는 `shared_types::INTENT_VOCABULARY`에 등록된 ID만 통과시킴.
+    /// - 누락 시 빈 vec — 기존 entries는 schema bump 없이 호환.
+    #[serde(default)]
+    pub intents: Vec<IntentId>,
+
+    /// 도메인 벤치마크 점수 — `IntentId → 0.0..=100.0`. (Phase 11'.a, ADR-0048)
+    ///
+    /// 정책:
+    /// - 누락된 intent는 점수 미보유로 처리(추천에서 가중 0). 큐레이터가 점진 백필.
+    /// - 큐레이터가 공식 leaderboard 또는 benchmarks paper에서 인용 + 출처는
+    ///   `community_insights.sources`에 누적.
+    /// - validator는 모든 key가 `INTENT_VOCABULARY`에 등록되고 값이 0..=100임을 검증.
+    #[serde(default)]
+    pub domain_scores: BTreeMap<IntentId, f32>,
+
+    /// 모델 사용 목적 — Phase 13'.f.2 (DEFERRED.md §13'.f.2 §1/§5).
+    ///
+    /// 정책:
+    /// - `general-chat` (기본) — 일반 채팅 추천에 등장. 누락 시 폴백.
+    /// - `fine-tune-base` — 베이스 모델, instruction-tuned 아님. chat target에서 자동 제외.
+    /// - `retrieval` — 임베딩 모델 (RAG). chat target에서 자동 제외, Workspace에서만 노출.
+    /// - `reranker` — 검색 결과 재정렬. chat target에서 자동 제외.
+    /// - 자동 제외 정책은 recommender의 `evaluate()`에서 `PurposeMismatch` 분기로 구현.
+    #[serde(default)]
+    pub purpose: ModelPurpose,
+
+    /// 상업 사용 가능 여부 — Phase 13'.f.2.2 (DEFERRED.md §13'.f.2 §4).
+    ///
+    /// 정책:
+    /// - `true` (기본) — Apache-2 / MIT / BSD 등 상업 자유.
+    /// - `false` — CC-BY-NC / Llama Community 700M+ 사용자 제약 / EXAONE Custom 등.
+    /// - UI는 `false`일 때 ⚠ "비상업" chip 노출. 큐레이터가 license 약관 검토 후 결정.
+    /// - 누락 시 `true` 폴백 (기존 entries 호환).
+    #[serde(default = "default_commercial")]
+    pub commercial: bool,
+
+    /// 콘텐츠 경고 — Phase 13'.f.2.2 (DEFERRED.md §13'.f.2 §3).
+    ///
+    /// 정책:
+    /// - `None` (기본) — 일반 모델.
+    /// - `RpExplicit` — 성인 RP / NSFW 모델. 첫 화면 추천 제외 + "성인 콘텐츠 허용" 토글 시에만 노출.
+    /// - 누락 시 `None` 폴백.
+    #[serde(default)]
+    pub content_warning: Option<ContentWarning>,
+
     #[serde(default)]
     pub notes: Option<String>,
     #[serde(default)]
@@ -112,6 +162,42 @@ pub enum Maturity {
     Beta,
     Stable,
     Deprecated,
+}
+
+/// `commercial` 필드 default — Apache-2/MIT 등 대부분 모델이 상업 자유라 true 폴백.
+fn default_commercial() -> bool {
+    true
+}
+
+/// 콘텐츠 경고 — Phase 13'.f.2.2.
+///
+/// kebab-case serde. v1.x 시드는 `RpExplicit` 1종. v2 확장(violence, self-harm 등) 가능.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum ContentWarning {
+    /// 성인 RP / NSFW 모델. 첫 화면 추천 제외 + 사용자 명시 활성화 토글 필요.
+    RpExplicit,
+}
+
+/// 모델 사용 목적 — Phase 13'.f.2.
+///
+/// `ModelCategory`(노출 분류)와 별개:
+/// - `ModelCategory` = UI 사이드바 탭 분류 (coding / roleplay / embeddings 등).
+/// - `ModelPurpose` = chat 추천 가능 여부 (chat에 적합한 일반 모델 vs 임베딩/재정렬/베이스).
+///
+/// `general-chat` 외 purpose는 chat target 추천에서 자동 제외 (recommender의 PurposeMismatch).
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum ModelPurpose {
+    /// 일반 채팅 — 기본. 누락 시 폴백.
+    #[default]
+    GeneralChat,
+    /// 베이스 모델, instruction-tuned 아님 — Workbench LoRA 시드용.
+    FineTuneBase,
+    /// 임베딩 모델 (RAG) — Workspace > 임베딩 모델에서만 노출.
+    Retrieval,
+    /// 검색 결과 재정렬 — RAG 후처리.
+    Reranker,
 }
 
 /// 카탈로그 노출 분류 — Phase 13'.e.1.
@@ -192,6 +278,51 @@ pub struct HfMeta {
     pub last_modified: String,
 }
 
+/// Manifest 항목 검증 에러 — Phase 11'.a (ADR-0048).
+///
+/// `validate_entry`가 반환. build script와 통합 테스트 양쪽에서 사용.
+#[derive(Debug, thiserror::Error, PartialEq)]
+pub enum ManifestValidationError {
+    #[error("의도 ID '{0}'은(는) 사전에 등록되지 않았어요")]
+    UnknownIntent(String),
+    #[error("도메인 점수 '{intent}'={score}는 0..=100 범위를 벗어나요")]
+    ScoreOutOfRange { intent: String, score: f32 },
+    #[error("의도 ID '{0}'이(가) 중복돼 있어요")]
+    DuplicateIntent(String),
+}
+
+/// 한 entry의 intents + domain_scores 무결성 검증. (Phase 11'.a, ADR-0048)
+///
+/// 검증:
+/// 1. `intents`의 모든 ID가 `INTENT_VOCABULARY`에 등록.
+/// 2. `intents` 내 중복 없음.
+/// 3. `domain_scores`의 모든 key가 `INTENT_VOCABULARY`에 등록.
+/// 4. `domain_scores`의 모든 value가 `0.0..=100.0` 범위.
+pub fn validate_entry(entry: &ModelEntry) -> Result<(), ManifestValidationError> {
+    use std::collections::HashSet;
+    let mut seen: HashSet<&str> = HashSet::new();
+    for iid in &entry.intents {
+        if !is_registered_intent(iid) {
+            return Err(ManifestValidationError::UnknownIntent(iid.clone()));
+        }
+        if !seen.insert(iid.as_str()) {
+            return Err(ManifestValidationError::DuplicateIntent(iid.clone()));
+        }
+    }
+    for (iid, score) in &entry.domain_scores {
+        if !is_registered_intent(iid) {
+            return Err(ManifestValidationError::UnknownIntent(iid.clone()));
+        }
+        if !(0.0..=100.0).contains(score) {
+            return Err(ManifestValidationError::ScoreOutOfRange {
+                intent: iid.clone(),
+                score: *score,
+            });
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -269,9 +400,12 @@ mod tests {
         }"#;
         let m: ModelManifest = serde_json::from_str(json).unwrap();
         let e = &m.entries[0];
-        // 누락된 필드는 default 폴백 — verified + None.
+        // 누락된 필드는 default 폴백 — verified + None + 빈 컬렉션.
         assert_eq!(e.tier, ModelTier::Verified);
         assert!(e.community_insights.is_none());
+        // Phase 11'.a — legacy entries는 intents/domain_scores 없이도 호환.
+        assert!(e.intents.is_empty());
+        assert!(e.domain_scores.is_empty());
     }
 
     #[test]
@@ -315,6 +449,11 @@ mod tests {
                 hub_id: None,
                 tier: ModelTier::default(),
                 community_insights: None,
+                intents: vec![],
+                domain_scores: BTreeMap::new(),
+                purpose: ModelPurpose::default(),
+                commercial: true,
+                content_warning: None,
             }],
         };
         let s = serde_json::to_string(&m).unwrap();
@@ -322,6 +461,8 @@ mod tests {
         assert_eq!(m2.entries.len(), 1);
         assert_eq!(m2.entries[0].id, "test-model");
         assert_eq!(m2.entries[0].verification.tier, VerificationTier::Community);
+        assert!(m2.entries[0].intents.is_empty());
+        assert!(m2.entries[0].domain_scores.is_empty());
     }
 
     #[test]
@@ -381,5 +522,213 @@ mod tests {
         let h2: HfMeta = serde_json::from_str(&s).unwrap();
         assert_eq!(h2.downloads, 12345);
         assert_eq!(h2.likes, 67);
+    }
+
+    // ── Phase 11'.a — intents + domain_scores invariants (ADR-0048) ──────
+
+    /// 테스트 헬퍼 — 기본 ModelEntry (검증을 위해 필요한 최소).
+    fn sample_entry() -> ModelEntry {
+        ModelEntry {
+            id: "sample".into(),
+            display_name: "Sample".into(),
+            category: ModelCategory::AgentGeneral,
+            model_family: "x".into(),
+            source: ModelSource::HuggingFace {
+                repo: "x/y".into(),
+                file: None,
+            },
+            runner_compatibility: vec![RuntimeKind::LlamaCpp],
+            quantization_options: vec![],
+            min_vram_mb: None,
+            rec_vram_mb: None,
+            min_ram_mb: 1024,
+            rec_ram_mb: 2048,
+            install_size_mb: 100,
+            context_guidance: None,
+            language_strength: None,
+            roleplay_strength: None,
+            coding_strength: None,
+            tool_support: false,
+            vision_support: false,
+            structured_output_support: false,
+            license: "MIT".into(),
+            maturity: Maturity::Stable,
+            portable_suitability: 5,
+            on_device_suitability: 5,
+            fine_tune_suitability: 5,
+            hub_id: None,
+            tier: ModelTier::default(),
+            community_insights: None,
+            verification: VerificationInfo::default(),
+            hf_meta: None,
+            use_case_examples: vec![],
+            notes: None,
+            warnings: vec![],
+            intents: vec![],
+            domain_scores: BTreeMap::new(),
+            purpose: ModelPurpose::default(),
+            commercial: true,
+            content_warning: None,
+        }
+    }
+
+    #[test]
+    fn validate_accepts_empty_intents_and_scores() {
+        // legacy/시드 미백필 entry — 빈 컬렉션은 항상 valid.
+        assert_eq!(validate_entry(&sample_entry()), Ok(()));
+    }
+
+    #[test]
+    fn validate_accepts_registered_intents() {
+        let mut e = sample_entry();
+        e.intents = vec!["vision-image".into(), "ko-conversation".into()];
+        e.domain_scores.insert("vision-image".into(), 53.7);
+        e.domain_scores.insert("ko-conversation".into(), 78.0);
+        assert_eq!(validate_entry(&e), Ok(()));
+    }
+
+    #[test]
+    fn validate_rejects_unknown_intent_in_intents() {
+        let mut e = sample_entry();
+        e.intents = vec!["vision-image".into(), "made-up".into()];
+        assert_eq!(
+            validate_entry(&e),
+            Err(ManifestValidationError::UnknownIntent("made-up".into()))
+        );
+    }
+
+    #[test]
+    fn validate_rejects_unknown_intent_in_scores() {
+        let mut e = sample_entry();
+        e.domain_scores.insert("not-a-real-intent".into(), 50.0);
+        assert_eq!(
+            validate_entry(&e),
+            Err(ManifestValidationError::UnknownIntent(
+                "not-a-real-intent".into()
+            ))
+        );
+    }
+
+    #[test]
+    fn validate_rejects_score_out_of_range() {
+        let mut e = sample_entry();
+        e.domain_scores.insert("vision-image".into(), 120.5);
+        assert_eq!(
+            validate_entry(&e),
+            Err(ManifestValidationError::ScoreOutOfRange {
+                intent: "vision-image".into(),
+                score: 120.5,
+            })
+        );
+
+        let mut e2 = sample_entry();
+        e2.domain_scores.insert("vision-image".into(), -1.0);
+        assert!(matches!(
+            validate_entry(&e2),
+            Err(ManifestValidationError::ScoreOutOfRange { .. })
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_duplicate_intent() {
+        let mut e = sample_entry();
+        e.intents = vec!["vision-image".into(), "vision-image".into()];
+        assert_eq!(
+            validate_entry(&e),
+            Err(ManifestValidationError::DuplicateIntent(
+                "vision-image".into()
+            ))
+        );
+    }
+
+    #[test]
+    fn validate_score_boundary_zero_and_hundred() {
+        let mut e = sample_entry();
+        e.domain_scores.insert("vision-image".into(), 0.0);
+        e.domain_scores.insert("ko-rag".into(), 100.0);
+        assert_eq!(validate_entry(&e), Ok(()));
+    }
+
+    #[test]
+    fn round_trip_with_intents_and_scores() {
+        let mut e = sample_entry();
+        e.intents = vec!["vision-image".into(), "ko-rag".into()];
+        e.domain_scores.insert("vision-image".into(), 53.7);
+        e.domain_scores.insert("ko-rag".into(), 67.4);
+
+        let json = serde_json::to_string(&e).unwrap();
+        let parsed: ModelEntry = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.intents, vec!["vision-image", "ko-rag"]);
+        assert_eq!(parsed.domain_scores.get("vision-image"), Some(&53.7));
+        assert_eq!(parsed.domain_scores.get("ko-rag"), Some(&67.4));
+    }
+
+    // ── Phase 13'.f.2 — ModelPurpose invariants ──────────────────────
+
+    #[test]
+    fn model_purpose_default_is_general_chat() {
+        assert_eq!(ModelPurpose::default(), ModelPurpose::GeneralChat);
+    }
+
+    #[test]
+    fn model_purpose_round_trip_kebab_case() {
+        for (purpose, expected) in [
+            (ModelPurpose::GeneralChat, "general-chat"),
+            (ModelPurpose::FineTuneBase, "fine-tune-base"),
+            (ModelPurpose::Retrieval, "retrieval"),
+            (ModelPurpose::Reranker, "reranker"),
+        ] {
+            let v = serde_json::to_value(purpose).unwrap();
+            assert_eq!(v.as_str(), Some(expected), "serialize {purpose:?}");
+            let parsed: ModelPurpose = serde_json::from_value(v).unwrap();
+            assert_eq!(parsed, purpose, "round-trip {purpose:?}");
+        }
+    }
+
+    #[test]
+    fn legacy_entry_without_purpose_falls_back_to_general_chat() {
+        let json = r#"{
+            "schema_version": 1,
+            "generated_at": "2026-04-27T00:00:00Z",
+            "entries": [{
+                "id": "legacy",
+                "display_name": "Legacy",
+                "category": "agent-general",
+                "model_family": "x",
+                "source": {"type": "direct-url", "url": "https://x"},
+                "runner_compatibility": ["llama-cpp"],
+                "quantization_options": [],
+                "min_vram_mb": null,
+                "rec_vram_mb": null,
+                "min_ram_mb": 1024,
+                "rec_ram_mb": 2048,
+                "install_size_mb": 100,
+                "tool_support": false,
+                "vision_support": false,
+                "structured_output_support": false,
+                "license": "MIT",
+                "maturity": "stable",
+                "portable_suitability": 5,
+                "on_device_suitability": 5,
+                "fine_tune_suitability": 5
+            }]
+        }"#;
+        let m: ModelManifest = serde_json::from_str(json).unwrap();
+        assert_eq!(m.entries[0].purpose, ModelPurpose::GeneralChat);
+    }
+
+    #[test]
+    fn validation_error_messages_are_korean() {
+        let err = ManifestValidationError::UnknownIntent("x".into());
+        let msg = err.to_string();
+        assert!(msg.contains("의도 ID"), "message: {msg}");
+
+        let err = ManifestValidationError::ScoreOutOfRange {
+            intent: "vision-image".into(),
+            score: 200.0,
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("도메인 점수"), "message: {msg}");
+        assert!(msg.contains("범위"), "message: {msg}");
     }
 }

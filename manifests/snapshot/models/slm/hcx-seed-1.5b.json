@@ -83,6 +83,11 @@
           "huggingface.co/naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B"
         ],
         "last_reviewed_at": "2026-04-30T00:00:00Z"
+      },
+      "intents": ["ko-conversation", "ko-rag"],
+      "domain_scores": {
+        "ko-conversation": 70.0,
+        "ko-rag": 60.0
       }
     }
   ]
