@@ -87,6 +87,16 @@
           "ai.meta.com/blog/meta-llama-3-3"
         ],
         "last_reviewed_at": "2026-04-30T00:00:00Z"
+      },
+      "intents": [
+        "agent-tool-use",
+        "translation-multi",
+        "ko-conversation"
+      ],
+      "domain_scores": {
+        "agent-tool-use": 85.0,
+        "translation-multi": 80.0,
+        "ko-conversation": 75.0
       }
     }
   ]

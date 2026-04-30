@@ -24,6 +24,81 @@ if (!fs.existsSync(src)) {
   process.exit(1);
 }
 
+// Phase 11'.a (ADR-0048) — Intent 사전을 shared-types/src/intents.rs에서 직접 파싱.
+// SSOT를 Rust 쪽에 유지하고, JS는 build 시점 검증만 수행 (drift 자동 방지).
+function parseIntentVocab() {
+  const p = path.join(repo, "crates", "shared-types", "src", "intents.rs");
+  if (!fs.existsSync(p)) {
+    console.error(`Intent 사전이 없어요: ${p}`);
+    process.exit(1);
+  }
+  const text = fs.readFileSync(p, "utf8");
+  const startMarker = "INTENT_VOCABULARY:";
+  const startIdx = text.indexOf(startMarker);
+  if (startIdx < 0) {
+    console.error("INTENT_VOCABULARY 식별자를 찾지 못했어요.");
+    process.exit(1);
+  }
+  const closeIdx = text.indexOf("];", startIdx);
+  if (closeIdx < 0) {
+    console.error("INTENT_VOCABULARY 끝 `];` 를 찾지 못했어요.");
+    process.exit(1);
+  }
+  const slice = text.slice(startIdx, closeIdx);
+  // 매치: ("vision-image", "이미지 분석"),
+  const re = /\("([a-z][a-z0-9-]*)"\s*,\s*"([^"]+)"\)/g;
+  const out = new Set();
+  let m;
+  while ((m = re.exec(slice)) !== null) {
+    out.add(m[1]);
+  }
+  if (out.size === 0) {
+    console.error("Intent 사전이 비어있어요. INTENT_VOCABULARY 정규식 매치 실패.");
+    process.exit(1);
+  }
+  return out;
+}
+
+const intentVocab = parseIntentVocab();
+console.log(`Intent 사전 ${intentVocab.size}종 로드`);
+
+function validateEntry(e) {
+  // serde(default) 호환 — 누락은 정상.
+  const intents = Array.isArray(e.intents) ? e.intents : [];
+  const scores =
+    e.domain_scores && typeof e.domain_scores === "object" ? e.domain_scores : {};
+
+  // intents 모두 사전 등록.
+  const seen = new Set();
+  for (const iid of intents) {
+    if (!intentVocab.has(iid)) {
+      console.error(`${e.id}: intent '${iid}'은(는) 사전에 등록되지 않았어요.`);
+      process.exit(1);
+    }
+    if (seen.has(iid)) {
+      console.error(`${e.id}: intent '${iid}'이(가) 중복돼 있어요.`);
+      process.exit(1);
+    }
+    seen.add(iid);
+  }
+
+  // domain_scores 검증.
+  for (const [iid, score] of Object.entries(scores)) {
+    if (!intentVocab.has(iid)) {
+      console.error(
+        `${e.id}: domain_scores 키 '${iid}'은(는) 사전에 등록되지 않았어요.`,
+      );
+      process.exit(1);
+    }
+    if (typeof score !== "number" || score < 0 || score > 100) {
+      console.error(
+        `${e.id}: domain_scores '${iid}'=${score}는 0..=100 범위를 벗어나요.`,
+      );
+      process.exit(1);
+    }
+  }
+}
+
 function walkJson(dir) {
   const out = [];
   for (const name of fs.readdirSync(dir)) {
@@ -51,6 +126,7 @@ for (const f of files) {
     continue;
   }
   for (const e of body.entries) {
+    validateEntry(e);
     entries.push(e);
   }
 }

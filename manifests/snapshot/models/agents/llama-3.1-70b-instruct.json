@@ -1,0 +1,98 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-05-01T00:00:00Z",
+  "entries": [
+    {
+      "id": "llama-3.1-70b-instruct",
+      "display_name": "Llama 3.1 70B Instruct (워크스테이션)",
+      "category": "agent-general",
+      "model_family": "llama",
+      "source": {
+        "type": "hugging-face",
+        "repo": "bartowski/Meta-Llama-3.1-70B-Instruct-GGUF",
+        "file": "Meta-Llama-3.1-70B-Instruct-Q4_K_M.gguf"
+      },
+      "hub_id": "llama3.1:70b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 42500,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Meta-Llama-3.1-70B-Instruct-Q4_K_M.gguf"
+        },
+        {
+          "label": "Q3_K_M",
+          "size_mb": 34000,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Meta-Llama-3.1-70B-Instruct-Q3_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 36864,
+      "rec_vram_mb": 49152,
+      "min_ram_mb": 65536,
+      "rec_ram_mb": 98304,
+      "install_size_mb": 42500,
+      "context_guidance": "128K context. 8 언어 공식. 70B Llama 3.1 — 3.3 70B의 직전 버전. RTX 4090×2 또는 A6000+급 필요.",
+      "language_strength": 8,
+      "roleplay_strength": 7,
+      "coding_strength": 8,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "Llama 3.1 Community License",
+      "maturity": "stable",
+      "portable_suitability": 1,
+      "on_device_suitability": 1,
+      "fine_tune_suitability": 4,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-05-01",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "general-chat",
+      "commercial": true,
+      "use_case_examples": [
+        "워크스테이션급 PC에서 최고 품질 비서",
+        "긴 문서 (~100K) 분석 / 요약",
+        "복잡한 추론 / 다단계 문제 (Llama 3.3 70B 대안)"
+      ],
+      "warnings": [
+        "VRAM 42GB+ — RTX 3090 / 4090 단일은 어려움. 듀얼 GPU 또는 A6000급 필요.",
+        "Llama 3.3 70B가 후속 버전 — 새 작업이면 3.3 권장. 3.1 70B는 *fine-tune 호환성*이 핵심일 때만.",
+        "Llama 3.1 라이선스 — 700M+ 서비스 임베드 시 Meta 별도 라이선스 필요."
+      ],
+      "intents": ["agent-tool-use", "translation-multi"],
+      "domain_scores": {
+        "agent-tool-use": 82.0,
+        "translation-multi": 78.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "70B Llama 시리즈 — 405B에 근접하는 품질",
+          "128K context로 긴 문서 한 번에 처리",
+          "tool calling + structured output 동급 최상위",
+          "fine-tune 생태계 풍부 (LoRA / DPO 변종 다수)"
+        ],
+        "weaknesses_ko": [
+          "VRAM 42GB+ — 일반 게이밍 PC 어려움",
+          "Llama 3.3 70B가 후속 — 새 작업이면 3.3 권장",
+          "한국어 미공식 — EXAONE 32B와 비슷"
+        ],
+        "use_cases_ko": [
+          "워크스테이션 / 듀얼 GPU 환경 최고 품질",
+          "fine-tune 호환성이 중요한 환경 (Llama 3.1 LoRA 풍부)",
+          "Llama 3.3 70B 대안 (안정성 검증 우선)"
+        ],
+        "curator_note_ko": "Llama 3.3 70B가 일반적으로 우위. 3.1 70B는 *fine-tune 시드*가 핵심일 때 — Llama 3.1 기반 LoRA / DPO가 많아 호환성 좋음. 일반 사용은 3.3로.",
+        "sources": [
+          "huggingface.co/meta-llama/Meta-Llama-3.1-70B-Instruct",
+          "ollama.com/library/llama3.1"
+        ],
+        "last_reviewed_at": "2026-05-01T00:00:00Z"
+      }
+    }
+  ]
+}

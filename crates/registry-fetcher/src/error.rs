@@ -41,4 +41,14 @@ pub enum FetcherError {
 
     #[error("URL 템플릿 치환 실패: {0}")]
     UrlTemplate(String),
+
+    /// Phase 13'.g.2.c (ADR-0047) — minisign 서명 검증 실패. body가 변조됐거나 잘못된 키로 서명됨.
+    /// caller(`registry_fetcher::refresh_once`)는 bundled fallback로 강등 + Diagnostics 빨간 카드.
+    #[error("카탈로그 서명을 확인하지 못했어요 — 안전을 위해 기본 목록을 사용할게요. ({0})")]
+    SignatureFailed(String),
+
+    /// Phase 13'.g.2.c — `.minisig` 파일을 받지 못함. server 측에서 서명을 업로드하지 않음.
+    /// CI 서명 파이프라인이 빠졌거나, Bundled tier에서 verify 시도 시 발생.
+    #[error("카탈로그 서명 파일을 받지 못했어요 (manifest_id={0}). 서명 없이는 검증할 수 없어요.")]
+    SignatureMissing(String),
 }

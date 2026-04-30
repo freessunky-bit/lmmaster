@@ -12,3 +12,9 @@ commands.allow = ["refresh_catalog_now"]
 identifier = "allow-get-last-catalog-refresh"
 description = "Read the last manifest refresh outcome (timestamp + counts)."
 commands.allow = ["get_last_catalog_refresh"]
+
+# Phase 13'.g.2.c (ADR-0047) — minisign 서명 검증 상태 노출.
+[[permission]]
+identifier = "allow-get-catalog-signature-status"
+description = "Read the last catalog minisign signature verification status (Verified / Failed / Disabled / Missing)."
+commands.allow = ["get_catalog_signature_status"]

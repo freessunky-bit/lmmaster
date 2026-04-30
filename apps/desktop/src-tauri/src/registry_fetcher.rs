@@ -12,7 +12,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use registry_fetcher::{default_sources, FetcherError, FetcherOptions, RegistryFetcher};
+use registry_fetcher::{
+    default_sources, FetcherError, FetcherOptions, RegistryFetcher, SignatureVerifier,
+};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use thiserror::Error;
@@ -34,7 +36,27 @@ pub struct RegistryFetcherService {
     manifest_ids: Vec<String>,
     /// 마지막 refresh outcome — get_last_catalog_refresh가 read.
     last_refresh: Arc<Mutex<Option<LastRefresh>>>,
+    /// Phase 13'.g.2.c (ADR-0047) — 마지막 catalog 서명 검증 결과. UI Diagnostics가 read.
+    last_signature_status: Arc<Mutex<Option<CatalogSignatureStatus>>>,
     sched: Mutex<Option<JobScheduler>>,
+}
+
+/// 카탈로그 minisign 서명 검증 결과 — Phase 13'.g.2.c (ADR-0047).
+///
+/// `get_catalog_signature_status` IPC + Diagnostics SignatureSection이 사용.
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum CatalogSignatureStatus {
+    /// 빌드 시점 pubkey 미설정 (개발 빌드). verify 비활성.
+    Disabled { at_ms: u128 },
+    /// verify 통과. catalog body는 신뢰 가능.
+    Verified { at_ms: u128, source: String },
+    /// verify 실패 — body가 변조됐거나 잘못된 키. caller가 bundled fallback로 강등.
+    Failed { at_ms: u128, reason: String },
+    /// `.minisig` 파일을 받지 못함 (CI 서명 파이프라인 미작동 / 404).
+    MissingSignature { at_ms: u128 },
+    /// Bundled tier에서 받음 — verify 부적용 (빌드 시점 신뢰).
+    BundledFallback { at_ms: u128 },
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -98,8 +120,14 @@ impl RegistryFetcherService {
             fetcher: Arc::new(fetcher),
             manifest_ids,
             last_refresh: Arc::new(Mutex::new(None)),
+            last_signature_status: Arc::new(Mutex::new(None)),
             sched: Mutex::new(None),
         })
+    }
+
+    /// 마지막 catalog 서명 검증 결과 — Diagnostics IPC가 read.
+    pub async fn last_signature_status(&self) -> Option<CatalogSignatureStatus> {
+        self.last_signature_status.lock().await.clone()
     }
 
     /// 모든 manifest를 1회 fetch — 성공/실패를 합산해 LastRefresh 기록 + event emit.
@@ -122,7 +150,10 @@ impl RegistryFetcherService {
         let mut fetched = 0usize;
         let mut failed = 0usize;
         // Phase 13'.a — "catalog" id가 fetch되면 body를 보존해 hot-swap에 사용.
+        // Phase 13'.g.2.c — 서명 검증 결과도 함께 보존.
         let mut catalog_body: Option<Vec<u8>> = None;
+        let mut catalog_source: Option<registry_fetcher::SourceTier> = None;
+        let mut catalog_from_cache = false;
         for (id, r) in &results {
             match r {
                 Ok(fm) => {
@@ -135,6 +166,8 @@ impl RegistryFetcherService {
                     fetched += 1;
                     if id.as_str() == "catalog" {
                         catalog_body = Some(fm.body.clone());
+                        catalog_source = Some(fm.source);
+                        catalog_from_cache = fm.from_cache;
                     }
                 }
                 Err(e) => {
@@ -142,6 +175,29 @@ impl RegistryFetcherService {
                     failed += 1;
                 }
             }
+        }
+
+        // Phase 13'.g.2.c — catalog body 받았을 때 서명 검증 시도.
+        // verify 실패 시 catalog_body=None으로 강등 (bundled fallback).
+        let signature_status = if let (Some(body), Some(source)) =
+            (catalog_body.as_ref(), catalog_source)
+        {
+            match verify_catalog_signature(&self.fetcher, body, source, catalog_from_cache).await {
+                Ok(status) => {
+                    if matches!(status, CatalogSignatureStatus::Failed { .. }) {
+                        // 변조 의심 → catalog_body 제거, bundled fallback.
+                        tracing::warn!("catalog 서명 검증 실패 — bundled fallback로 강등");
+                        catalog_body = None;
+                    }
+                    Some(status)
+                }
+                Err(()) => None,
+            }
+        } else {
+            None
+        };
+        if let Some(status) = signature_status.clone() {
+            *self.last_signature_status.lock().await = Some(status);
         }
 
         let outcome = if failed == 0 {
@@ -259,6 +315,83 @@ impl RegistryFetcherService {
     }
 }
 
+/// catalog body + source tier를 받아 minisign 서명 검증. Phase 13'.g.2.c (ADR-0047).
+///
+/// 정책:
+/// - cache hit → `BundledFallback`-equivalent 처리 (이전 검증 통과 가정, verify skip).
+///   네트워크 fresh fetch만 verify 강제.
+/// - Bundled tier → `BundledFallback` (빌드 시점 신뢰).
+/// - 빌드 시점 pubkey 미설정(`from_embedded`=None) → `Disabled`.
+/// - .minisig 404 → `MissingSignature`.
+/// - verify 실패 → `Failed { reason }`.
+/// - Ok(()) → `Verified { source }`.
+async fn verify_catalog_signature(
+    fetcher: &RegistryFetcher,
+    body: &[u8],
+    source: registry_fetcher::SourceTier,
+    from_cache: bool,
+) -> Result<CatalogSignatureStatus, ()> {
+    let now = epoch_ms();
+
+    if from_cache {
+        // cache 적중 — 이전에 검증된 가정. Verified로 간주하되 reason 명시.
+        return Ok(CatalogSignatureStatus::Verified {
+            at_ms: now,
+            source: format!("{source:?} (cache)"),
+        });
+    }
+
+    if !source.is_network() {
+        return Ok(CatalogSignatureStatus::BundledFallback { at_ms: now });
+    }
+
+    let verifier = match SignatureVerifier::from_embedded() {
+        Ok(Some(v)) => v,
+        Ok(None) => {
+            return Ok(CatalogSignatureStatus::Disabled { at_ms: now });
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "minisign pubkey 임베드 실패");
+            return Ok(CatalogSignatureStatus::Disabled { at_ms: now });
+        }
+    };
+
+    let sig_url = match fetcher.signature_url_for("catalog", source) {
+        Ok(Some(u)) => u,
+        Ok(None) | Err(_) => {
+            return Ok(CatalogSignatureStatus::Failed {
+                at_ms: now,
+                reason: format!("source tier {source:?} not configured"),
+            });
+        }
+    };
+
+    let timeout = fetcher
+        .source_timeout(source)
+        .unwrap_or_else(|| Duration::from_secs(8));
+
+    let sig_text = match fetcher.fetch_signature_text(&sig_url, timeout).await {
+        Ok(Some(t)) => t,
+        Ok(None) => {
+            return Ok(CatalogSignatureStatus::MissingSignature { at_ms: now });
+        }
+        Err(_) => {
+            return Ok(CatalogSignatureStatus::MissingSignature { at_ms: now });
+        }
+    };
+
+    match verifier.verify(body, &sig_text) {
+        Ok(()) => Ok(CatalogSignatureStatus::Verified {
+            at_ms: now,
+            source: format!("{source:?}"),
+        }),
+        Err(e) => Ok(CatalogSignatureStatus::Failed {
+            at_ms: now,
+            reason: e.to_string(),
+        }),
+    }
+}
+
 fn epoch_ms() -> u128 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -284,6 +417,15 @@ pub async fn get_last_catalog_refresh(
     service: tauri::State<'_, Arc<RegistryFetcherService>>,
 ) -> Result<Option<LastRefresh>, CatalogRefreshError> {
     Ok(service.last_refresh().await)
+}
+
+/// 마지막 catalog minisign 검증 결과 — Phase 13'.g.2.c (ADR-0047).
+/// Diagnostics SignatureSection이 사용. 한 번도 검증 시도 안 됐으면 None.
+#[tauri::command]
+pub async fn get_catalog_signature_status(
+    service: tauri::State<'_, Arc<RegistryFetcherService>>,
+) -> Result<Option<CatalogSignatureStatus>, CatalogRefreshError> {
+    Ok(service.last_signature_status().await)
 }
 
 #[cfg(test)]

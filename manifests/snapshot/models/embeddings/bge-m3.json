@@ -1,0 +1,86 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "bge-m3",
+      "display_name": "BGE-M3 (다국어 임베더)",
+      "category": "embeddings",
+      "model_family": "bge",
+      "source": {
+        "type": "hugging-face",
+        "repo": "BAAI/bge-m3",
+        "file": "bge-m3.gguf"
+      },
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp"],
+      "quantization_options": [
+        {
+          "label": "F16",
+          "size_mb": 2200,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "bge-m3.gguf"
+        }
+      ],
+      "min_vram_mb": null,
+      "rec_vram_mb": 2048,
+      "min_ram_mb": 4096,
+      "rec_ram_mb": 8192,
+      "install_size_mb": 2200,
+      "context_guidance": "100+ 언어 RAG 표준 임베더. 1024-d dense + sparse + multi-vector. ONNX 변환은 knowledge-stack의 embedder cascade에서.",
+      "language_strength": 7,
+      "roleplay_strength": 0,
+      "coding_strength": 0,
+      "tool_support": false,
+      "vision_support": false,
+      "structured_output_support": false,
+      "license": "MIT",
+      "maturity": "stable",
+      "portable_suitability": 8,
+      "on_device_suitability": 8,
+      "fine_tune_suitability": 6,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "retrieval",
+      "use_case_examples": [
+        "다국어 문서 임베딩 (RAG)",
+        "한국어 + 영어 혼합 검색",
+        "긴 문서 청크 임베딩 (8192 token)"
+      ],
+      "warnings": [
+        "임베딩 전용 모델이에요 — 채팅에는 사용할 수 없어요. Workspace > Knowledge에서 RAG 검색에 활용해 주세요."
+      ],
+      "intents": ["ko-rag"],
+      "domain_scores": {
+        "ko-rag": 75.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "100+ 언어 — 다국어 RAG 표준",
+          "MIT 라이선스 — 상업 자유",
+          "dense + sparse + multi-vector 3-mode",
+          "8192 token context — 긴 청크 임베딩 가능"
+        ],
+        "weaknesses_ko": [
+          "한국어만 보면 KURE-v1에 살짝 밀림",
+          "임베딩 전용 — 채팅 X"
+        ],
+        "use_cases_ko": [
+          "다국어 RAG (사내 문서가 한·영·일 혼재)",
+          "긴 문서 청크 임베딩",
+          "fallback 임베더 (특수 언어 대응)"
+        ],
+        "curator_note_ko": "한국어 단일이면 KURE-v1, 다국어 혼재면 BGE-M3. 두 모델 모두 knowledge-stack의 embedder cascade에 포함돼서 자동 fallback이 가능해요.",
+        "sources": [
+          "huggingface.co/BAAI/bge-m3",
+          "github.com/FlagOpen/FlagEmbedding"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

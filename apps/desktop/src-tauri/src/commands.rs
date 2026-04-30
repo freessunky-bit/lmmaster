@@ -241,15 +241,21 @@ pub fn get_catalog(
     })
 }
 
-/// 카테고리 별 추천 — deterministic. host fingerprint 미보장 시 HostNotProbed.
+/// 카테고리 + (선택) 의도 기반 추천 — deterministic. host fingerprint 미보장 시 HostNotProbed.
+///
+/// Phase 11'.b (ADR-0048): `intent`가 `Some`이면 `domain_scores[intent]`가 ranking에 가중,
+/// `None`이면 기존 카테고리 기반 추천 (backward compat).
 #[tauri::command]
 pub async fn get_recommendation(
     catalog: tauri::State<'_, Arc<CatalogState>>,
     category: ModelCategory,
+    intent: Option<String>,
 ) -> Result<model_registry::Recommendation, CatalogApiError> {
     let report = runtime_detector::probe_environment().await;
     let host = host_fingerprint_from_report(&report).ok_or(CatalogApiError::HostNotProbed)?;
-    Ok(catalog.snapshot().recommend(&host, category))
+    Ok(catalog
+        .snapshot()
+        .recommend_with_intent(&host, category, intent.as_ref()))
 }
 
 /// runtime-detector EnvironmentReport → shared_types::HostFingerprint 변환.

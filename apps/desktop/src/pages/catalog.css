@@ -1172,3 +1172,398 @@
   border: 1px solid var(--primary-a-3);
   font-size: var(--fs-11);
 }
+
+/* ── Phase 11'.b — IntentBoard + 도메인 점수 바 (ADR-0048) ────────── */
+
+.intent-board {
+  margin-bottom: var(--space-4);
+}
+
+.intent-board-heading {
+  font-size: var(--fs-13);
+  color: var(--text-muted);
+  margin: 0 0 var(--space-2);
+  font-weight: 500;
+}
+
+.intent-board-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.intent-chip {
+  appearance: none;
+  background: var(--surface-2);
+  border: 1px solid var(--surface-3);
+  color: var(--text);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: var(--fs-13);
+  cursor: pointer;
+  text-align: center;
+  width: auto;
+  transition: background var(--dur-instant) var(--ease-out),
+    border-color var(--dur-instant) var(--ease-out);
+}
+
+.intent-chip:hover:not(.is-active) {
+  background: var(--surface-3);
+}
+
+.intent-chip:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
+.intent-chip.is-active {
+  background: var(--primary-a-2);
+  border-color: var(--primary-a-3);
+  color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intent-chip {
+    transition: none;
+  }
+}
+
+.catalog-card-domain-score {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.catalog-card-domain-score-label {
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.catalog-card-domain-score-track {
+  flex: 1;
+  height: 6px;
+  background: var(--surface-3);
+  border-radius: var(--radius-1);
+  overflow: hidden;
+}
+
+.catalog-card-domain-score-fill {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: inherit;
+  transition: width var(--dur-instant) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .catalog-card-domain-score-fill {
+    transition: none;
+  }
+}
+
+.catalog-card-domain-score-value {
+  font-size: var(--fs-12);
+  color: var(--primary);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Phase 11'.c — HF 하이브리드 검색 (ADR-0049) ──────────────────── */
+
+.catalog-hf-search-trigger {
+  appearance: none;
+  background: var(--surface-2);
+  border: 1px solid var(--surface-3);
+  color: var(--text);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  font: inherit;
+  font-size: var(--fs-13);
+  cursor: pointer;
+  margin-top: var(--space-2);
+  width: 100%;
+  text-align: center;
+  transition: background var(--dur-instant) var(--ease-out);
+}
+
+.catalog-hf-search-trigger:hover {
+  background: var(--surface-3);
+}
+
+.catalog-hf-search-trigger:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
+.hf-search-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-4);
+}
+
+.hf-search-modal {
+  background: var(--surface-2);
+  border: 1px solid var(--surface-3);
+  border-radius: var(--radius-3);
+  width: min(720px, 100%);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.hf-search-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--surface-3);
+}
+
+.hf-search-modal-title {
+  margin: 0;
+  font-size: var(--fs-18);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hf-search-modal-close {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--fs-22);
+  line-height: 1;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  width: auto;
+  text-align: center;
+}
+
+.hf-search-modal-close:hover {
+  color: var(--text);
+  background: var(--surface-3);
+}
+
+.hf-search-modal-close:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
+.hf-search-modal-banner {
+  background: rgba(255, 200, 60, 0.08);
+  border-left: 3px solid rgba(255, 200, 60, 0.6);
+  color: var(--text-secondary);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--fs-13);
+}
+
+.hf-search-modal-body {
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4);
+  flex: 1;
+}
+
+.hf-search-status {
+  text-align: center;
+  color: var(--text-muted);
+  padding: var(--space-6) 0;
+  margin: 0;
+}
+
+.hf-search-error {
+  color: rgba(255, 100, 100, 0.9);
+}
+
+.hf-search-hits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hf-search-hit {
+  background: var(--surface);
+  border: 1px solid var(--surface-3);
+  border-radius: var(--radius-2);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hf-search-hit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.hf-search-hit-repo {
+  font-family: var(--font-mono);
+  font-size: var(--fs-13);
+  color: var(--text);
+  word-break: break-all;
+}
+
+.hf-search-hit-badge {
+  background: rgba(255, 200, 60, 0.12);
+  border: 1px solid rgba(255, 200, 60, 0.4);
+  color: rgba(255, 220, 100, 0.95);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-11);
+  flex-shrink: 0;
+}
+
+.hf-search-hit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+}
+
+.hf-search-hit-tag {
+  background: var(--surface-3);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-1);
+  font-size: var(--fs-11);
+}
+
+.hf-search-hit-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-1);
+}
+
+.hf-search-action {
+  appearance: none;
+  border: 1px solid var(--surface-3);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-1);
+  font: inherit;
+  font-size: var(--fs-13);
+  cursor: pointer;
+  text-align: center;
+  width: auto;
+}
+
+.hf-search-action:hover:not(:disabled) {
+  background: var(--surface-3);
+}
+
+.hf-search-action:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
+.hf-search-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hf-search-action-primary {
+  background: var(--primary-a-2);
+  border-color: var(--primary-a-3);
+  color: var(--primary);
+}
+
+.hf-search-action-primary:hover:not(:disabled) {
+  background: var(--primary-a-3);
+}
+
+/* ── Phase 12'.a — ModelCard "이 모델로 시작" CTA (ADR-0050) ──────── */
+
+.catalog-card-start-btn {
+  appearance: none;
+  background: var(--primary-a-2);
+  border: 1px solid var(--primary-a-3);
+  color: var(--primary);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-1);
+  font: inherit;
+  font-size: var(--fs-12);
+  cursor: pointer;
+  text-align: center;
+  width: auto;
+  flex-shrink: 0;
+}
+
+.catalog-card-start-btn:hover {
+  background: var(--primary-a-3);
+}
+
+.catalog-card-start-btn:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
+/* ── Phase 13'.f.2.3 — NSFW + 비상업 라벨 (DEFERRED §13'.f.2 §3-4) ─── */
+
+.catalog-adult-toggle {
+  appearance: none;
+  background: var(--surface-2);
+  border: 1px solid var(--surface-3);
+  color: var(--text-muted);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: var(--fs-12);
+  cursor: pointer;
+  text-align: center;
+  width: auto;
+  transition: background var(--dur-instant) var(--ease-out);
+}
+
+.catalog-adult-toggle:hover {
+  background: var(--surface-3);
+}
+
+.catalog-adult-toggle:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
+.catalog-adult-toggle.is-on {
+  background: rgba(255, 200, 60, 0.12);
+  border-color: rgba(255, 200, 60, 0.4);
+  color: rgba(255, 220, 100, 0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .catalog-adult-toggle {
+    transition: none;
+  }
+}
+
+.catalog-card-chip-adult {
+  background: rgba(255, 200, 60, 0.12);
+  border: 1px solid rgba(255, 200, 60, 0.4);
+  color: rgba(255, 220, 100, 0.95);
+}
+
+.catalog-card-chip-noncommercial {
+  background: rgba(255, 130, 130, 0.08);
+  border: 1px solid rgba(255, 130, 130, 0.3);
+  color: rgba(255, 150, 150, 0.95);
+}

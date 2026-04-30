@@ -1,0 +1,92 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "llama-3.1-8b-instruct",
+      "display_name": "Llama 3.1 8B Instruct",
+      "category": "agent-general",
+      "model_family": "llama",
+      "source": {
+        "type": "hugging-face",
+        "repo": "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF",
+        "file": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+      },
+      "hub_id": "llama3.1:8b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 4900,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 6144,
+      "rec_vram_mb": 8192,
+      "min_ram_mb": 8192,
+      "rec_ram_mb": 16384,
+      "install_size_mb": 4900,
+      "context_guidance": "128K context. 8개 언어 공식 지원 (한국어 비공식 OK). tool calling + structured output 강함. 70B의 경량 변종.",
+      "language_strength": 7,
+      "roleplay_strength": 6,
+      "coding_strength": 7,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "Llama 3.1 Community License",
+      "maturity": "stable",
+      "portable_suitability": 7,
+      "on_device_suitability": 7,
+      "fine_tune_suitability": 9,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "general-chat",
+      "commercial": true,
+      "use_case_examples": [
+        "다국어 일반 비서 (영/스페인/프랑스/포루투갈/이탈리아/독일/태국/힌디)",
+        "tool calling / 함수 호출 자동화",
+        "긴 문서 요약 (128K context)"
+      ],
+      "warnings": [
+        "Llama 3.1 라이선스 — 일반 상업 사용 OK이지만 *700M+ 월간 활성 사용자* 서비스에 임베드 시 Meta 별도 라이선스 필요.",
+        "한국어가 공식 8개 언어에 미포함 — 실사용은 OK이나 EXAONE / Bllossom 대비 자연스러움 한 단계 낮음."
+      ],
+      "intents": ["agent-tool-use", "translation-multi"],
+      "domain_scores": {
+        "agent-tool-use": 78.0,
+        "translation-multi": 70.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "tool calling 동급 최상위 — 함수 호출 자동화에 강함",
+          "128K context로 긴 문서 처리 가능",
+          "다국어 공식 8개 — 영/스페인/프랑스/독일 등 일관된 품질",
+          "structured output 안정적 — JSON 스키마 강제 준수"
+        ],
+        "weaknesses_ko": [
+          "한국어 미공식 — EXAONE 7.8B 대비 자연스러움 떨어짐",
+          "라이선스가 Apache-2 / MIT 대비 제약 (700M+ 서비스 임베드)",
+          "코딩은 Codestral / Qwen Coder에 밀림"
+        ],
+        "use_cases_ko": [
+          "다국어 일반 비서 (영어 1순위, 한국어 2순위)",
+          "tool calling 기반 에이전트 워크플로",
+          "Mistral Small 24B 대안 (사양 낮을 때)"
+        ],
+        "curator_note_ko": "한국어 우선이면 EXAONE 7.8B, 다국어 + tool calling이 핵심이면 Llama 3.1 8B. Workbench LoRA 시드로도 인기 — Yi-Ko 6B와 함께 한국어 fine-tune 베이스 후보.",
+        "sources": [
+          "huggingface.co/meta-llama/Meta-Llama-3.1-8B-Instruct",
+          "ollama.com/library/llama3.1",
+          "ai.meta.com/blog/meta-llama-3-1"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

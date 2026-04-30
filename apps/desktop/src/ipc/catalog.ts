@@ -16,6 +16,25 @@ export type ModelCategory =
 export type Maturity = "experimental" | "beta" | "stable" | "deprecated";
 
 /**
+ * 모델 사용 목적 — Phase 13'.f.2 (ADR-0048 + DEFERRED §13'.f.2).
+ * - general-chat (기본): 일반 채팅 추천에 등장.
+ * - fine-tune-base: instruction-tuned 아님 — Workbench LoRA 시드용. chat 추천 자동 제외.
+ * - retrieval: 임베딩 모델 (RAG). chat 추천 자동 제외.
+ * - reranker: 검색 결과 재정렬. chat 추천 자동 제외.
+ */
+export type ModelPurpose =
+  | "general-chat"
+  | "fine-tune-base"
+  | "retrieval"
+  | "reranker";
+
+/**
+ * 콘텐츠 경고 — Phase 13'.f.2.2 (DEFERRED §13'.f.2 §3).
+ * - rp-explicit: 성인 RP / NSFW. 사용자 명시 토글 ON 시에만 카탈로그에 노출.
+ */
+export type ContentWarning = "rp-explicit";
+
+/**
  * 카탈로그 노출 분류 — Phase 13'.e.1.
  *
  * Maturity (모델 자체 안정성)와 별개:
@@ -34,6 +53,25 @@ export type RuntimeKind =
   | "ollama"
   | "lm-studio"
   | "vllm";
+
+/**
+ * 의도(intent) 식별자 — Phase 11'.a (ADR-0048).
+ *
+ * SSOT는 `crates/shared-types/src/intents.rs::INTENT_VOCABULARY`. v1.x 시드 11종.
+ * 자유 string이지만 manifest validator + UI 사전이 등록된 것만 통과시킴.
+ */
+export type IntentId =
+  | "vision-image"
+  | "vision-multimodal"
+  | "translation-ko-en"
+  | "translation-multi"
+  | "coding-general"
+  | "coding-fim"
+  | "agent-tool-use"
+  | "roleplay-narrative"
+  | "ko-conversation"
+  | "ko-rag"
+  | "voice-stt";
 
 export interface VerificationInfo {
   tier: VerificationTier;
@@ -118,6 +156,22 @@ export interface ModelEntry {
   use_case_examples: string[];
   notes?: string | null;
   warnings: string[];
+  /**
+   * 의도 태그 — Phase 11'.a (ADR-0048). N:N 매핑.
+   * 빈 배열 OK (점진 백필 정책).
+   */
+  intents?: IntentId[];
+  /**
+   * 도메인 벤치마크 점수 — `IntentId → 0..=100`. Phase 11'.a (ADR-0048).
+   * 누락된 intent는 점수 미보유. 큐레이터가 점진 백필.
+   */
+  domain_scores?: Partial<Record<IntentId, number>>;
+  /** Phase 13'.f.2 — 모델 사용 목적. 누락 시 general-chat 폴백. */
+  purpose?: ModelPurpose;
+  /** Phase 13'.f.2.2 — 상업 사용 가능 여부. 누락 시 true 폴백. */
+  commercial?: boolean;
+  /** Phase 13'.f.2.2 — 콘텐츠 경고 (성인 등). 누락 시 None. */
+  content_warning?: ContentWarning | null;
 }
 
 export type ExclusionReason =
@@ -152,11 +206,17 @@ export async function getCatalog(
   return invoke<CatalogView>("get_catalog", { category });
 }
 
-/** 카테고리별 결정적 추천. host fingerprint 미보장 시 host-not-probed reject. */
+/**
+ * 카테고리 + (선택) 의도 기반 결정적 추천. host fingerprint 미보장 시 host-not-probed reject.
+ *
+ * Phase 11'.b (ADR-0048): `intent`가 있으면 `domain_scores[intent]`가 ranking에 가중,
+ * 없으면 기존 카테고리 기반 추천 (backward compat).
+ */
 export async function getRecommendation(
   category: ModelCategory,
+  intent?: IntentId,
 ): Promise<Recommendation> {
-  return invoke<Recommendation>("get_recommendation", { category });
+  return invoke<Recommendation>("get_recommendation", { category, intent });
 }
 
 /**

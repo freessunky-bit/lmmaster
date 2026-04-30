@@ -50,7 +50,19 @@
         "구조화 JSON 출력",
         "긴 문서 요약 (128K context)"
       ],
-      "warnings": []
+      "warnings": [],
+      "intents": [
+        "vision-image",
+        "vision-multimodal",
+        "ko-conversation",
+        "agent-tool-use"
+      ],
+      "domain_scores": {
+        "vision-image": 56.0,
+        "vision-multimodal": 54.0,
+        "ko-conversation": 70.0,
+        "agent-tool-use": 60.0
+      }
     }
   ]
 }

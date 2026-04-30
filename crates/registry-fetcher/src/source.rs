@@ -77,6 +77,23 @@ impl SourceConfig {
         }
         Ok(self.url_template.replace("{id}", manifest_id))
     }
+
+    /// `.minisig` URL 반환 — Phase 13'.g.2.b (ADR-0047).
+    ///
+    /// 정책:
+    /// - 모든 network tier(jsDelivr / GitHub Releases / Vendor)는 `<body_url>.minisig`로 통일.
+    /// - Bundled tier는 `is_network()=false` — `Err(NotNetworkTier)` 반환. caller가 별도 처리.
+    /// - 보안: body와 같은 호스트에서만 fetch (cross-origin 시 변조 위험 회피).
+    pub fn resolve_signature_url(&self, manifest_id: &str) -> Result<String, FetcherError> {
+        if !self.tier.is_network() {
+            return Err(FetcherError::UrlTemplate(format!(
+                "Bundled tier는 .minisig URL이 없어요 (tier={:?})",
+                self.tier
+            )));
+        }
+        let body_url = self.resolve_url(manifest_id)?;
+        Ok(format!("{body_url}.minisig"))
+    }
 }
 
 /// LMmaster 권장 기본 source 목록.
@@ -176,6 +193,61 @@ mod tests {
         ));
         assert!(matches!(
             s.resolve_url("a b"),
+            Err(FetcherError::UrlTemplate(_))
+        ));
+    }
+
+    // ── Phase 13'.g.2.b — .minisig URL invariants ──────────────────
+
+    #[test]
+    fn resolve_signature_url_appends_minisig() {
+        let s = SourceConfig {
+            tier: SourceTier::Jsdelivr,
+            url_template: "https://cdn.jsdelivr.net/gh/x/y@abc/manifests/{id}.json".into(),
+            timeout: Duration::from_secs(1),
+        };
+        assert_eq!(
+            s.resolve_signature_url("catalog").unwrap(),
+            "https://cdn.jsdelivr.net/gh/x/y@abc/manifests/catalog.json.minisig"
+        );
+    }
+
+    #[test]
+    fn resolve_signature_url_works_for_github_releases() {
+        let s = SourceConfig {
+            tier: SourceTier::Github,
+            url_template: "https://github.com/x/y/releases/download/manifests-2026.05.01/{id}.json"
+                .into(),
+            timeout: Duration::from_secs(1),
+        };
+        let url = s.resolve_signature_url("catalog").unwrap();
+        assert!(url.ends_with("catalog.json.minisig"));
+        assert!(url.contains("github.com"));
+    }
+
+    #[test]
+    fn resolve_signature_url_rejects_bundled() {
+        let s = SourceConfig {
+            tier: SourceTier::Bundled,
+            url_template: String::new(),
+            timeout: Duration::from_secs(1),
+        };
+        assert!(matches!(
+            s.resolve_signature_url("catalog"),
+            Err(FetcherError::UrlTemplate(_))
+        ));
+    }
+
+    #[test]
+    fn resolve_signature_url_rejects_bad_id_via_resolve_url() {
+        let s = SourceConfig {
+            tier: SourceTier::Github,
+            url_template: "https://example.com/{id}.json".into(),
+            timeout: Duration::from_secs(1),
+        };
+        // resolve_url의 ID 검증을 그대로 통과. ../etc/passwd → reject.
+        assert!(matches!(
+            s.resolve_signature_url("../etc/passwd"),
             Err(FetcherError::UrlTemplate(_))
         ));
     }

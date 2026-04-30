@@ -594,6 +594,51 @@
       "title": "Workbench",
       "subtitle": "5-step pipeline",
       "comingSoon": "Coming in the next phase",
+      "context": {
+        "heading": "Current working context",
+        "intentLabel": "Intent",
+        "modelLabel": "Model",
+        "change": "Change"
+      },
+      "promptTemplate": {
+        "title": "① Prompt templates — start now",
+        "subtitle": "Examples you can use right away with this model. Click a card to copy the prompt.",
+        "empty": "No examples registered for this model yet.",
+        "gridLabel": "Prompt template list",
+        "copy": "Copy",
+        "save": "Save my pattern",
+        "delete": "Delete",
+        "copied": "Copied. Paste into the Chat page to use.",
+        "copyFailed": "Failed to copy.",
+        "saved": "Saved to your patterns.",
+        "saveFailed": "Failed to save.",
+        "savedHeading": "My saved patterns",
+        "savedAt": "Saved",
+        "advance": "Go deeper (LoRA fine-tune) →",
+        "advanceHint": "When prompts alone aren't enough — fine-tune with LoRA for more accurate alignment."
+      },
+      "ragSeed": {
+        "title": "② Add your data (RAG) — optional",
+        "subtitle": "Adding your domain documents helps the model understand your context. Turn this on when prompts alone aren't enough.",
+        "koRagTip": "For Korean documents, the KURE-v1 embedder is most accurate. Enable it in Workspace > Embedding models.",
+        "visionDeferred": "Image RAG arrives in the next version. For now only text documents (.txt / .md / .pdf) can be embedded.",
+        "pathLabel": "Folder or file path",
+        "pathPlaceholder": "/path/to/notes or D:\\Docs\\internal",
+        "pathHint": "Text / Markdown / PDF files are auto-chunked and embedded.",
+        "start": "Add it now",
+        "running": "Adding…",
+        "workspaceLink": "Manage in detail at Workspace",
+        "noWorkspace": "No active Workspace. Create one from the sidebar first.",
+        "modelHintLabel": "Model note",
+        "startFailed": "Failed to add documents. Please try again shortly.",
+        "done": "Done — {{chunks}} chunks from {{files}} files.",
+        "stage": {
+          "reading": "Reading files",
+          "chunking": "Chunking",
+          "embedding": "Embedding",
+          "writing": "Writing to store"
+        }
+      },
       "hero": {
         "title": "Forge your own model",
         "body": "A 5-step workbench: LoRA-fine-tune on Korean data, quantize, and register to Ollama in one click.",
@@ -732,6 +777,16 @@
       }
     },
     "diagnostics": {
+      "signature": {
+        "title": "Catalog signature",
+        "empty": "No verification result yet — refresh the catalog.",
+        "checkedAt": "Checked at",
+        "verified": "✅ Verified ({{source}})",
+        "failed": "❌ Signature verification failed: {{reason}}. Using bundled catalog for safety.",
+        "missing": "⚠ Signature file missing. Check the CI signing pipeline.",
+        "bundled": "ℹ Using bundled catalog — verification not applied (trusted at build time).",
+        "disabled": "ℹ Signature verification disabled (dev build)."
+      },
       "title": "Diagnostics",
       "subtitle": "Check this machine's health at a glance.",
       "health": {
@@ -854,6 +909,21 @@
     "title": "Model Catalog",
     "subtitle": "Pick a model that fits your machine.",
     "search": { "placeholder": "Search by model name" },
+    "card": {
+      "startWorkbench": "Start with this model →",
+      "startWorkbenchTitle": "Start in Workbench with this model? Intent and model context travel together."
+    },
+    "adultContent": {
+      "on": "🔞 Adult models shown",
+      "off": "🔞 Adult models hidden",
+      "toggleTitle": "Choose whether to show adult-content models in the catalog. Default OFF — turning it on reveals NSFW-labeled models with a ⚠ chip.",
+      "chip": "🔞 Adult",
+      "chipTitle": "Adult content — visible because the filter is on"
+    },
+    "commercial": {
+      "chip": "⚠ Non-commercial",
+      "chipTitle": "Non-commercial license — commercial use not allowed"
+    },
     "category": {
       "all": "All",
       "new": "🔥 New",
@@ -862,7 +932,9 @@
       "coding": "Coding",
       "slm": "Small models",
       "sound-stt": "Speech recognition",
-      "sound-tts": "Speech synthesis"
+      "sound-tts": "Speech synthesis",
+      "embeddings": "Embeddings (RAG)",
+      "rerank": "Rerank"
     },
     "filter": {
       "tool": "Tool calling",
@@ -879,6 +951,40 @@
     "empty": {
       "noMatch": "No models match your filters. Adjust them and try again.",
       "category": "No models in this category yet."
+    },
+    "hfSearch": {
+      "triggerLabel": "Search HuggingFace",
+      "triggerTitle": "Search HuggingFace directly. Unsupported models are flagged with ⚠.",
+      "title": "Found on HuggingFace",
+      "close": "Close",
+      "banner": "Unsupported models are not verified for compatibility or Korean strength. Domain scores are not shown.",
+      "loading": "Searching…",
+      "empty": "No results. Try a different keyword.",
+      "errorGeneric": "HuggingFace search failed. Please try again shortly.",
+      "registerError": "Registration failed. Please try again shortly.",
+      "unsupported": "Unsupported",
+      "downloads": "Downloads",
+      "likes": "Likes",
+      "lastModified": "Updated",
+      "tryNow": "Try now",
+      "registering": "Registering…",
+      "requestCuration": "Request curation"
+    },
+    "intent": {
+      "heading": "What kind of AI are you looking for?",
+      "all": "All",
+      "scoreAria": "{{intent}} score: {{score}} / 100",
+      "vision-image": "Image analysis",
+      "vision-multimodal": "Vision + text multimodal",
+      "translation-ko-en": "Korean ↔ English translation",
+      "translation-multi": "Multilingual translation",
+      "coding-general": "Coding",
+      "coding-fim": "Code completion (FIM)",
+      "agent-tool-use": "Agent / tool use",
+      "roleplay-narrative": "Roleplay / narrative",
+      "ko-conversation": "Korean conversation",
+      "ko-rag": "Korean RAG",
+      "voice-stt": "Speech recognition"
     }
   },
   "recommendation": {

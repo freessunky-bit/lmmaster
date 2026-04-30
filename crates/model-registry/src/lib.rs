@@ -20,8 +20,8 @@ use shared_types::{HostFingerprint, ModelCategory};
 
 pub use cache::CacheError;
 pub use manifest::{
-    CommunityInsights, HfMeta, Maturity, ModelEntry, ModelManifest, ModelSource, ModelTier,
-    QuantOption, VerificationInfo, VerificationTier,
+    CommunityInsights, ContentWarning, HfMeta, Maturity, ModelEntry, ModelManifest, ModelPurpose,
+    ModelSource, ModelTier, QuantOption, VerificationInfo, VerificationTier,
 };
 pub use recommender::{compute as compute_recommendation, ExclusionReason, Recommendation};
 pub use register::{CustomModel, ModelRegistry, ModelRegistryError};
@@ -72,9 +72,21 @@ impl Catalog {
         }
     }
 
-    /// 추천 — Deterministic.
+    /// 추천 — Deterministic. 기존 caller 호환 wrapper (의도 없음).
     pub fn recommend(&self, host: &HostFingerprint, target: ModelCategory) -> Recommendation {
-        recommender::compute(host, target, &self.entries)
+        self.recommend_with_intent(host, target, None)
+    }
+
+    /// 추천 (의도 가중). Deterministic. (Phase 11'.b, ADR-0048)
+    ///
+    /// `intent`는 의도(intent picker) 신호 — `None`이면 `recommend(...)`와 동일 (backward compat).
+    pub fn recommend_with_intent(
+        &self,
+        host: &HostFingerprint,
+        target: ModelCategory,
+        intent: Option<&shared_types::IntentId>,
+    ) -> Recommendation {
+        recommender::compute_with_intent(host, target, &self.entries, intent)
     }
 
     /// 카테고리 별 카운트 — UI 카운트 배지용.
@@ -125,6 +137,11 @@ mod tests {
             hub_id: None,
             tier: crate::manifest::ModelTier::default(),
             community_insights: None,
+            intents: vec![],
+            domain_scores: Default::default(),
+            purpose: Default::default(),
+            commercial: true,
+            content_warning: None,
         }
     }
 

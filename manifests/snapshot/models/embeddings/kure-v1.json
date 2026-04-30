@@ -1,0 +1,86 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "kure-v1",
+      "display_name": "KURE-v1 (한국어 RAG SOTA)",
+      "category": "embeddings",
+      "model_family": "kure",
+      "source": {
+        "type": "hugging-face",
+        "repo": "nlpai-lab/KURE-v1",
+        "file": "kure-v1.gguf"
+      },
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp"],
+      "quantization_options": [
+        {
+          "label": "F16",
+          "size_mb": 1300,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "kure-v1.gguf"
+        }
+      ],
+      "min_vram_mb": null,
+      "rec_vram_mb": 2048,
+      "min_ram_mb": 4096,
+      "rec_ram_mb": 8192,
+      "install_size_mb": 1300,
+      "context_guidance": "한국어 RAG 전용 — KorSTS 등 한국어 retrieval 벤치마크에서 SOTA. 1024-d. 고려대 NLP & AI 연구실.",
+      "language_strength": 10,
+      "roleplay_strength": 0,
+      "coding_strength": 0,
+      "tool_support": false,
+      "vision_support": false,
+      "structured_output_support": false,
+      "license": "MIT",
+      "maturity": "stable",
+      "portable_suitability": 9,
+      "on_device_suitability": 9,
+      "fine_tune_suitability": 6,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "retrieval",
+      "use_case_examples": [
+        "한국어 사내 문서 RAG",
+        "한국어 Q&A 시스템",
+        "한국어 BM25 대체"
+      ],
+      "warnings": [
+        "임베딩 전용 모델이에요 — 채팅에는 사용할 수 없어요."
+      ],
+      "intents": ["ko-rag"],
+      "domain_scores": {
+        "ko-rag": 88.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "한국어 RAG 벤치마크 SOTA (KorSTS / KMRC)",
+          "MIT 라이선스 — 상업 자유",
+          "고려대 NLP & AI 연구실 검증"
+        ],
+        "weaknesses_ko": [
+          "한국어 단일 — 영어 retrieval은 BGE-M3에 밀림",
+          "다국어 혼재 환경에서는 BGE-M3 권장",
+          "임베딩 전용 — 채팅 X"
+        ],
+        "use_cases_ko": [
+          "한국어 사내 문서 검색 (RAG)",
+          "한국어 BM25 대체 (semantic search)",
+          "한국어 chatbot의 retrieval 백엔드"
+        ],
+        "curator_note_ko": "한국어 자료라면 KURE-v1을 1순위로 권장해요. knowledge-stack에서 active embedder를 KURE-v1으로 설정하면 자동 적용. 다국어 혼재면 BGE-M3로 전환하세요.",
+        "sources": [
+          "huggingface.co/nlpai-lab/KURE-v1",
+          "github.com/nlpai-lab/KURE"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

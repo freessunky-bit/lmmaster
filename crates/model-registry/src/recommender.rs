@@ -11,9 +11,9 @@
 //! 5. ExclusionReason enum — 자유 문자열 금지.
 
 use serde::{Deserialize, Serialize};
-use shared_types::{HostFingerprint, ModelCategory};
+use shared_types::{HostFingerprint, IntentId, ModelCategory};
 
-use crate::manifest::{Maturity, ModelEntry, VerificationTier};
+use crate::manifest::{Maturity, ModelEntry, ModelPurpose, VerificationTier};
 
 const LIGHTWEIGHT_MAX_MB: u64 = 5000;
 const HEADROOM_RATIO_NUM: u64 = 13;
@@ -48,6 +48,9 @@ pub enum ExclusionReason {
     IncompatibleRuntime { id: String },
     /// Maturity == Deprecated.
     Deprecated { id: String },
+    /// Phase 13'.f.2 — purpose != general-chat (임베딩 / 베이스 / 재정렬).
+    /// 채팅 추천에서 자동 제외. Workspace 또는 Workbench 별도 셀렉터에서 노출.
+    PurposeMismatch { id: String, purpose: String },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -109,10 +112,26 @@ fn evaluate(
     entry: &ModelEntry,
     host: &HostFingerprint,
     target: ModelCategory,
+    intent: Option<&IntentId>,
 ) -> Result<Scored, ExclusionReason> {
     if entry.maturity == Maturity::Deprecated {
         return Err(ExclusionReason::Deprecated {
             id: entry.id.clone(),
+        });
+    }
+
+    // Phase 13'.f.2 — purpose != general-chat 모델은 채팅 추천에서 자동 제외.
+    // 임베딩(Retrieval)/베이스(FineTuneBase)/재정렬(Reranker) 모델이 chat target으로 선택되는 것 차단.
+    if entry.purpose != ModelPurpose::GeneralChat {
+        let purpose_label = match entry.purpose {
+            ModelPurpose::FineTuneBase => "fine-tune-base",
+            ModelPurpose::Retrieval => "retrieval",
+            ModelPurpose::Reranker => "reranker",
+            ModelPurpose::GeneralChat => unreachable!("matched in if above"),
+        };
+        return Err(ExclusionReason::PurposeMismatch {
+            id: entry.id.clone(),
+            purpose: purpose_label.into(),
         });
     }
 
@@ -200,6 +219,19 @@ fn evaluate(
         s += 5;
     }
 
+    // Phase 11'.b (ADR-0048) — Intent 가중.
+    //   `domain_scores[intent] * 0.4` → 0..40 가산. 카테고리 Same(+20) 대비 우위.
+    //   `intents.contains(intent)`이면 +5 (큐레이터 의도 표명).
+    //   intent=None 또는 점수 미보유면 가산 0 (backward compat).
+    if let Some(iid) = intent {
+        if let Some(score) = entry.domain_scores.get(iid) {
+            s += (*score * 0.4) as i32;
+        }
+        if entry.intents.iter().any(|t| t == iid) {
+            s += 5;
+        }
+    }
+
     Ok(Scored {
         id: entry.id.clone(),
         score: s,
@@ -208,7 +240,7 @@ fn evaluate(
     })
 }
 
-/// Public 진입점.
+/// Public 진입점 — 카테고리만 사용. 기존 caller 호환 wrapper.
 ///
 /// `entries`는 카탈로그의 전체 엔트리(필터 전). 카테고리 필터링은 fitness 가중으로 수행.
 pub fn compute(
@@ -216,11 +248,24 @@ pub fn compute(
     target: ModelCategory,
     entries: &[ModelEntry],
 ) -> Recommendation {
+    compute_with_intent(host, target, entries, None)
+}
+
+/// Public 진입점 — 카테고리 + 의도 가중. (Phase 11'.b, ADR-0048)
+///
+/// `intent`는 의도(intent picker) 신호 — `None`이면 기존 `compute(...)`와 동일 (backward compat).
+/// `Some(iid)`이면 `domain_scores[iid]*0.4` + `intents.contains(iid)*5` 가산.
+pub fn compute_with_intent(
+    host: &HostFingerprint,
+    target: ModelCategory,
+    entries: &[ModelEntry],
+    intent: Option<&IntentId>,
+) -> Recommendation {
     let mut scored: Vec<Scored> = Vec::new();
     let mut excluded: Vec<ExclusionReason> = Vec::new();
 
     for entry in entries {
-        match evaluate(entry, host, target) {
+        match evaluate(entry, host, target, intent) {
             Ok(s) => scored.push(s),
             Err(reason) => excluded.push(reason),
         }

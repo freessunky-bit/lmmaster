@@ -1,0 +1,57 @@
+name: 큐레이션 요청 — HuggingFace 모델 추가
+description: 카탈로그에 새 모델을 추가해 주세요. (Phase 11'.c, ADR-0049)
+title: "[큐레이션 요청] "
+labels: ["curation-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        LMmaster Catalog에 새 모델을 큐레이션 요청해 주셔서 감사해요.
+        큐레이터가 호환성·한국어 강도·라이선스·chat template을 검증한 뒤
+        다음 카탈로그 갱신에 포함해요. (jsDelivr 24h propagate)
+
+  - type: input
+    id: hf_repo
+    attributes:
+      label: HuggingFace repo
+      description: "예: `elyza/Llama-3-ELYZA-JP-8B`"
+      placeholder: "org/model-name"
+    validations:
+      required: true
+
+  - type: textarea
+    id: intent
+    attributes:
+      label: 사용 의도
+      description: 어떤 작업에 쓰고 싶으세요? 예 — "한국어 코딩", "비전 + 한국어", "롤플레이"
+      placeholder: |
+        - 한국어 자연어 처리
+        - 코드 자동완성
+        - ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: license_check
+    attributes:
+      label: 라이선스 검토
+      description: 모델 카드의 라이선스를 확인했나요?
+      options:
+        - 확인했어요 — 상업/비상업 모두 OK (Apache-2 / MIT / BSD 등)
+        - 확인했어요 — 비상업만 OK (CC-BY-NC / Llama Community 등)
+        - 확인했어요 — 약관 검토 필요 (HCX-SEED, EXAONE Custom 등)
+        - 아직 확인 못 했어요
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 추가 메모
+      description: 양자화 선호 / VRAM 요구 / 특이사항 / 출처 leaderboard 등.
+      placeholder: |
+        - Q4_K_M 권장
+        - VRAM 8GB+ 필요
+        - HF Trending 1주 1위
+    validations:
+      required: false

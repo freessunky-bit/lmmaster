@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import {
   getCatalog,
   getRecommendation,
+  type IntentId,
   type ModelCategory,
   type ModelEntry,
   type Recommendation,
@@ -25,11 +26,14 @@ import {
 import type { CustomModel } from "../ipc/workbench";
 
 import { CustomModelsSection } from "../components/catalog/CustomModelsSection";
+import { HfSearchModal } from "../components/catalog/HfSearchModal";
+import { IntentBoard } from "../components/catalog/IntentBoard";
 import { ModelCard } from "../components/catalog/ModelCard";
 import { ModelDetailDrawer } from "../components/catalog/ModelDetailDrawer";
 import { RecommendationStrip } from "../components/catalog/RecommendationStrip";
 import { idOf, modelHasFlag } from "../components/catalog/format";
 import { HelpButton } from "../components/HelpButton";
+import { useAdultContentAllowed } from "../hooks/useAdultContentAllowed";
 
 import "./catalog.css";
 
@@ -50,6 +54,7 @@ const SIDEBAR_TABS: SidebarTabKey[] = [
   "slm",
   "sound-stt",
   "sound-tts",
+  "embeddings",
 ];
 
 type FilterKey = "tool" | "vision" | "structured" | "recommendedOnly";
@@ -61,12 +66,15 @@ export function CatalogPage() {
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [recLoading, setRecLoading] = useState(false);
   const [category, setCategory] = useState<SidebarTabKey>("all");
+  const [intent, setIntent] = useState<IntentId | null>(null);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Set<FilterKey>>(new Set());
   const [sort, setSort] = useState<SortKey>("score");
   const [selected, setSelected] = useState<ModelEntry | null>(null);
   const [lastRefresh, setLastRefresh] = useState<LastRefresh | null>(null);
   const [refreshBusy, setRefreshBusy] = useState(false);
+  const [hfModalOpen, setHfModalOpen] = useState(false);
+  const [adultAllowed, setAdultAllowed] = useAdultContentAllowed();
 
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
 
@@ -158,14 +166,15 @@ export function CatalogPage() {
     };
   }, []);
 
-  // 2) 추천 — 카테고리 바뀔 때만 (all/new → agent-general default).
+  // 2) 추천 — 카테고리 또는 의도 바뀔 때 재계산. (Phase 11'.b, ADR-0048)
+  // "new" 탭은 tier 필터지 카테고리가 아님 — 추천은 agent-general 기본.
+  // intent가 있으면 backend에서 domain_scores[intent]가 ranking에 가중.
   useEffect(() => {
     let cancelled = false;
     setRecLoading(true);
-    // "new" 탭은 tier 필터지 카테고리가 아님 — 추천은 agent-general 기본.
     const targetCat: ModelCategory =
       category === "all" || category === "new" ? "agent-general" : category;
-    getRecommendation(targetCat)
+    getRecommendation(targetCat, intent ?? undefined)
       .then((rec) => {
         if (!cancelled) {
           setRecommendation(rec);
@@ -182,7 +191,7 @@ export function CatalogPage() {
     return () => {
       cancelled = true;
     };
-  }, [category]);
+  }, [category, intent]);
 
   const byId = useMemo(() => {
     const m = new Map<string, ModelEntry>();
@@ -213,6 +222,10 @@ export function CatalogPage() {
     }
     // deprecated tier는 어느 탭에서도 메인 노출 안 함 — 별도 "안 권장" 필터로 v1.x.
     list = list.filter((e) => e.tier !== "deprecated");
+    // Phase 13'.f.2.3 — content_warning 게이팅. adultAllowed=false면 rp-explicit 모델 hidden.
+    if (!adultAllowed) {
+      list = list.filter((e) => e.content_warning !== "rp-explicit");
+    }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
@@ -230,7 +243,7 @@ export function CatalogPage() {
     }
     list = sortEntries(list, sort, recommendation);
     return list;
-  }, [entries, category, search, filters, sort, recommendedIds, recommendation]);
+  }, [entries, category, search, filters, sort, recommendedIds, recommendation, adultAllowed]);
 
   const handleSlotSelect = (modelId: string) => {
     const el = cardRefs.current.get(modelId);
@@ -279,6 +292,22 @@ export function CatalogPage() {
             >
               {refreshBusy ? "갱신하고 있어요…" : "다시 불러오기"}
             </button>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={adultAllowed}
+              className={`catalog-adult-toggle${adultAllowed ? " is-on" : ""}`}
+              onClick={() => setAdultAllowed(!adultAllowed)}
+              data-testid="catalog-adult-toggle"
+              title={t(
+                "catalog.adultContent.toggleTitle",
+                "성인 콘텐츠 모델을 카탈로그에 노출할지 선택해요. 기본 OFF — 켜면 NSFW 라벨 모델이 ⚠ chip과 함께 표시돼요.",
+              )}
+            >
+              {adultAllowed
+                ? t("catalog.adultContent.on", "🔞 성인 모델 보임")
+                : t("catalog.adultContent.off", "🔞 성인 모델 숨김")}
+            </button>
           </div>
         </div>
         <p className="catalog-page-subtitle">{t("catalog.subtitle")}</p>
@@ -297,6 +326,18 @@ export function CatalogPage() {
             onChange={(e) => setSearch(e.target.value)}
             aria-label={t("catalog.search.placeholder")}
           />
+          <button
+            type="button"
+            className="catalog-hf-search-trigger"
+            onClick={() => setHfModalOpen(true)}
+            data-testid="catalog-hf-search-trigger"
+            title={t(
+              "catalog.hfSearch.triggerTitle",
+              "HuggingFace에서 직접 모델을 찾아볼래요? 큐레이션 외 모델은 ⚠ 라벨이 붙어요.",
+            )}
+          >
+            🤗 {t("catalog.hfSearch.triggerLabel", "HuggingFace에서 찾기")}
+          </button>
           <nav
             className="catalog-categories"
             aria-label={t("catalog.title")}
@@ -327,6 +368,8 @@ export function CatalogPage() {
         </aside>
 
         <main className="catalog-main">
+          <IntentBoard selected={intent} onSelect={setIntent} />
+
           <RecommendationStrip
             recommendation={recommendation}
             loading={recLoading}
@@ -386,6 +429,7 @@ export function CatalogPage() {
                     model={m}
                     recommendation={recommendation}
                     onSelect={setSelected}
+                    intent={intent}
                   />
                 </div>
               ))}
@@ -397,6 +441,16 @@ export function CatalogPage() {
       <ModelDetailDrawer
         model={selected}
         onClose={() => setSelected(null)}
+      />
+
+      <HfSearchModal
+        isOpen={hfModalOpen}
+        query={search}
+        onClose={() => setHfModalOpen(false)}
+        onRegistered={(model) => {
+          // 등록 직후 ModelDetailDrawer로 자동 진입 — 사용자가 즉시 모델을 볼 수 있게.
+          setSelected(customModelToEntry(model));
+        }}
       />
     </div>
   );

@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::cache::{Cache, CachePutInput, CacheRow};
 use crate::error::FetcherError;
+use crate::signature::SignatureVerifier;
 use crate::source::{SourceConfig, SourceTier};
 
 /// fetch 결과.
@@ -53,6 +54,66 @@ pub struct FetcherCore {
 }
 
 impl FetcherCore {
+    /// id에 대해 4-tier fallback 시도 + minisign 서명 검증. (Phase 13'.g.2.c, ADR-0047)
+    ///
+    /// 정책:
+    /// - 네트워크 fresh fetch면 `.minisig` 추가 fetch + `verifier.verify` 강제.
+    /// - cache 적중(`from_cache=true`)이면 verify skip — 첫 적재 시 이미 검증됨 가정.
+    /// - Bundled tier(`is_network()=false`)는 verify skip — 빌드 시점 신뢰.
+    /// - verify 실패 → `FetcherError::SignatureFailed` (caller가 bundled fallback로 강등).
+    /// - `.minisig` 파일 미존재(404) → `FetcherError::SignatureMissing` (CI 서명 파이프라인 미작동).
+    pub async fn fetch_one_with_signature(
+        &self,
+        id: &str,
+        verifier: &SignatureVerifier,
+    ) -> Result<FetchedManifest, FetcherError> {
+        let manifest = self.fetch_one(id).await?;
+
+        // cache hit / Bundled — verify skip.
+        if manifest.from_cache || !manifest.source.is_network() {
+            return Ok(manifest);
+        }
+
+        // 네트워크 fresh — 같은 tier에서 .minisig fetch + verify.
+        let source_config = self
+            .sources
+            .iter()
+            .find(|s| s.tier == manifest.source)
+            .ok_or_else(|| {
+                FetcherError::SignatureFailed(format!(
+                    "source tier {:?} not configured",
+                    manifest.source
+                ))
+            })?;
+
+        let sig_url = source_config.resolve_signature_url(id)?;
+        let sig_resp = self
+            .http
+            .get(&sig_url)
+            .timeout(source_config.timeout)
+            .send()
+            .await
+            .map_err(|e| FetcherError::SignatureMissing(format!("{id}: {e}")))?;
+
+        if !sig_resp.status().is_success() {
+            return Err(FetcherError::SignatureMissing(format!(
+                "{id}: HTTP {}",
+                sig_resp.status()
+            )));
+        }
+
+        let sig_text = sig_resp
+            .text()
+            .await
+            .map_err(|e| FetcherError::SignatureMissing(format!("{id}: {e}")))?;
+
+        verifier
+            .verify(&manifest.body, &sig_text)
+            .map_err(|e| FetcherError::SignatureFailed(e.to_string()))?;
+
+        Ok(manifest)
+    }
+
     /// id에 대해 4-tier fallback 시도.
     pub async fn fetch_one(&self, id: &str) -> Result<FetchedManifest, FetcherError> {
         if id.is_empty() {

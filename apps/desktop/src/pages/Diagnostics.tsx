@@ -14,6 +14,10 @@ import { useTranslation } from "react-i18next";
 import { StatusPill } from "@lmmaster/design-system/react";
 import { listRecentBenchReports, type BenchReport } from "../ipc/bench";
 import {
+  getCatalogSignatureStatus,
+  type CatalogSignatureStatus,
+} from "../ipc/catalog-refresh";
+import {
   listCrashReports,
   readCrashLog,
   type CrashSummary,
@@ -126,6 +130,9 @@ export function Diagnostics() {
   const [repairHistory, setRepairHistory] = useState<RepairHistoryEntry[]>([]);
   const [crashes, setCrashes] = useState<CrashSummary[]>([]);
   const [crashesNotInitialized, setCrashesNotInitialized] = useState(false);
+  // Phase 13'.g.2.c — catalog minisign 서명 검증 상태.
+  const [signatureStatus, setSignatureStatus] =
+    useState<CatalogSignatureStatus | null>(null);
 
   // 첫 마운트 — IPC 일괄 fetch.
   useEffect(() => {
@@ -188,6 +195,13 @@ export function Diagnostics() {
         } else {
           console.warn("listCrashReports failed:", e);
         }
+      }
+      // Phase 13'.g.2.c — catalog 서명 검증 상태 (refresh 시점에만 변동).
+      try {
+        const status = await getCatalogSignatureStatus();
+        if (!cancelled) setSignatureStatus(status);
+      } catch (e) {
+        console.warn("getCatalogSignatureStatus failed:", e);
       }
     })();
     return () => {
@@ -296,9 +310,120 @@ export function Diagnostics() {
         <BenchSection entries={recentBench} onStartNewBench={onStartNewBench} />
         <WorkspaceSection ws={ws} tier={wsTier} history={repairHistory} />
         <CrashSection crashes={crashes} notInitialized={crashesNotInitialized} />
+        <SignatureSection status={signatureStatus} />
       </div>
     </div>
   );
+}
+
+// ── Phase 13'.g.2.c — Catalog minisign 서명 검증 섹션 (ADR-0047) ──────
+
+interface SignatureSectionProps {
+  status: CatalogSignatureStatus | null;
+}
+
+function SignatureSection({ status }: SignatureSectionProps) {
+  const { t } = useTranslation();
+
+  if (!status) {
+    return (
+      <section
+        className="diag-card"
+        role="region"
+        aria-labelledby="signature-section-title"
+        data-testid="diagnostics-signature-section"
+      >
+        <h3 id="signature-section-title" className="diag-card-title">
+          {t("diagnostics.signature.title", "카탈로그 서명")}
+        </h3>
+        <p className="diag-card-empty">
+          {t(
+            "diagnostics.signature.empty",
+            "아직 카탈로그를 갱신하지 않아 검증 결과가 없어요.",
+          )}
+        </p>
+      </section>
+    );
+  }
+
+  const tone = signatureTone(status.kind);
+  const message = signatureMessage(status, t);
+
+  return (
+    <section
+      className={`diag-card diag-card-tone-${tone}`}
+      role="region"
+      aria-labelledby="signature-section-title"
+      data-testid="diagnostics-signature-section"
+      data-tone={tone}
+    >
+      <h3 id="signature-section-title" className="diag-card-title">
+        {t("diagnostics.signature.title", "카탈로그 서명")}
+      </h3>
+      <p
+        className="diag-signature-message"
+        data-testid="diagnostics-signature-message"
+        role={status.kind === "failed" ? "alert" : undefined}
+      >
+        {message}
+      </p>
+      <p className="diag-signature-meta num">
+        {t("diagnostics.signature.checkedAt", "검증 시각")}:{" "}
+        {new Date(status.at_ms).toLocaleString("ko-KR")}
+      </p>
+    </section>
+  );
+}
+
+function signatureTone(
+  kind: CatalogSignatureStatus["kind"],
+): "ok" | "warn" | "error" | "neutral" {
+  switch (kind) {
+    case "verified":
+      return "ok";
+    case "failed":
+      return "error";
+    case "missing-signature":
+      return "warn";
+    case "bundled-fallback":
+    case "disabled":
+      return "neutral";
+  }
+}
+
+type TFn = ReturnType<typeof useTranslation>["t"];
+
+function signatureMessage(
+  status: CatalogSignatureStatus,
+  t: TFn,
+): string {
+  switch (status.kind) {
+    case "verified":
+      return t("diagnostics.signature.verified", {
+        source: status.source,
+        defaultValue: `검증됨 (${status.source})`,
+      });
+    case "failed":
+      return t("diagnostics.signature.failed", {
+        reason: status.reason,
+        defaultValue: `❌ 서명 검증 실패: ${status.reason}. 안전을 위해 기본 목록을 사용하고 있어요.`,
+      });
+    case "missing-signature":
+      return t(
+        "diagnostics.signature.missing",
+        "⚠ 서명 파일을 받지 못했어요. CI 서명 파이프라인을 확인해 주세요.",
+      );
+    case "bundled-fallback":
+      return t(
+        "diagnostics.signature.bundled",
+        "내장 카탈로그 사용 중 — 서명 검증 부적용 (빌드 시점 신뢰).",
+      );
+    case "disabled":
+      return t(
+        "diagnostics.signature.disabled",
+        "서명 검증 비활성 (개발 빌드).",
+      );
+  }
 }
 
 // ── 좌상 — 자가스캔 ───────────────────────────────────────────────

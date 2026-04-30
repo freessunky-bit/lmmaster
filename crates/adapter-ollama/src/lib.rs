@@ -398,6 +398,11 @@ pub struct ChatMessage {
     /// "system" / "user" / "assistant".
     pub role: String,
     pub content: String,
+    /// Phase 13'.h (ADR-0050) — 멀티모달 이미지. base64 인코딩된 string 배열.
+    /// `None` 또는 빈 vec이면 텍스트 전용 (기존 호환). Ollama API: messages[i].images.
+    /// `vision_support: true` 모델만 의미 있음 — 그 외 모델은 Ollama가 무시 또는 에러.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub images: Option<Vec<String>>,
 }
 
 /// Chat 스트림 이벤트 — UI에 실시간 token chunk 전달.
@@ -1409,5 +1414,47 @@ mod tests {
     async fn run_prompt_label_is_ollama() {
         let a = OllamaAdapter::new();
         assert_eq!(a.runtime_label(), "ollama");
+    }
+
+    // ── Phase 13'.h — ChatMessage vision (images) invariants ──────────
+
+    #[test]
+    fn chat_message_without_images_does_not_serialize_field() {
+        // 백워드 호환 — images=None은 wire format에서 사라져야 함.
+        let m = ChatMessage {
+            role: "user".into(),
+            content: "안녕".into(),
+            images: None,
+        };
+        let v = serde_json::to_value(&m).unwrap();
+        assert_eq!(v["role"], "user");
+        assert_eq!(v["content"], "안녕");
+        assert!(v.get("images").is_none(), "images=None은 직렬화 X");
+    }
+
+    #[test]
+    fn chat_message_with_images_serializes_array() {
+        let m = ChatMessage {
+            role: "user".into(),
+            content: "이 사진은 뭐예요?".into(),
+            images: Some(vec!["base64-payload".into()]),
+        };
+        let v = serde_json::to_value(&m).unwrap();
+        assert_eq!(v["images"][0], "base64-payload");
+    }
+
+    #[test]
+    fn chat_message_legacy_without_images_field_parses() {
+        // 기존 frontend가 보내는 {role, content}만 있는 메시지도 파싱.
+        let json = r#"{"role":"user","content":"x"}"#;
+        let m: ChatMessage = serde_json::from_str(json).unwrap();
+        assert!(m.images.is_none());
+    }
+
+    #[test]
+    fn chat_message_with_images_field_parses() {
+        let json = r#"{"role":"user","content":"x","images":["abc"]}"#;
+        let m: ChatMessage = serde_json::from_str(json).unwrap();
+        assert_eq!(m.images.as_deref().map(|v| v.len()), Some(1));
     }
 }

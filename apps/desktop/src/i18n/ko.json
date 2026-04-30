@@ -594,6 +594,51 @@
       "title": "워크벤치",
       "subtitle": "5단계 작업대",
       "comingSoon": "다음 페이즈에서 만나요",
+      "context": {
+        "heading": "지금 작업 중인 컨텍스트",
+        "intentLabel": "의도",
+        "modelLabel": "모델",
+        "change": "변경"
+      },
+      "promptTemplate": {
+        "title": "① 프롬프트 템플릿 — 즉시 시작",
+        "subtitle": "이 모델로 바로 쓸 수 있는 작업 예시예요. 카드를 누르면 프롬프트가 복사돼요.",
+        "empty": "이 모델에는 아직 등록된 작업 예시가 없어요.",
+        "gridLabel": "프롬프트 템플릿 목록",
+        "copy": "복사",
+        "save": "내 패턴 저장",
+        "delete": "삭제",
+        "copied": "프롬프트를 복사했어요. Chat 페이지에 붙여넣어 사용해 보세요.",
+        "copyFailed": "복사하지 못했어요.",
+        "saved": "내 패턴에 저장했어요.",
+        "saveFailed": "저장하지 못했어요.",
+        "savedHeading": "내가 저장한 패턴",
+        "savedAt": "저장",
+        "advance": "더 깊게 (LoRA로 조정) →",
+        "advanceHint": "프롬프트만으로 부족할 때 — LoRA 파인튜닝으로 더 정확하게 맞출 수 있어요."
+      },
+      "ragSeed": {
+        "title": "② 자료 추가 (RAG) — 선택",
+        "subtitle": "내 도메인 자료를 추가하면 모델이 내 맥락을 더 잘 이해해요. 프롬프트만으로 답이 부족할 때 켜 보세요.",
+        "koRagTip": "한국어 자료라면 KURE-v1 임베더가 가장 정확해요. Workspace > 임베딩 모델에서 활성화할 수 있어요.",
+        "visionDeferred": "이미지 RAG는 다음 버전에서 지원할게요. 지금은 텍스트 자료(.txt / .md / .pdf)만 임베드 가능해요.",
+        "pathLabel": "폴더 또는 파일 경로",
+        "pathPlaceholder": "/path/to/notes 또는 D:\\문서\\사내자료",
+        "pathHint": "텍스트 / Markdown / PDF 파일을 자동으로 청크 분할해 임베드해요.",
+        "start": "지금 추가해 볼게요",
+        "running": "추가하고 있어요…",
+        "workspaceLink": "Workspace에서 더 자세히 관리하기",
+        "noWorkspace": "활성 Workspace가 없어요. 사이드바에서 먼저 만들어 주세요.",
+        "modelHintLabel": "모델 안내",
+        "startFailed": "자료 추가에 실패했어요. 잠시 뒤에 다시 시도해 주세요.",
+        "done": "완료 — 파일 {{files}}개에서 청크 {{chunks}}개를 만들었어요.",
+        "stage": {
+          "reading": "파일을 읽고 있어요",
+          "chunking": "청크로 나누고 있어요",
+          "embedding": "임베딩하고 있어요",
+          "writing": "저장하고 있어요"
+        }
+      },
       "hero": {
         "title": "내 모델을 직접 빚어볼래요",
         "body": "한국어 데이터로 LoRA 파인튜닝하고, 양자화하고, Ollama에 1-click 등록하는 5단계 작업대예요.",
@@ -734,6 +779,16 @@
     "diagnostics": {
       "title": "진단",
       "subtitle": "이 PC가 잘 돌아가는지 한 번에 확인해요",
+      "signature": {
+        "title": "카탈로그 서명",
+        "empty": "아직 카탈로그를 갱신하지 않아 검증 결과가 없어요.",
+        "checkedAt": "검증 시각",
+        "verified": "✅ 검증됨 ({{source}})",
+        "failed": "❌ 서명 검증 실패: {{reason}}. 안전을 위해 기본 목록을 사용하고 있어요.",
+        "missing": "⚠ 서명 파일을 받지 못했어요. CI 서명 파이프라인을 확인해 주세요.",
+        "bundled": "ℹ 내장 카탈로그 사용 중 — 서명 검증 부적용 (빌드 시점 신뢰).",
+        "disabled": "ℹ 서명 검증 비활성 (개발 빌드)."
+      },
       "health": {
         "green": "전부 정상이에요",
         "yellow": "주의할 항목이 있어요",
@@ -854,6 +909,21 @@
     "title": "모델 카탈로그",
     "subtitle": "내 PC에 맞는 모델을 골라보세요",
     "search": { "placeholder": "모델 이름 검색" },
+    "card": {
+      "startWorkbench": "이 모델로 시작 →",
+      "startWorkbenchTitle": "Workbench에서 이 모델로 시작해 볼래요? 의도와 모델 컨텍스트가 함께 전달돼요."
+    },
+    "adultContent": {
+      "on": "🔞 성인 모델 보임",
+      "off": "🔞 성인 모델 숨김",
+      "toggleTitle": "성인 콘텐츠 모델을 카탈로그에 노출할지 선택해요. 기본 OFF — 켜면 NSFW 라벨 모델이 ⚠ chip과 함께 표시돼요.",
+      "chip": "🔞 성인",
+      "chipTitle": "성인 콘텐츠 — 필터로 노출 중"
+    },
+    "commercial": {
+      "chip": "⚠ 비상업",
+      "chipTitle": "비상업 라이선스 — 상업 사용 거부"
+    },
     "category": {
       "all": "전체",
       "new": "🔥 새 모델",
@@ -862,7 +932,9 @@
       "coding": "코딩",
       "slm": "소형 모델",
       "sound-stt": "음성 인식",
-      "sound-tts": "음성 합성"
+      "sound-tts": "음성 합성",
+      "embeddings": "임베딩 (RAG)",
+      "rerank": "재정렬"
     },
     "filter": {
       "tool": "도구 호출",
@@ -879,6 +951,40 @@
     "empty": {
       "noMatch": "조건에 맞는 모델이 없어요. 필터를 조정해 볼래요?",
       "category": "이 카테고리에는 아직 모델이 없어요."
+    },
+    "hfSearch": {
+      "triggerLabel": "HuggingFace에서 찾기",
+      "triggerTitle": "HuggingFace에서 직접 모델을 찾아볼래요? 큐레이션 외 모델은 ⚠ 라벨이 붙어요.",
+      "title": "HuggingFace에서 찾았어요",
+      "close": "닫기",
+      "banner": "큐레이션 외 모델은 호환성·한국어 강도가 검증되지 않았어요. 도메인 점수도 표시되지 않아요.",
+      "loading": "검색하고 있어요…",
+      "empty": "검색 결과가 없어요. 다른 키워드로 시도해 볼래요?",
+      "errorGeneric": "HuggingFace 검색에 실패했어요. 잠시 뒤에 다시 시도해 주세요.",
+      "registerError": "등록에 실패했어요. 잠시 뒤에 다시 시도해 주세요.",
+      "unsupported": "큐레이션 외",
+      "downloads": "다운로드",
+      "likes": "좋아요",
+      "lastModified": "갱신",
+      "tryNow": "지금 시도해 볼게요",
+      "registering": "등록하고 있어요…",
+      "requestCuration": "큐레이션 추가 요청"
+    },
+    "intent": {
+      "heading": "어떤 AI를 찾고 있어요?",
+      "all": "전체",
+      "scoreAria": "{{intent}} 점수: {{score}} / 100",
+      "vision-image": "이미지 분석",
+      "vision-multimodal": "이미지+텍스트 멀티모달",
+      "translation-ko-en": "한↔영 번역",
+      "translation-multi": "다국어 번역",
+      "coding-general": "코딩",
+      "coding-fim": "코드 자동완성 (FIM)",
+      "agent-tool-use": "에이전트 / 도구 사용",
+      "roleplay-narrative": "롤플레이 / 서사",
+      "ko-conversation": "한국어 대화",
+      "ko-rag": "한국어 RAG",
+      "voice-stt": "음성 인식"
     }
   },
   "recommendation": {

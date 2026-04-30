@@ -84,6 +84,11 @@
           "mistral.ai/news/codestral"
         ],
         "last_reviewed_at": "2026-04-30T00:00:00Z"
+      },
+      "intents": ["coding-general", "coding-fim"],
+      "domain_scores": {
+        "coding-general": 81.1,
+        "coding-fim": 89.5
       }
     }
   ]

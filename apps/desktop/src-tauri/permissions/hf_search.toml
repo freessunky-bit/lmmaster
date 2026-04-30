@@ -1,0 +1,14 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 11'.c (ADR-0049) — HuggingFace 하이브리드 검색·바인딩.
+# 외부 통신 0 정책 예외 (ADR-0026 §1) — `huggingface.co` 화이트리스트 기존.
+
+[[permission]]
+identifier = "allow-search-hf-models"
+description = "Search HuggingFace Hub for models by query string. Used by Catalog HF mode."
+commands.allow = ["search_hf_models"]
+
+[[permission]]
+identifier = "allow-register-hf-model"
+description = "Register a HuggingFace model into the user's CustomModelRegistry as 'unsupported' (yellow badge)."
+commands.allow = ["register_hf_model"]

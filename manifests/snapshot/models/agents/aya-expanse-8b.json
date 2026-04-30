@@ -1,0 +1,92 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-05-01T00:00:00Z",
+  "entries": [
+    {
+      "id": "aya-expanse-8b",
+      "display_name": "Aya Expanse 8B (다국어 23 언어, 비상업)",
+      "category": "agent-general",
+      "model_family": "aya",
+      "source": {
+        "type": "hugging-face",
+        "repo": "CohereForAI/aya-expanse-8b-GGUF",
+        "file": "aya-expanse-8b-Q4_K_M.gguf"
+      },
+      "hub_id": "aya-expanse:8b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 5100,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "aya-expanse-8b-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 6144,
+      "rec_vram_mb": 8192,
+      "min_ram_mb": 8192,
+      "rec_ram_mb": 16384,
+      "install_size_mb": 5100,
+      "context_guidance": "Cohere Aya Expanse — 23 언어 (한국어 포함) 공식 지원. 다국어 작업의 최고 후보. CC-BY-NC-4.0 라이선스로 비상업 한정.",
+      "language_strength": 8,
+      "roleplay_strength": 6,
+      "coding_strength": 5,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "CC-BY-NC-4.0",
+      "maturity": "stable",
+      "portable_suitability": 7,
+      "on_device_suitability": 7,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-05-01",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "general-chat",
+      "commercial": false,
+      "use_case_examples": [
+        "다국어 일반 비서 (23 언어 — 영/한/중/일/아랍 등)",
+        "다국어 번역 (한국어 ↔ 다른 22 언어)",
+        "비상업 학술 / 사내 다국어 도구"
+      ],
+      "warnings": [
+        "라이선스가 CC-BY-NC-4.0 — *상업 사용 거부*. 개인 / 학술 / 사내 비상업 도구 한정.",
+        "한국어 단독은 EXAONE 7.8B에 살짝 밀림 — 다국어가 핵심일 때 추천."
+      ],
+      "intents": ["translation-multi", "translation-ko-en", "ko-conversation"],
+      "domain_scores": {
+        "translation-multi": 82.0,
+        "translation-ko-en": 75.0,
+        "ko-conversation": 70.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "23 언어 공식 지원 — Llama 3.1 8개보다 월등히 넓음",
+          "한국어 + 일본어 + 중국어 동시에 자연스러움",
+          "Cohere의 Aya 프로젝트 — 다국어 RAG / 번역에 특화 학습"
+        ],
+        "weaknesses_ko": [
+          "*비상업 라이선스* — 상업 제품 임베드 거부",
+          "한국어 단독 사용 시 EXAONE 7.8B에 살짝 밀림",
+          "코딩 / tool calling 정확도는 Llama 3.1 8B에 살짝 밀림"
+        ],
+        "use_cases_ko": [
+          "다국어 (3+ 언어) 사내 비서 (비상업)",
+          "한국어 ↔ 다른 언어 번역 (특히 일본어 / 중국어)",
+          "다국어 RAG (KURE-v1 + Aya 조합)"
+        ],
+        "curator_note_ko": "다국어 환경(특히 한·일·중) + 비상업이면 1순위. 상업 + 한국어 단독이면 EXAONE / Bllossom. 32B 변종도 있지만 워크스테이션 필요해서 8B를 시드로 등재.",
+        "sources": [
+          "huggingface.co/CohereForAI/aya-expanse-8b",
+          "ollama.com/library/aya-expanse",
+          "cohere.com/research/aya"
+        ],
+        "last_reviewed_at": "2026-05-01T00:00:00Z"
+      }
+    }
+  ]
+}

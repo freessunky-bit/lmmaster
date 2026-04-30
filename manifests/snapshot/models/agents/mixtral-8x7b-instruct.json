@@ -1,0 +1,96 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-05-01T00:00:00Z",
+  "entries": [
+    {
+      "id": "mixtral-8x7b-instruct",
+      "display_name": "Mixtral 8x7B Instruct (MoE 워크스테이션)",
+      "category": "agent-general",
+      "model_family": "mixtral",
+      "source": {
+        "type": "hugging-face",
+        "repo": "TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF",
+        "file": "mixtral-8x7b-instruct-v0.1.Q4_K_M.gguf"
+      },
+      "hub_id": "mixtral:8x7b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 26500,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "mixtral-8x7b-instruct-v0.1.Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 28672,
+      "rec_vram_mb": 32768,
+      "min_ram_mb": 49152,
+      "rec_ram_mb": 65536,
+      "install_size_mb": 26500,
+      "context_guidance": "Mixtral 8x7B SMoE — 활성 파라미터 ~13B (8 experts 중 2 활성). VRAM 26GB+ 필요. 영/프/이/스/독 5 언어 강세. 한국어 보통.",
+      "language_strength": 6,
+      "roleplay_strength": 6,
+      "coding_strength": 7,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "Apache-2.0",
+      "maturity": "stable",
+      "portable_suitability": 1,
+      "on_device_suitability": 2,
+      "fine_tune_suitability": 5,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-05-01",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "general-chat",
+      "commercial": true,
+      "use_case_examples": [
+        "워크스테이션급 PC 다국어 비서 (영/프/독/스/이)",
+        "Apache-2 워크스테이션 — 상업 자유 + 70B급 품질",
+        "Codestral 22B 대안 (Apache-2 + tool calling)"
+      ],
+      "warnings": [
+        "VRAM 28GB+ 필요 — RTX 4090 24GB 단일은 빠듯. A6000 / 듀얼 GPU 권장.",
+        "MoE는 llama.cpp 0.2.50+ 필요 (구버전 호환성 확인).",
+        "한국어 자연스러움은 EXAONE 32B / Llama 3.3 70B에 밀림 — 다국어 5 언어가 핵심일 때만.",
+        "Mistral 0.1 — Mistral Small 24B(2024) 후속이 더 신뢰. 새 작업이면 Mistral Small 권장."
+      ],
+      "intents": ["agent-tool-use", "translation-multi"],
+      "domain_scores": {
+        "agent-tool-use": 72.0,
+        "translation-multi": 68.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "Apache-2 + SMoE — 활성 13B로 70B급 품질",
+          "tool calling + structured output 안정적",
+          "영/프/독/스/이 5 언어 — Mistral 모델의 강점",
+          "fine-tune 변종 풍부 (Nous, Dolphin 등)"
+        ],
+        "weaknesses_ko": [
+          "VRAM 28GB+ — RTX 4090 단일 어려움 (offload 필요)",
+          "MoE는 llama.cpp 구버전 호환성 미흡",
+          "한국어 보통 — EXAONE / Llama 3.3에 밀림",
+          "Mistral Small 24B(2024)가 후속 — 새 작업이면 Mistral Small 권장"
+        ],
+        "use_cases_ko": [
+          "워크스테이션 + Apache-2 + 다국어 5 언어",
+          "Mistral 0.1 호환 fine-tune 시드 (Nous-Hermes-2-Mixtral 등)",
+          "Codestral 22B 대안 (instruct + tool calling 동시)"
+        ],
+        "curator_note_ko": "Apache-2 + MoE + 70B급 품질이라 매력적이지만 VRAM 28GB+ 부담. 일반 사용자는 Llama 3.1 8B / Mistral Small 24B 권장. Mixtral은 *워크스테이션 듀얼 GPU + Apache-2 필수* 환경 한정.",
+        "sources": [
+          "huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1",
+          "huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF",
+          "ollama.com/library/mixtral",
+          "mistral.ai/news/mixtral-of-experts"
+        ],
+        "last_reviewed_at": "2026-05-01T00:00:00Z"
+      }
+    }
+  ]
+}

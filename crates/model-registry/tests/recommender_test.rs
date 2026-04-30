@@ -114,6 +114,11 @@ fn make_entry(id: &str, cat: ModelCategory, install_mb: u64) -> ModelEntry {
         hub_id: None,
         tier: model_registry::ModelTier::default(),
         community_insights: None,
+        intents: vec![],
+        domain_scores: Default::default(),
+        purpose: Default::default(),
+        commercial: true,
+        content_warning: None,
     }
 }
 
@@ -166,7 +171,8 @@ fn host_low_picks_lightweight_korean_first() {
             ExclusionReason::InsufficientVram { id, .. }
             | ExclusionReason::InsufficientRam { id, .. }
             | ExclusionReason::IncompatibleRuntime { id }
-            | ExclusionReason::Deprecated { id } => id.as_str(),
+            | ExclusionReason::Deprecated { id }
+            | ExclusionReason::PurposeMismatch { id, .. } => id.as_str(),
         })
         .collect();
     assert!(excluded_ids.contains(&"exaone-4.0-32b-instruct"));
@@ -191,7 +197,8 @@ fn host_mid_picks_balanced_korean() {
             ExclusionReason::InsufficientVram { id, .. }
             | ExclusionReason::InsufficientRam { id, .. }
             | ExclusionReason::IncompatibleRuntime { id }
-            | ExclusionReason::Deprecated { id } => id.as_str(),
+            | ExclusionReason::Deprecated { id }
+            | ExclusionReason::PurposeMismatch { id, .. } => id.as_str(),
         })
         .collect();
     assert!(excluded_ids.contains(&"exaone-4.0-32b-instruct"));
@@ -209,7 +216,8 @@ fn host_high_unlocks_32b_for_coding() {
             ExclusionReason::InsufficientVram { id, .. }
             | ExclusionReason::InsufficientRam { id, .. }
             | ExclusionReason::IncompatibleRuntime { id }
-            | ExclusionReason::Deprecated { id } => id.as_str(),
+            | ExclusionReason::Deprecated { id }
+            | ExclusionReason::PurposeMismatch { id, .. } => id.as_str(),
         })
         .collect();
     assert!(
@@ -349,7 +357,8 @@ fn host_with_no_gpu_excludes_vram_required_models() {
             ExclusionReason::InsufficientVram { id, .. }
             | ExclusionReason::InsufficientRam { id, .. }
             | ExclusionReason::IncompatibleRuntime { id }
-            | ExclusionReason::Deprecated { id } => id.as_str(),
+            | ExclusionReason::Deprecated { id }
+            | ExclusionReason::PurposeMismatch { id, .. } => id.as_str(),
         })
         .collect();
     // EXAONE 3.5 7.8B (min 6GB VRAM), HCX-SEED 8B (min 6GB), Polyglot 12.8B, 32B, qwen 3B (min 3GB).
@@ -421,4 +430,114 @@ fn verified_tier_boosts_score() {
     let cat = Catalog::from_entries(vec![b, a]);
     let r = cat.recommend(&host_high(), ModelCategory::AgentGeneral);
     assert_eq!(r.best_choice.as_deref(), Some("verified-one"));
+}
+
+// ── Phase 11'.b — Intent 가중 invariants (ADR-0048) ──────────────────────
+
+#[test]
+fn intent_none_matches_legacy_recommend() {
+    // backward compat — recommend() 와 recommend_with_intent(None)은 정확히 동일.
+    let cat = Catalog::from_entries(vec![
+        make_entry("a", ModelCategory::AgentGeneral, 2000),
+        make_entry("b", ModelCategory::AgentGeneral, 5000),
+        make_entry("c", ModelCategory::Coding, 3000),
+    ]);
+    let host = host_mid();
+    let legacy = cat.recommend(&host, ModelCategory::AgentGeneral);
+    let with_none = cat.recommend_with_intent(&host, ModelCategory::AgentGeneral, None);
+    assert_eq!(legacy.best_choice, with_none.best_choice);
+    assert_eq!(legacy.balanced_choice, with_none.balanced_choice);
+    assert_eq!(legacy.lightweight_choice, with_none.lightweight_choice);
+    assert_eq!(legacy.fallback_choice, with_none.fallback_choice);
+}
+
+#[test]
+fn intent_some_with_high_score_wins_against_peer() {
+    // 같은 카테고리·사양·tier — domain_score만 차이. 점수 가진 쪽이 best.
+    let mut a = make_entry("vision-strong", ModelCategory::AgentGeneral, 4000);
+    let b = make_entry("vision-empty", ModelCategory::AgentGeneral, 4000);
+    a.intents = vec!["vision-image".into()];
+    a.domain_scores.insert("vision-image".into(), 80.0); // +32 점수 + 5 (intents) = 37
+    let cat = Catalog::from_entries(vec![b, a]);
+    let intent: shared_types::IntentId = "vision-image".into();
+    let r = cat.recommend_with_intent(&host_high(), ModelCategory::AgentGeneral, Some(&intent));
+    assert_eq!(r.best_choice.as_deref(), Some("vision-strong"));
+}
+
+#[test]
+fn intent_some_unknown_id_is_graceful_no_op() {
+    // Intent 사전에 없는 ID — 점수 가산 0. 결과는 intent=None과 동일해야 함.
+    let mut a = make_entry("a", ModelCategory::AgentGeneral, 2000);
+    let b = make_entry("b", ModelCategory::AgentGeneral, 4000);
+    a.intents = vec!["vision-image".into()];
+    a.domain_scores.insert("vision-image".into(), 90.0);
+    let cat = Catalog::from_entries(vec![b, a]);
+
+    let unknown: shared_types::IntentId = "completely-unknown".into();
+    let with_unknown =
+        cat.recommend_with_intent(&host_high(), ModelCategory::AgentGeneral, Some(&unknown));
+    let with_none = cat.recommend_with_intent(&host_high(), ModelCategory::AgentGeneral, None);
+    // 미등록 intent로는 a의 80점 가중이 적용되지 않음 — intent=None과 동일 결과.
+    assert_eq!(with_unknown.best_choice, with_none.best_choice);
+    assert_eq!(with_unknown.balanced_choice, with_none.balanced_choice);
+}
+
+// ── Phase 13'.f.2 — ModelPurpose 분기 invariants ───────────────────────
+
+#[test]
+fn purpose_retrieval_excluded_from_chat_target() {
+    // 임베딩 모델은 chat target 추천에서 자동 제외 — 채팅에 부적합.
+    let mut emb = make_entry("emb-model", ModelCategory::Embeddings, 1000);
+    emb.purpose = model_registry::ModelPurpose::Retrieval;
+    let chat = make_entry("chat-model", ModelCategory::AgentGeneral, 1000);
+
+    let cat = Catalog::from_entries(vec![emb, chat]);
+    let r = cat.recommend(&host_high(), ModelCategory::AgentGeneral);
+
+    // emb-model은 excluded에 PurposeMismatch로 등장.
+    let purpose_excluded = r
+        .excluded
+        .iter()
+        .any(|e| matches!(e, ExclusionReason::PurposeMismatch { id, .. } if id == "emb-model"));
+    assert!(
+        purpose_excluded,
+        "emb-model이 PurposeMismatch로 제외되지 않음"
+    );
+    // best는 chat-model.
+    assert_eq!(r.best_choice.as_deref(), Some("chat-model"));
+}
+
+#[test]
+fn purpose_fine_tune_base_excluded_from_chat_target() {
+    let mut base = make_entry("base-model", ModelCategory::AgentGeneral, 4000);
+    base.purpose = model_registry::ModelPurpose::FineTuneBase;
+    let cat = Catalog::from_entries(vec![base]);
+    let r = cat.recommend(&host_high(), ModelCategory::AgentGeneral);
+    assert!(r.best_choice.is_none(), "베이스 모델만 있을 때 best 없음");
+    assert!(
+        r.excluded
+            .iter()
+            .any(|e| matches!(e, ExclusionReason::PurposeMismatch { .. })),
+        "PurposeMismatch가 누락됨"
+    );
+}
+
+#[test]
+fn intent_determinism_invariant() {
+    // 같은 입력 100회 → 같은 추천. (deterministic 원칙)
+    let mut a = make_entry("vision-strong", ModelCategory::AgentGeneral, 4000);
+    let b = make_entry("vision-empty", ModelCategory::AgentGeneral, 4000);
+    a.intents = vec!["vision-image".into()];
+    a.domain_scores.insert("vision-image".into(), 80.0);
+    let cat = Catalog::from_entries(vec![b, a]);
+    let intent: shared_types::IntentId = "vision-image".into();
+
+    let first = cat.recommend_with_intent(&host_high(), ModelCategory::AgentGeneral, Some(&intent));
+    for _ in 0..100 {
+        let r = cat.recommend_with_intent(&host_high(), ModelCategory::AgentGeneral, Some(&intent));
+        assert_eq!(r.best_choice, first.best_choice);
+        assert_eq!(r.balanced_choice, first.balanced_choice);
+        assert_eq!(r.lightweight_choice, first.lightweight_choice);
+        assert_eq!(r.fallback_choice, first.fallback_choice);
+    }
 }

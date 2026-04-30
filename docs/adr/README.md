@@ -8,7 +8,7 @@
 - Section: Status / Context / Decision / Consequences / Alternatives considered / References.
 - 새 ADR 작성 시 본 README 인덱스 표를 갱신한다.
 
-## 인덱스 (36건, 2026-04-28 현재)
+## 인덱스 (50건, 2026-04-30 현재)
 
 ### Foundation (Phase α)
 
@@ -128,6 +128,14 @@
 |---|---|---|
 | 0042 | Real Embedder cascade — ort + bge-m3 / KURE-v1 / multilingual-e5-small + HuggingFace 다운로드 | Accepted |
 
+### Phase 11'~12' — v1.x 도메인 축 (2026-04-30) [proposed]
+
+| 번호 | 제목 | Status |
+|---|---|---|
+| 0048 | Intent 축 + domain_scores 스키마 (vision/translation 등 도메인 우열 판독) | Accepted (Phase 11'.a 머지 2026-04-30) |
+| 0049 | HuggingFace 하이브리드 검색·바인딩 (큐레이션 1급 + 지원 외 별도 진입점) | Accepted (Phase 11'.c 머지 2026-04-30) |
+| 0050 | Workbench 3단 사다리 (프롬프트→RAG→LoRA) + 비전 IPC | 부분 채택 (12'.a + 12'.b + 13'.h.1 Ollama + 13'.h.2.a LM Studio 머지, llama.cpp server 자동 spawn은 v2) |
+
 ## Supersede / Modify 그래프
 
 ```
@@ -136,10 +144,10 @@
 0025 §"감내한 트레이드오프"(SSE byte-perfect) ──partial-supersede──> 0030 (SSE chunk transformation)
 ```
 
-## 다음 후보 (Phase 7'.b 이후)
+## 다음 후보 (Phase 11'~12' 진입 후)
 
-- **ADR-0028** — Gateway audit channel (PipelineLayer ↔ PipelinesState 연동)
-- **ADR-0029** — GlitchTip self-hosted endpoint 연결 (텔레메트리 v1.x)
+- **ADR-0048~0050** — 위 "v1.x 도메인 축" 3건 페이즈 진입 시 Proposed → Accepted 전환.
+- 후속: 영상 분석 ADR (v2+ 후보), 자세 분석 ADR (v2+ 별개 thesis 후보).
 
 ## 참고
 

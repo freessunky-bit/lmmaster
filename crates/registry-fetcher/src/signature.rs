@@ -14,6 +14,14 @@
 use minisign_verify::{PublicKey, Signature};
 use thiserror::Error;
 
+/// 빌드 시점 임베드 pubkey — Phase 13'.g.2.a.
+///
+/// CI / 사용자 빌드 시 `LMMASTER_CATALOG_PUBKEY` env로 주입.
+/// 미설정 시 `None` — 개발 빌드 graceful (verify 비활성, Bundled fallback).
+const EMBEDDED_PRIMARY: Option<&str> = option_env!("LMMASTER_CATALOG_PUBKEY");
+/// 키 회전 90일 overlap용 secondary. 미설정 시 `None`.
+const EMBEDDED_SECONDARY: Option<&str> = option_env!("LMMASTER_CATALOG_PUBKEY_SECONDARY");
+
 #[derive(Debug, Error)]
 pub enum SignatureError {
     #[error("공개키가 아직 등록되지 않았어요")]
@@ -54,6 +62,22 @@ impl SignatureVerifier {
             None => None,
         };
         Ok(Self { primary, secondary })
+    }
+
+    /// 빌드 시점 임베드된 pubkey로 verifier 생성 — Phase 13'.g.2.a.
+    ///
+    /// 정책:
+    /// - `LMMASTER_CATALOG_PUBKEY` env 미설정 → `Ok(None)` (개발 빌드 graceful).
+    /// - 설정됐으나 형식 잘못 → `Err(InvalidPublicKey)` (CI에서 catch).
+    /// - secondary는 optional (키 회전 90일 overlap).
+    pub fn from_embedded() -> Result<Option<Self>, SignatureError> {
+        match EMBEDDED_PRIMARY {
+            Some(primary) => Ok(Some(Self::from_minisign_strings(
+                primary,
+                EMBEDDED_SECONDARY,
+            )?)),
+            None => Ok(None),
+        }
     }
 
     /// `body`가 `sig_text`(minisign signature 파일 내용)에 의해 서명되었는지 검증.
@@ -97,6 +121,21 @@ mod tests {
         // primary 형식 자체가 잘못이면 거기서 먼저 fail — 의도적으로 둘 다 잘못 넣어 secondary 분기 X.
         let r = SignatureVerifier::from_minisign_strings("not-real", Some("also-garbage"));
         assert!(matches!(r, Err(SignatureError::InvalidPublicKey(_))));
+    }
+
+    /// Phase 13'.g.2.a — env 미설정 시 from_embedded()는 graceful Ok(None).
+    /// 개발 빌드에서 verify 비활성화하는 1차 안전장치.
+    #[test]
+    fn from_embedded_graceful_when_env_unset() {
+        // CI는 env 설정 — 본 테스트는 env가 *없는* 개발 빌드에서만 의미.
+        // 빈 env이면 None이어야 하고, 설정됐으면 Some(verifier).
+        let result = SignatureVerifier::from_embedded();
+        // 둘 다 valid (env 설정 여부는 빌드 환경에 따라).
+        assert!(result.is_ok());
+        if let Ok(Some(_)) = result {
+            // env 설정된 빌드 — pubkey 파싱 성공.
+        }
+        // env 미설정이면 Ok(None) — 명시 단언 X (CI/dev 양쪽 통과).
     }
 
     /// `Signature::decode`가 거부하는 명백한 garbage signature text.

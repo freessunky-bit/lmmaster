@@ -76,6 +76,11 @@
           "ollama.com/library/qwen2.5-coder"
         ],
         "last_reviewed_at": "2026-04-30T00:00:00Z"
+      },
+      "intents": ["coding-general", "coding-fim"],
+      "domain_scores": {
+        "coding-general": 88.4,
+        "coding-fim": 78.0
       }
     }
   ]

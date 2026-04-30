@@ -1,0 +1,92 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-05-01T00:00:00Z",
+  "entries": [
+    {
+      "id": "aya-expanse-32b",
+      "display_name": "Aya Expanse 32B (다국어 워크스테이션, 비상업)",
+      "category": "agent-general",
+      "model_family": "aya",
+      "source": {
+        "type": "hugging-face",
+        "repo": "CohereForAI/aya-expanse-32b-GGUF",
+        "file": "aya-expanse-32b-Q4_K_M.gguf"
+      },
+      "hub_id": "aya-expanse:32b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 19500,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "aya-expanse-32b-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 22528,
+      "rec_vram_mb": 24576,
+      "min_ram_mb": 32768,
+      "rec_ram_mb": 49152,
+      "install_size_mb": 19500,
+      "context_guidance": "Aya Expanse 8B의 워크스테이션급 변종 — 23 언어 + 32B로 EXAONE 32B에 근접. CC-BY-NC-4.0 비상업 한정.",
+      "language_strength": 9,
+      "roleplay_strength": 7,
+      "coding_strength": 6,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "CC-BY-NC-4.0",
+      "maturity": "stable",
+      "portable_suitability": 3,
+      "on_device_suitability": 3,
+      "fine_tune_suitability": 6,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-05-01",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "general-chat",
+      "commercial": false,
+      "use_case_examples": [
+        "워크스테이션급 다국어 비서 (23 언어 — 한·영·일·중 등)",
+        "비상업 학술 / 연구 환경 다국어 RAG",
+        "EXAONE 32B 대안 (다국어가 더 중요할 때)"
+      ],
+      "warnings": [
+        "라이선스가 CC-BY-NC-4.0 — *상업 사용 거부*. 학술 / 비상업 한정.",
+        "VRAM 22GB+ — RTX 4090 24GB 필요. 일반 게이밍 PC 부담.",
+        "한국어 단독은 EXAONE 32B에 살짝 밀림 — 다국어가 핵심일 때 추천."
+      ],
+      "intents": ["translation-multi", "translation-ko-en", "ko-conversation"],
+      "domain_scores": {
+        "translation-multi": 88.0,
+        "translation-ko-en": 80.0,
+        "ko-conversation": 76.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "23 언어 + 32B — 다국어 작업의 워크스테이션급 SOTA",
+          "Cohere의 Aya 프로젝트 — 다국어 RAG / 번역 특화",
+          "한·일·중 동시 자연스러움 — 동아시아 다국어 1순위"
+        ],
+        "weaknesses_ko": [
+          "*비상업 라이선스* — 상업 거부",
+          "VRAM 22GB+ — RTX 4090 / A6000 필요",
+          "한국어 단독은 EXAONE 32B에 미세하게 밀림"
+        ],
+        "use_cases_ko": [
+          "워크스테이션 + 다국어 + 비상업 환경 (3 조건 동시)",
+          "한·일·중·영 동시 작업 (특수)",
+          "다국어 RAG (KURE-v1 + Aya 32B 조합)"
+        ],
+        "curator_note_ko": "Aya Expanse 8B의 큰 변종. 8B로 부족하고 워크스테이션 + 비상업 OK일 때만. 상업 환경이면 Yi-1.5 34B(Apache-2) 또는 Llama 3.3 70B로.",
+        "sources": [
+          "huggingface.co/CohereForAI/aya-expanse-32b",
+          "ollama.com/library/aya-expanse"
+        ],
+        "last_reviewed_at": "2026-05-01T00:00:00Z"
+      }
+    }
+  ]
+}
