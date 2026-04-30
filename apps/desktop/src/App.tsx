@@ -33,6 +33,7 @@ import { WorkspaceRepairBanner } from "./components/workspace/WorkspaceRepairBan
 import { WorkspaceSwitcher } from "./components/WorkspaceSwitcher";
 import { ActiveWorkspaceProvider } from "./contexts/ActiveWorkspaceContext";
 import { CatalogPage } from "./pages/Catalog";
+import { ChatPage } from "./pages/Chat";
 import { Diagnostics } from "./pages/Diagnostics";
 import { Guide } from "./pages/Guide";
 import { Home } from "./pages/Home";
@@ -49,6 +50,7 @@ const NAV_KEYS = [
   "home",
   "catalog",
   "install",
+  "chat",
   "runtimes",
   "workspace",
   "projects",
@@ -293,6 +295,8 @@ function MainShell({
           <ApiKeysPanel />
         ) : activeNav === "install" ? (
           <InstallPage />
+        ) : activeNav === "chat" ? (
+          <ChatPage />
         ) : activeNav === "runtimes" ? (
           <RuntimesPage />
         ) : activeNav === "workspace" ? (

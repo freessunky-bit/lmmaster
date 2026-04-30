@@ -21,9 +21,20 @@ export interface BenchChipProps {
   onMeasure?: () => void;
   onCancel?: () => void;
   onRetry?: () => void;
+  /** ModelNotLoaded 에러일 때 노출되는 "이 모델 먼저 받을게요" CTA 핸들러. */
+  onInstall?: () => void;
+  /** 풀 진행 중이면 install CTA 비활성화 — 중복 클릭 방지. */
+  installInProgress?: boolean;
 }
 
-export function BenchChip({ state, onMeasure, onCancel, onRetry }: BenchChipProps) {
+export function BenchChip({
+  state,
+  onMeasure,
+  onCancel,
+  onRetry,
+  onInstall,
+  installInProgress,
+}: BenchChipProps) {
   const { t } = useTranslation();
 
   if (state.kind === "running") {
@@ -67,6 +78,26 @@ export function BenchChip({ state, onMeasure, onCancel, onRetry }: BenchChipProp
   // state.kind === "report"
   const r = state.report;
   if (r.error) {
+    // ModelNotLoaded — 측정 전 풀이 우선. retry 대신 install CTA 강조.
+    if (r.error.kind === "model-not-loaded" && onInstall) {
+      return (
+        <div className="bench-chip is-error" data-testid="bench-error-chip">
+          <span className="bench-chip-text">{errorText(t, r.error)}</span>
+          <button
+            type="button"
+            className="bench-chip-action is-primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              onInstall();
+            }}
+            disabled={installInProgress}
+            data-testid="bench-install-cta"
+          >
+            {installInProgress ? "받고 있어요" : "이 모델 먼저 받을게요"}
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="bench-chip is-error" data-testid="bench-error-chip">
         <span className="bench-chip-text">{errorText(t, r.error)}</span>

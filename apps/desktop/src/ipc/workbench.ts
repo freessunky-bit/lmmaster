@@ -222,3 +222,59 @@ export async function getArtifactStats(): Promise<ArtifactStats> {
 export async function cleanupArtifactsNow(): Promise<CleanupReport> {
   return invoke<CleanupReport>("cleanup_artifacts_now");
 }
+
+// ── Phase 9'.b — Workbench 실 모드 (real quantize / real LoRA) ───────────
+
+/**
+ * Rust workbench::WorkbenchRealStatus 미러 — workbench_real_status 반환.
+ *
+ * 정책:
+ * - quantize_binary_found: PATH 또는 LMMASTER_LLAMA_QUANTIZE_PATH env에 llama-quantize 있나
+ * - trainer_venv_ready: LLaMA-Factory venv가 이미 부트스트랩됐나
+ *
+ * UI는 둘 다 false면 "실 모드 사용하려면 설치 필요" 안내, true면 토글 활성.
+ */
+export interface WorkbenchRealStatus {
+  quantize_binary_found: boolean;
+  quantize_binary_path: string | null;
+  trainer_venv_ready: boolean;
+  trainer_venv_dir: string;
+}
+
+export async function getWorkbenchRealStatus(): Promise<WorkbenchRealStatus> {
+  return invoke<WorkbenchRealStatus>("workbench_real_status");
+}
+
+/**
+ * Rust workbench_core::lora_real::BootstrapEvent 미러.
+ * tagged enum (`kind` discriminant) — Probing → PythonReady → CreatingVenv → InstallingDeps... → Done | Failed.
+ */
+export type BootstrapEvent =
+  | { kind: "probing" }
+  | { kind: "python-ready"; version: string; path: string }
+  | { kind: "creating-venv" }
+  | { kind: "installing-deps"; phase: string }
+  | { kind: "log"; line: string }
+  | { kind: "done" }
+  | { kind: "failed"; error: string };
+
+/**
+ * LoRA용 Python venv + LLaMA-Factory 부트스트랩 시작.
+ *
+ * 정책 (ADR-0043 — 실 LoRA):
+ * - 5~10GB 다운로드 + Python 의존성 설치. **사용자 명시 동의 후만 호출** (UI에서 dialog).
+ * - Channel<BootstrapEvent>로 진행 이벤트 스트림. UI는 단계별 진행 + 라이브 로그 노출.
+ * - 즉시 token_id를 반환 — 같은 token_id로 cancel 가능. 백그라운드 task가 실제 부트스트랩.
+ */
+export async function loraBootstrapVenv(args: {
+  onEvent: (event: BootstrapEvent) => void;
+}): Promise<string> {
+  const channel = new Channel<BootstrapEvent>();
+  channel.onmessage = args.onEvent;
+  return invoke<string>("lora_bootstrap_venv", { onEvent: channel });
+}
+
+/** 진행 중 부트스트랩 cancel — 같은 token_id로. idempotent. */
+export async function cancelLoraBootstrap(tokenId: string): Promise<void> {
+  return invoke<void>("cancel_lora_bootstrap", { tokenId });
+}

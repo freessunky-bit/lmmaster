@@ -1,0 +1,80 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "llama-3-bllossom-8b",
+      "display_name": "Llama 3 Korean Bllossom 8B",
+      "category": "agent-general",
+      "model_family": "llama",
+      "source": {
+        "type": "hugging-face",
+        "repo": "MLP-KTLim/llama-3-Korean-Bllossom-8B-gguf-Q4_K_M",
+        "file": "llama-3-Korean-Bllossom-8B-Q4_K_M.gguf"
+      },
+      "hub_id": "benedict/linkbricks-llama3.1-korean:8b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 4900,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "llama-3-Korean-Bllossom-8B-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 6144,
+      "rec_vram_mb": 8192,
+      "min_ram_mb": 8192,
+      "rec_ram_mb": 16384,
+      "install_size_mb": 4900,
+      "context_guidance": "최대 8K context. Llama 3 8B 기반에 한국어 어휘 확장 + 한국어 instruct 튜닝. 일반 한국어 비서로 균형 좋아요.",
+      "language_strength": 9,
+      "roleplay_strength": 7,
+      "coding_strength": 6,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "Llama 3 Community License",
+      "maturity": "stable",
+      "portable_suitability": 7,
+      "on_device_suitability": 7,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "한국어 일반 비서 / Q&A",
+        "한국어 글쓰기 / 요약",
+        "한국 문화 / 시사 관련 대화"
+      ],
+      "warnings": [],
+      "community_insights": {
+        "strengths_ko": [
+          "Llama 3 base에 한국어 어휘를 새로 학습해서 한국어 응답이 자연스러워요",
+          "instruct 튜닝까지 끝나서 system prompt 잘 따라요",
+          "8B 크기라 RTX 3060 12GB에서도 잘 돌아요"
+        ],
+        "weaknesses_ko": [
+          "최신 한국 시사는 2024 cut-off로 약해요",
+          "수학/추론은 EXAONE이나 Qwen 더 강해요",
+          "긴 컨텍스트(8K 넘는)는 응답 품질 떨어져요"
+        ],
+        "use_cases_ko": [
+          "한국어 일반 대화 비서",
+          "한국어 콘텐츠 작성",
+          "교육 / 튜토링"
+        ],
+        "curator_note_ko": "한국 학계(고려대 NLP 그룹) 출신 모델로 한국어 토큰화가 잘 돼있어요. EXAONE이 LG 엔터프라이즈향이라면 Bllossom은 학술 + 오픈 라이선스 친화적이에요.",
+        "sources": [
+          "huggingface.co/MLP-KTLim/llama-3-Korean-Bllossom-8B",
+          "github.com/MLP-Lab/Bllossom"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

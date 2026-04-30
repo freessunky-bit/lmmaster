@@ -1,0 +1,89 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "llama-3.2-1b-instruct",
+      "display_name": "Llama 3.2 1B Instruct",
+      "category": "slm",
+      "model_family": "llama",
+      "source": {
+        "type": "hugging-face",
+        "repo": "bartowski/Llama-3.2-1B-Instruct-GGUF",
+        "file": "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+      },
+      "hub_id": "llama3.2:1b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 770,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+        },
+        {
+          "label": "Q8_0",
+          "size_mb": 1300,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Llama-3.2-1B-Instruct-Q8_0.gguf"
+        }
+      ],
+      "min_vram_mb": null,
+      "rec_vram_mb": 2048,
+      "min_ram_mb": 4096,
+      "rec_ram_mb": 8192,
+      "install_size_mb": 770,
+      "context_guidance": "최대 128K context. 1B 초경량 — CPU에서도 실시간. 영어 + 영문 지시 잘 따름. 한국어는 가벼운 응답.",
+      "language_strength": 6,
+      "roleplay_strength": 5,
+      "coding_strength": 5,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "Llama 3.2 Community License",
+      "maturity": "stable",
+      "portable_suitability": 10,
+      "on_device_suitability": 10,
+      "fine_tune_suitability": 8,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "엣지 디바이스 / 라즈베리파이 5",
+        "structured output 봇 (JSON / 분류)",
+        "fine-tune 베이스 — 한국어 toy model"
+      ],
+      "warnings": [
+        "한국어 자연스러움은 EXAONE 1.2B 권장. 본 모델은 영어 + tool calling 시드용."
+      ],
+      "community_insights": {
+        "strengths_ko": [
+          "1B로 실시간 응답 — CPU에서도 30+ tok/s 가능",
+          "Meta 공식 모델 + 128K context",
+          "tool calling 정확도 동급 1B 중 최상위",
+          "fine-tune 베이스로 인기 (한국어 fine-tune 다수 파생)"
+        ],
+        "weaknesses_ko": [
+          "한국어 응답 매우 짧고 단순함 — 1B 한계",
+          "긴 추론 못함",
+          "코드 작성도 약함"
+        ],
+        "use_cases_ko": [
+          "임베디드 / 엣지 디바이스",
+          "분류 / 추출 / structured 작업",
+          "한국어 fine-tune의 베이스 모델"
+        ],
+        "curator_note_ko": "한국어 일상 비서로는 EXAONE 1.2B이 더 좋고, 영어 + tool calling + 가장 작은 사이즈가 필요할 때 본 모델. 라즈베리파이 5에서도 동작.",
+        "sources": [
+          "huggingface.co/meta-llama/Llama-3.2-1B-Instruct",
+          "ollama.com/library/llama3.2"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

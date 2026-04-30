@@ -1,0 +1,58 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "deepseek-r1-7b",
+      "display_name": "DeepSeek-R1 7B (추론 특화)",
+      "category": "agent-general",
+      "model_family": "deepseek",
+      "source": {
+        "type": "hugging-face",
+        "repo": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+        "file": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf"
+      },
+      "hub_id": "deepseek-r1:7b",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 4700,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 6144,
+      "rec_vram_mb": 8192,
+      "min_ram_mb": 8192,
+      "rec_ram_mb": 16384,
+      "install_size_mb": 4700,
+      "context_guidance": "최대 128K context. <think>...</think> 단계별 추론을 출력해요. 사실 답변보다 추론 과정을 보고 싶을 때 좋아요.",
+      "language_strength": 8,
+      "roleplay_strength": 5,
+      "coding_strength": 8,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "MIT",
+      "maturity": "stable",
+      "portable_suitability": 7,
+      "on_device_suitability": 7,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "수학/논리 문제 단계별 풀이",
+        "코드 디버깅 (생각 과정 노출)",
+        "긴 추론 사슬 필요한 작업"
+      ],
+      "warnings": [
+        "응답이 길어요 — 단순 한 줄 답변엔 과해요. <think> 토큰을 UI에서 접거나 분리 표시하면 가독성이 좋아져요."
+      ]
+    }
+  ]
+}

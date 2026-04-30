@@ -1,0 +1,82 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "deepseek-coder-v2-16b",
+      "display_name": "DeepSeek Coder V2 Lite 16B",
+      "category": "coding",
+      "model_family": "deepseek",
+      "source": {
+        "type": "hugging-face",
+        "repo": "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+        "file": "DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf"
+      },
+      "hub_id": "deepseek-coder-v2:16b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 9100,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 12288,
+      "rec_vram_mb": 16384,
+      "min_ram_mb": 16384,
+      "rec_ram_mb": 24576,
+      "install_size_mb": 9100,
+      "context_guidance": "최대 128K context. 16B MoE (활성 2.4B). 코드 + 수학 강함. Lite 변종이라 RTX 3090/4080에서 실용 가능.",
+      "language_strength": 6,
+      "roleplay_strength": 3,
+      "coding_strength": 9,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "DeepSeek License",
+      "maturity": "stable",
+      "portable_suitability": 5,
+      "on_device_suitability": 5,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "복잡한 알고리즘 / 수학 코드",
+        "긴 코드베이스 리팩터링",
+        "다언어 코드 (TS / Py / Rust / Go)"
+      ],
+      "warnings": [
+        "DeepSeek 라이선스 — 상용 시 약관 확인 (대부분 OK이나 학술 외 사용 시 review 권장)."
+      ],
+      "community_insights": {
+        "strengths_ko": [
+          "MoE 구조로 16B인데 활성 파라미터 2.4B — VRAM 효율 우수",
+          "수학적 코드 (numerical / algorithmic) 특화",
+          "128K context로 monorepo 분석 가능"
+        ],
+        "weaknesses_ko": [
+          "MoE라 첫 토큰 latency 살짝 느림",
+          "한국어 자연스러움 약함",
+          "라이선스가 일반 OSS보다 제한적"
+        ],
+        "use_cases_ko": [
+          "알고리즘 / 수치 코드",
+          "monorepo 분석 + 리팩터",
+          "Qwen Coder가 막힐 때 두 번째 의견"
+        ],
+        "curator_note_ko": "Qwen 2.5 Coder가 메인 코딩 모델이면 DeepSeek은 백업/검증용. 두 모델 답이 다르면 사람이 판단하는 식으로 활용 권장.",
+        "sources": [
+          "huggingface.co/deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+          "ollama.com/library/deepseek-coder-v2"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

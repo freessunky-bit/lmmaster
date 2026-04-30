@@ -15,6 +15,17 @@ export type ModelCategory =
 
 export type Maturity = "experimental" | "beta" | "stable" | "deprecated";
 
+/**
+ * 카탈로그 노출 분류 — Phase 13'.e.1.
+ *
+ * Maturity (모델 자체 안정성)와 별개:
+ * - new: 90일 이내 등장 + 트래픽 검증된 신모델. 🔥 NEW 탭.
+ * - verified: 큐레이터 검증 완료. 메인 카탈로그.
+ * - experimental: chat template 위험 / 사용자 책임 부담 큰 모델.
+ * - deprecated: 보안/품질 이슈로 비추천.
+ */
+export type ModelTier = "new" | "verified" | "experimental" | "deprecated";
+
 export type VerificationTier = "verified" | "community";
 
 export type RuntimeKind =
@@ -36,6 +47,23 @@ export interface HfMeta {
   last_modified: string;
 }
 
+/**
+ * 큐레이터 작성 커뮤니티 인사이트 — drawer "?" 토글에 4-section으로 노출.
+ *
+ * 정책 (Phase 13'.e.1):
+ * - 외부 LLM 자동 요약 X — 정확도 + "외부 통신 0" 정책.
+ * - 큐레이터가 사실 진술 + 코멘트 + 출처 URL 작성.
+ */
+export interface CommunityInsights {
+  strengths_ko: string[];
+  weaknesses_ko: string[];
+  use_cases_ko: string[];
+  curator_note_ko: string;
+  sources: string[];
+  /** RFC3339. */
+  last_reviewed_at?: string | null;
+}
+
 export interface QuantOption {
   label: string;
   size_mb: number;
@@ -53,6 +81,19 @@ export interface ModelEntry {
   category: ModelCategory;
   model_family: string;
   source: ModelSource;
+  /**
+   * 검증된 Ollama Hub 모델명. 큐레이터가 명시한 wrapper 경로 (예: "sam860/exaone-4.0:1.2b").
+   *
+   * 정책 (2026-04-30 — Ollama HF 통합 정밀 리서치):
+   * - EXAONE/HCX 같은 한국어 특수 architecture는 `hf.co/{repo}` 직접 풀 시 chat template
+   *   누락으로 출력 깨짐 위험. 큐레이터가 검증된 Modelfile wrapper로 매핑.
+   * - 있으면 `runtimeModelId`가 그대로 사용. 없으면 source.repo로 자동 derivation.
+   */
+  hub_id?: string | null;
+  /** 카탈로그 노출 분류 — Phase 13'.e.1. 누락 시 verified 폴백. */
+  tier?: ModelTier;
+  /** 큐레이터 커뮤니티 인사이트 — drawer "?" 토글에 노출. 누락 가능. */
+  community_insights?: CommunityInsights | null;
   runner_compatibility: RuntimeKind[];
   quantization_options: QuantOption[];
   min_vram_mb: number | null;
@@ -116,4 +157,44 @@ export async function getRecommendation(
   category: ModelCategory,
 ): Promise<Recommendation> {
   return invoke<Recommendation>("get_recommendation", { category });
+}
+
+/**
+ * 카탈로그의 LMmaster 내부 id를 런타임 어댑터가 사용할 수 있는 모델 식별자로 변환.
+ *
+ * 정책 (2026-04-30 — 사용자 첫 풀 root cause + Ollama HF 통합 정밀 리서치):
+ * - **우선**: `model.hub_id` 가 명시되어 있으면 *그대로 사용* (예: "sam860/exaone-4.0:1.2b").
+ *   이건 큐레이터가 검증한 Ollama Hub wrapper로 chat template + stop sequence 보장.
+ * - **폴백**: HuggingFace 소스면 `hf.co/{repo}:{tag}` 자동 derivation
+ *   ([Ollama HF 공식 통합](https://huggingface.co/docs/hub/ollama)).
+ *   주의: 한국어 특수 architecture (EXAONE 4.0, HCX-Seed 등)는 chat template이 GGUF에 없어
+ *   출력이 깨질 수 있음 — 가능하면 `hub_id` 명시 권장.
+ * - **거부**: DirectUrl 소스는 Ollama 미지원 → null (호출 측이 친화 안내).
+ *
+ * @param model 카탈로그의 ModelEntry.
+ * @param quantLabel 사용자가 고른 양자화 라벨 (예: "Q4_K_M"). null이면 첫 옵션 기본.
+ * @param runtime 풀/측정에 사용할 런타임 — "ollama" 외엔 null 반환.
+ * @returns Ollama API의 model 필드에 그대로 넣을 수 있는 이름.
+ */
+export function runtimeModelId(
+  model: ModelEntry,
+  quantLabel: string | null,
+  runtime: RuntimeKind,
+): string | null {
+  if (runtime !== "ollama") return null;
+  // 1) 큐레이터 명시 hub_id 우선 — chat template 검증된 wrapper.
+  if (model.hub_id && model.hub_id.length > 0) {
+    return model.hub_id;
+  }
+  // 2) HuggingFace 자동 derivation 폴백.
+  switch (model.source.type) {
+    case "hugging-face": {
+      const quant = quantLabel ?? model.quantization_options[0]?.label ?? null;
+      if (!quant) return `hf.co/${model.source.repo}`;
+      return `hf.co/${model.source.repo}:${quant}`;
+    }
+    case "direct-url":
+      // Ollama는 임의 URL pull을 지원하지 않아요. 호출 측은 안내 메시지로 fallback.
+      return null;
+  }
 }

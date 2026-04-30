@@ -7,11 +7,14 @@
 //!   Alt+F4 / taskkill / OS shutdown에서 누락(tauri#10555).
 
 pub mod bench;
+pub mod chat;
 pub mod commands;
 pub mod gateway;
+pub mod hf_meta;
 pub mod install;
 pub mod keys;
 pub mod knowledge;
+pub mod model_pull;
 pub mod panic_hook;
 pub mod pipelines;
 pub mod presets;
@@ -31,9 +34,12 @@ use tauri::{Emitter, Manager};
 use tracing_subscriber::EnvFilter;
 
 use bench::registry::BenchRegistry;
+use chat::registry::ChatRegistry;
 use commands::{CatalogState, LastScanCache};
+use hf_meta::HfMetaCache;
 use install::registry::InstallRegistry;
 use knowledge::{EmbeddingState, KnowledgeRegistry};
+use model_pull::registry::ModelPullRegistry;
 use presets::commands::PresetCache;
 use updater::{PollerState, UpdaterRegistry};
 use workbench::WorkbenchRegistry;
@@ -84,6 +90,10 @@ pub fn run() {
             commands::get_recommendation,
             install::install_app,
             install::cancel_install,
+            model_pull::start_model_pull,
+            model_pull::cancel_model_pull,
+            chat::start_chat,
+            chat::cancel_all_chats,
             bench::commands::start_bench,
             bench::commands::cancel_bench,
             bench::commands::get_last_bench_report,
@@ -153,6 +163,15 @@ pub fn run() {
             let registry: Arc<InstallRegistry> = Arc::new(InstallRegistry::new());
             app.manage(registry);
 
+            // 2.b. ModelPullRegistry — 모델 풀 동시 다중 + cancel 토큰 보관.
+            //       앱 종료 시 cancel_all 호출 (RunEvent::ExitRequested 핸들러).
+            let model_pull_registry: Arc<ModelPullRegistry> = Arc::new(ModelPullRegistry::new());
+            app.manage(Arc::clone(&model_pull_registry));
+
+            // 2.c. ChatRegistry — 사용자 in-app 채팅 cancel 토큰. 앱 종료 시 cancel_all.
+            let chat_registry: Arc<ChatRegistry> = Arc::new(ChatRegistry::new());
+            app.manage(Arc::clone(&chat_registry));
+
             // 3. Self-scanner — broadcast 결과를 scan:summary event로 forward + 캐시.
             let last_scan: Arc<LastScanCache> = Arc::new(LastScanCache::default());
             app.manage(last_scan.clone());
@@ -170,6 +189,36 @@ pub fn run() {
             tracing::info!(entries = catalog.entries().len(), "카탈로그 로드 완료");
             let catalog_state: Arc<CatalogState> = Arc::new(CatalogState::new(catalog));
             app.manage(Arc::clone(&catalog_state));
+
+            // 4.b. HfMetaCache — Phase 13'.e.2. HF Hub API metadata를 6h cron으로 자동 갱신.
+            //      get_catalog이 entries 반환 시 cache 머지 → downloads/likes/lastModified 노출.
+            //      앱 시작 시 1회 fetch + 그 후 6h interval (별도 tokio task).
+            let hf_meta_cache: Arc<HfMetaCache> = Arc::new(HfMetaCache::new());
+            app.manage(Arc::clone(&hf_meta_cache));
+            // 첫 실행 + 6h interval task spawn.
+            let catalog_for_hf = Arc::clone(&catalog_state);
+            let cache_for_hf = Arc::clone(&hf_meta_cache);
+            tauri::async_runtime::spawn(async move {
+                let http = reqwest::Client::builder()
+                    .user_agent("LMmaster-desktop")
+                    .timeout(std::time::Duration::from_secs(10))
+                    .build()
+                    .unwrap_or_else(|_| reqwest::Client::new());
+                // 첫 실행 — 앱 시작 직후 (3초 grace).
+                tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+                loop {
+                    let entries: Vec<model_registry::ModelEntry> = catalog_for_hf
+                        .snapshot()
+                        .entries()
+                        .iter()
+                        .cloned()
+                        .collect();
+                    let (_ok, _fail) =
+                        hf_meta::refresh_all(&http, &cache_for_hf, &entries).await;
+                    // 6시간 주기.
+                    tokio::time::sleep(std::time::Duration::from_secs(6 * 60 * 60)).await;
+                }
+            });
 
             // 5. BenchRegistry — Phase 2'.c.2.
             let bench_registry: Arc<BenchRegistry> = Arc::new(BenchRegistry::new());
@@ -311,16 +360,35 @@ pub fn run() {
                 .app_data_dir()
                 .map(|d| d.join("registry").join("fetch.db"))
                 .unwrap_or_else(|_| std::path::PathBuf::from("registry-fetch.db"));
-            // bundled apps 디렉터리 — manifests/snapshot/apps/.
-            let bundled_apps_dir = app
-                .path()
-                .resource_dir()
-                .ok()
-                .map(|r| r.join("manifests/snapshot/apps"))
-                .filter(|p| p.exists());
-            // v1 manifest IDs — 자동 갱신 대상. installer + scanner가 사용.
+            // bundled apps 디렉터리 — fetcher가 try_bundled에서 `{id}.json`을 읽음.
+            // 기존 path("manifests/snapshot/apps")는 디렉터리가 없어 항상 None이었어요.
+            // Phase 13'.a — 실제 위치인 `manifests/apps/`로 fix. 여기에 ollama.json /
+            // lm-studio.json / catalog.json 모두 존재. dev 모드에선 워크스페이스 root,
+            // release에선 resource_dir에서 찾음.
+            let bundled_apps_dir = {
+                let resource_path = app
+                    .path()
+                    .resource_dir()
+                    .ok()
+                    .map(|r| r.join("manifests/apps"))
+                    .filter(|p| p.exists());
+                if resource_path.is_some() {
+                    resource_path
+                } else {
+                    // dev 폴백 — 워크스페이스 root에서 manifests/apps 직접.
+                    std::env::current_dir().ok().and_then(|cwd| {
+                        cwd.ancestors()
+                            .map(|a| a.join("manifests/apps"))
+                            .find(|p| p.exists())
+                    })
+                }
+            };
+            // v1 manifest IDs — 자동 갱신 대상.
+            // - "ollama" / "lm-studio": app installer manifests (registry_fetcher 기존 동작).
+            // - "catalog": 모델 카탈로그 단일 bundle (Phase 13'.a). registry_fetcher가 fetch하면
+            //   `CatalogState::swap_from_bundle_body`로 hot-swap → 새 모델이 즉시 카탈로그에 노출.
             let manifest_ids: Vec<String> =
-                ["ollama".into(), "lm-studio".into()].to_vec();
+                ["ollama".into(), "lm-studio".into(), "catalog".into()].to_vec();
             let registry_fetcher_service: Option<Arc<registry_fetcher::RegistryFetcherService>> =
                 match tauri::async_runtime::block_on(
                     registry_fetcher::RegistryFetcherService::new(
@@ -433,6 +501,16 @@ pub fn run() {
                 tracing::info!("ExitRequested received, cancelling all in-flight installs");
                 registry.cancel_all();
             }
+            // In-flight model pull cancel — Phase install/bench bugfix.
+            if let Some(registry) = app_handle.try_state::<Arc<ModelPullRegistry>>() {
+                tracing::info!("ExitRequested received, cancelling all in-flight model pulls");
+                registry.cancel_all();
+            }
+            // In-flight chat cancel — 사용자 in-app 채팅.
+            if let Some(registry) = app_handle.try_state::<Arc<ChatRegistry>>() {
+                tracing::info!("ExitRequested received, cancelling all in-flight chats");
+                registry.cancel_all();
+            }
             // In-flight bench cancel.
             if let Some(registry) = app_handle.try_state::<Arc<BenchRegistry>>() {
                 tracing::info!("ExitRequested received, cancelling all in-flight benches");
@@ -524,25 +602,56 @@ fn preinit_crash_dir() -> Option<std::path::PathBuf> {
 
 /// Bundled snapshot의 카탈로그 디렉터리를 찾아 로드한다.
 ///
-/// dev 모드: 워크스페이스 root에서 `manifests/snapshot/models/` 직접 사용.
-/// 프로덕션 빌드: `app.path().resource_dir()` 안의 `manifests/snapshot/models/`.
+/// 정책 (2026-04-30 사용자 리포트 — 신규 manifest 추가해도 안 보이던 root cause):
+/// - **debug 빌드는 워크스페이스 root 우선**. resource_dir에 stale 복사본이 있으면
+///   새로 추가한 manifest가 안 보이는 문제 회피. 개발 흐름에서 manifest 즉시 반영.
+/// - **release 빌드는 resource_dir 우선** (워크스페이스 root는 사용자 PC에 없음).
 pub(crate) fn load_bundled_catalog(
     app: &tauri::AppHandle,
 ) -> Result<model_registry::Catalog, anyhow::Error> {
     use tauri::Manager;
 
-    let resource_dir = app.path().resource_dir()?;
-    let bundled_models = resource_dir.join("manifests/snapshot/models");
-    if bundled_models.exists() {
-        return Ok(model_registry::Catalog::load_from_dir(&bundled_models)?);
+    let try_workspace = || -> Option<model_registry::Catalog> {
+        // dev — 워크스페이스 root에서 manifests/snapshot/models/ 직접.
+        let cwd = std::env::current_dir().ok()?;
+        for ancestor in cwd.ancestors() {
+            let candidate = ancestor.join("manifests/snapshot/models");
+            if candidate.exists() {
+                return model_registry::Catalog::load_from_dir(&candidate).ok();
+            }
+        }
+        None
+    };
+
+    let try_resource_dir = || -> Option<model_registry::Catalog> {
+        let resource_dir = app.path().resource_dir().ok()?;
+        let bundled_models = resource_dir.join("manifests/snapshot/models");
+        if bundled_models.exists() {
+            return model_registry::Catalog::load_from_dir(&bundled_models).ok();
+        }
+        None
+    };
+
+    #[cfg(debug_assertions)]
+    {
+        if let Some(c) = try_workspace() {
+            tracing::info!("catalog loaded from workspace root (dev)");
+            return Ok(c);
+        }
+        if let Some(c) = try_resource_dir() {
+            tracing::info!("catalog loaded from resource_dir (dev fallback)");
+            return Ok(c);
+        }
     }
 
-    // dev fallback — 워크스페이스 root.
-    let cwd = std::env::current_dir()?;
-    for ancestor in cwd.ancestors() {
-        let candidate = ancestor.join("manifests/snapshot/models");
-        if candidate.exists() {
-            return Ok(model_registry::Catalog::load_from_dir(&candidate)?);
+    #[cfg(not(debug_assertions))]
+    {
+        if let Some(c) = try_resource_dir() {
+            return Ok(c);
+        }
+        // release fallback — sandbox 미적용 환경 대비.
+        if let Some(c) = try_workspace() {
+            return Ok(c);
         }
     }
 

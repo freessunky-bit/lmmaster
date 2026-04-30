@@ -20,6 +20,11 @@ function Step($name, $block) {
   Write-Output "OK: $name"
 }
 
+Step "Tauri ACL drift" {
+  # IPC 명령이 capabilities/main.json에 모두 등록됐는지 확인 — 누락 시 사용자 클릭 실패.
+  & "$PSScriptRoot\check-acl-drift.ps1"
+}
+
 Step "cargo fmt --check" {
   cargo fmt --all -- --check 2>&1 | Select-Object -Last 10
 }

@@ -1,0 +1,299 @@
+/* Chat 페이지 — design-system tokens만 사용. */
+
+.chat-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-8);
+  height: 100%;
+  overflow: hidden;
+}
+
+.chat-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.chat-title {
+  margin: 0;
+  font-size: var(--fs-22);
+  font-weight: var(--weight-semi);
+  letter-spacing: -0.01em;
+}
+
+.chat-subtitle {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+}
+
+.chat-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.chat-model-select {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chat-label {
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+}
+
+.chat-model-select select {
+  appearance: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-13);
+  padding: 0 var(--space-3);
+  height: 32px;
+  min-width: 220px;
+}
+
+.chat-action {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-12);
+  padding: 0 var(--space-3);
+  height: 32px;
+  cursor: pointer;
+}
+
+.chat-action:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
+.chat-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Install Center 와 동일한 ghost-style — 흰 폰트 대비 부족 회피. */
+.chat-action.is-primary {
+  background: var(--primary-a-2);
+  color: var(--primary);
+  border-color: var(--primary-a-3);
+  font-weight: 600;
+}
+
+.chat-action.is-primary:hover:not(:disabled) {
+  background: var(--primary-a-3);
+}
+
+.chat-action.is-stop {
+  background: var(--warn-a-2);
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.chat-empty {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-2);
+}
+
+.chat-empty-text {
+  margin: 0;
+}
+
+.chat-stream-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-stream {
+  flex: 1;
+  /* min-height: 0 — flex 자식이 부모를 늘리지 않게. 안 그러면 sentinel scroll이
+     실제 스크롤 컨테이너가 아닌 페이지에 적용돼 사이드바도 같이 움직임. */
+  min-height: 0;
+  overflow-y: auto;
+  /* 마지막 메시지가 입력창에 가려지지 않도록 하단 padding을 넉넉히. streaming delta로
+     bubble이 자라는 중에도 입력창과 겹치지 않게. */
+  padding: var(--space-4) var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  /* 모바일/터치 환경에서 부드러운 스크롤. */
+  -webkit-overflow-scrolling: touch;
+  /* 새 콘텐츠 추가 시 브라우저 자체 anchor 보존 — 위에서 읽는 중 점프 방지. */
+  overflow-anchor: auto;
+}
+
+/* 플로팅 "맨 아래로" 버튼 — 사용자가 위로 스크롤한 상태에서 새 메시지 도착 시 안내. */
+.chat-scroll-to-bottom {
+  position: absolute;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  appearance: none;
+  background: var(--primary-a-2);
+  color: var(--primary);
+  border: 1px solid var(--primary-a-3);
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: var(--fs-12);
+  font-weight: 600;
+  padding: 0 var(--space-3);
+  height: 32px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px var(--black-a-3);
+  z-index: 1;
+  /* primary-a-2는 backdrop이 어두울 때 살짝 투명하게 보일 수 있어 surface 약간 섞음. */
+  backdrop-filter: blur(6px);
+}
+.chat-scroll-to-bottom:hover {
+  background: var(--primary-a-3);
+}
+.chat-scroll-to-bottom:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
+.chat-placeholder {
+  margin: auto;
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+}
+
+.chat-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-2);
+  max-width: 85%;
+}
+
+.chat-bubble.is-user {
+  align-self: flex-end;
+  background: var(--primary-a-2);
+  border: 1px solid var(--primary-a-3);
+}
+
+.chat-bubble.is-assistant {
+  align-self: flex-start;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.chat-bubble.is-error {
+  border-color: var(--error);
+  background: var(--error-a-2);
+}
+
+.chat-bubble-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.chat-bubble-role {
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+}
+
+.chat-bubble-took {
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chat-bubble-text {
+  margin: 0;
+  font-size: var(--fs-14);
+  color: var(--text);
+  line-height: var(--lh-loose);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-bubble-error {
+  color: var(--error);
+}
+
+.chat-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--primary);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: chat-blink 1s steps(2, jump-none) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-cursor {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+@keyframes chat-blink {
+  to {
+    opacity: 0;
+  }
+}
+
+.chat-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+}
+
+.chat-input {
+  appearance: none;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-14);
+  padding: var(--space-3);
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.chat-input:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 1px;
+  border-color: var(--primary);
+}
+
+.chat-input:disabled {
+  opacity: 0.5;
+}
+
+.chat-input-actions {
+  display: flex;
+  justify-content: flex-end;
+}

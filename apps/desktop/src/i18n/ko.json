@@ -3,6 +3,7 @@
     "home": "홈",
     "catalog": "모델 카탈로그",
     "install": "설치 센터",
+    "chat": "채팅",
     "runtimes": "런타임",
     "workspace": "워크스페이스",
     "projects": "프로젝트 연결",
@@ -786,6 +787,8 @@
       "sections": {
         "getting-started": "시작하기",
         "catalog": "모델 카탈로그",
+        "chat": "채팅으로 시험하기",
+        "model-tuning": "모델별 권장 세팅",
         "workbench": "워크벤치",
         "knowledge": "자료 인덱싱 (RAG)",
         "api-keys": "API 키 + 외부 웹앱",
@@ -842,6 +845,7 @@
     "search": { "placeholder": "모델 이름 검색" },
     "category": {
       "all": "전체",
+      "new": "🔥 새 모델",
       "agent-general": "일반 어시스턴트",
       "roleplay": "롤플레이",
       "coding": "코딩",
@@ -926,7 +930,14 @@
     "quantRecommended": "이게 권장이에요",
     "install": {
       "cta": "이 모델 설치할게요",
-      "aria": "{{name}} 설치 페이지로 이동할게요"
+      "aria": "{{name}}을(를) 받아올게요",
+      "starting": "받기를 시작하고 있어요",
+      "running": "받고 있어요",
+      "cancel": "취소할래요",
+      "done": "받기 완료. 이제 30초 측정을 해볼래요?",
+      "cancelled": "받기를 취소했어요",
+      "retry": "다시 받을래요",
+      "lmsRedirect": "LM Studio는 자체 앱에서 받아주세요. 카탈로그 검색에 모델 이름을 그대로 넣으면 찾을 수 있어요."
     }
   },
   "workspace": {

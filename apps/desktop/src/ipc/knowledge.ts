@@ -85,9 +85,9 @@ export type KnowledgeApiError =
   | { kind: "start-failed"; message: string }
   | { kind: "search-failed"; message: string }
   | { kind: "internal"; message: string }
-  | { kind: "already-downloading"; kind: string }
-  | { kind: "unknown-embedding-model"; kind: string }
-  | { kind: "model-not-downloaded"; kind: string };
+  | { kind: "already-downloading"; model_kind: string }
+  | { kind: "unknown-embedding-model"; model_kind: string }
+  | { kind: "model-not-downloaded"; model_kind: string };
 
 // ── Phase 9'.a — Embedding model panel types ─────────────────────────
 

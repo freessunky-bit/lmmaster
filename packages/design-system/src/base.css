@@ -57,7 +57,11 @@ button:active:not(:disabled),
   display: grid;
   grid-template-columns: 240px 1fr;
   height: 100vh;
+  /* min-height:0 + overflow:hidden — 자식의 콘텐츠가 부모를 늘려서 페이지 전체가
+     스크롤되지 않게. 사이드바와 메인은 각자 별도 스크롤 컨테이너. */
+  min-height: 0;
   background: var(--bg);
+  overflow: hidden;
 }
 
 .sidebar {
@@ -67,6 +71,11 @@ button:active:not(:disabled),
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  /* nav 항목이 viewport보다 많으면 사이드바 자체에서만 스크롤 — 메인 콘텐츠
+     스크롤과 분리되어 메뉴가 같이 움직이지 않음. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
 }
 
 .brand {
@@ -156,8 +165,12 @@ button:active:not(:disabled),
 
 .content {
   display: grid;
-  grid-template-rows: 56px 1fr;
+  /* `1fr`은 사실 `minmax(auto, 1fr)`이라 자식이 크면 행이 늘어남 → 페이지 전체 스크롤 발생.
+     `minmax(0, 1fr)`로 자식 height가 100% 안에 갇히게 강제. */
+  grid-template-rows: 56px minmax(0, 1fr);
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .topbar {

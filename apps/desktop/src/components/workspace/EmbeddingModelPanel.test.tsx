@@ -141,7 +141,9 @@ describe("EmbeddingModelPanel", () => {
 
   it("진행률 progressbar는 percent를 반영해요", async () => {
     vi.mocked(listEmbeddingModels).mockResolvedValue(MODELS);
-    let onEvent: ((ev: unknown) => void) | null = null;
+    // noop default — 실제 listener는 mockImplementationOnce가 덮어씀.
+    // TS가 let의 narrow를 closure에 적용 못해 `never`로 추론하는 문제 회피.
+    let onEvent: (ev: unknown) => void = () => {};
     vi.mocked(startEmbeddingDownload).mockImplementationOnce(
       async (_kind, listener) => {
         onEvent = listener as unknown as (ev: unknown) => void;
@@ -184,7 +186,9 @@ describe("EmbeddingModelPanel", () => {
 
   it("실패 이벤트는 카드별 error alert를 표시해요", async () => {
     vi.mocked(listEmbeddingModels).mockResolvedValue(MODELS);
-    let onEvent: ((ev: unknown) => void) | null = null;
+    // noop default — 실제 listener는 mockImplementationOnce가 덮어씀.
+    // TS가 let의 narrow를 closure에 적용 못해 `never`로 추론하는 문제 회피.
+    let onEvent: (ev: unknown) => void = () => {};
     vi.mocked(startEmbeddingDownload).mockImplementationOnce(
       async (_kind, listener) => {
         onEvent = listener as unknown as (ev: unknown) => void;
@@ -257,7 +261,8 @@ describe("EmbeddingModelPanel", () => {
 
   it("진행 중에는 'Cancel' 버튼만 노출되고 cancel 호출 시 IPC가 호출돼요", async () => {
     vi.mocked(listEmbeddingModels).mockResolvedValue(MODELS);
-    let onEvent: ((ev: any) => void) | null = null;
+    // noop default — 실제 listener는 mockImplementationOnce가 덮어씀.
+    let onEvent: (ev: any) => void = () => {};
     const handle: DownloadEmbeddingHandle = {
       kind: "bge-m3",
       cancel: vi.fn(async () => {}),

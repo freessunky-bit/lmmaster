@@ -7,9 +7,11 @@
 //! - 카탈로그가 동일 process 안에 있어 host fingerprint는 runtime_detector::probe로 즉시 산출.
 
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use bench_harness::{
-    baseline_korean_seeds, fingerprint_short, run_bench, BenchKey, BenchPlan, BenchReport,
+    baseline_korean_seeds, fingerprint_short, run_bench, BenchErrorReport, BenchKey,
+    BenchMetricsSource, BenchPlan, BenchReport,
 };
 use scopeguard::defer;
 use serde::Serialize;
@@ -79,6 +81,31 @@ pub async fn start_bench(
         }
     };
 
+    // ── Preflight (Ollama only) ─────────────────────────────────────────
+    //
+    // 정책 (phase-install-bench-bugfix-decision §2.4):
+    // - /api/version 실패 → RuntimeUnreachable.
+    // - /api/tags에 모델 없음 → ModelNotLoaded.
+    // - 30초 budget 낭비 + 6회 즉시 fail 노이즈 차단.
+    //
+    // LM Studio는 v1에서 preflight skip — 어댑터 자체가 model 미존재를 그대로 매핑함.
+    if matches!(runtime_kind, RuntimeKind::Ollama) {
+        if let Some(report) = ollama_preflight(
+            &app,
+            runtime_kind,
+            &model_id,
+            &quant_label,
+            &digest_at_bench,
+            &host,
+        )
+        .await
+        {
+            // 캐시 저장 안 함 — 잠깐 끄거나 한 번만 모델 안 받았을 수 있어, 다음 시도엔 재검증 필요.
+            let _ = app.emit("bench:finished", &report);
+            return Ok(report);
+        }
+    }
+
     let plan = BenchPlan {
         runtime_kind,
         model_id: model_id.clone(),
@@ -109,6 +136,93 @@ pub async fn start_bench(
 
     let _ = app.emit("bench:finished", &report);
     Ok(report)
+}
+
+/// Ollama preflight — 런타임 + 모델 존재 빠른 확인. 실패 시 즉시 보고서 반환.
+///
+/// Returns:
+/// - `None` — preflight 통과 → 본 측정 진행.
+/// - `Some(report)` — preflight 실패 → 본 측정 skip + 한국어 안내 노출.
+async fn ollama_preflight(
+    app: &AppHandle,
+    runtime_kind: RuntimeKind,
+    model_id: &str,
+    quant_label: &Option<String>,
+    digest_at_bench: &Option<String>,
+    host: &shared_types::HostFingerprint,
+) -> Option<BenchReport> {
+    use adapter_ollama::OllamaAdapter;
+    let adapter = OllamaAdapter::new();
+
+    // 1) /api/tags로 모델 + 런타임 동시 검증.
+    //    has_model 자체가 /api/tags 호출 → reqwest 연결 실패면 RuntimeUnreachable.
+    match adapter.has_model(model_id).await {
+        Ok(true) => None,
+        Ok(false) => Some(preflight_failed_report(
+            runtime_kind,
+            model_id,
+            quant_label,
+            digest_at_bench,
+            host,
+            BenchErrorReport::ModelNotLoaded {
+                model_id: model_id.to_string(),
+            },
+        )),
+        Err(e) => {
+            tracing::debug!(error = %e, "ollama preflight failed — runtime unreachable");
+            // emit hint 이벤트 — 사용자 향 카피는 BenchChip이 i18n 키로 처리.
+            let _ = app.emit(
+                "bench:preflight",
+                &serde_json::json!({
+                    "model_id": model_id,
+                    "kind": "runtime-unreachable",
+                }),
+            );
+            Some(preflight_failed_report(
+                runtime_kind,
+                model_id,
+                quant_label,
+                digest_at_bench,
+                host,
+                BenchErrorReport::RuntimeUnreachable {
+                    message: e.to_string(),
+                },
+            ))
+        }
+    }
+}
+
+fn preflight_failed_report(
+    runtime_kind: RuntimeKind,
+    model_id: &str,
+    quant_label: &Option<String>,
+    digest_at_bench: &Option<String>,
+    host: &shared_types::HostFingerprint,
+    error: BenchErrorReport,
+) -> BenchReport {
+    let host_short = fingerprint_short(host);
+    BenchReport {
+        runtime_kind,
+        model_id: model_id.to_string(),
+        quant_label: quant_label.clone(),
+        host_fingerprint_short: host_short,
+        bench_at: SystemTime::now(),
+        digest_at_bench: digest_at_bench.clone(),
+        tg_tps: 0.0,
+        ttft_ms: 0,
+        pp_tps: None,
+        e2e_ms: 0,
+        cold_load_ms: None,
+        peak_vram_mb: None,
+        peak_ram_delta_mb: None,
+        metrics_source: BenchMetricsSource::Native,
+        sample_count: 0,
+        prompts_used: Vec::new(),
+        timeout_hit: false,
+        sample_text_excerpt: None,
+        took_ms: 0,
+        error: Some(error),
+    }
 }
 
 /// 진행 중인 측정 취소 — idempotent.

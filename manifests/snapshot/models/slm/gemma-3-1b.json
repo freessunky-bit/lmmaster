@@ -1,0 +1,58 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "gemma-3-1b-it",
+      "display_name": "Gemma 3 1B Instruct",
+      "category": "slm",
+      "model_family": "gemma",
+      "source": {
+        "type": "hugging-face",
+        "repo": "google/gemma-3-1b-it-qat-q4_0-gguf",
+        "file": "gemma-3-1b-it-q4_0.gguf"
+      },
+      "hub_id": "gemma3:1b",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_0",
+          "size_mb": 815,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "gemma-3-1b-it-q4_0.gguf"
+        }
+      ],
+      "min_vram_mb": null,
+      "rec_vram_mb": 2048,
+      "min_ram_mb": 4096,
+      "rec_ram_mb": 8192,
+      "install_size_mb": 815,
+      "context_guidance": "최대 32K context. 짧은 대화/요약/구조화 출력에 강해요. 작아서 빠른 응답이 장점이에요.",
+      "language_strength": 7,
+      "roleplay_strength": 5,
+      "coding_strength": 5,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "Gemma Terms of Use",
+      "maturity": "stable",
+      "portable_suitability": 9,
+      "on_device_suitability": 9,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "구조화 JSON 출력",
+        "짧은 한영 번역",
+        "온디바이스 비서"
+      ],
+      "warnings": [
+        "한국어 자연스러움은 EXAONE/Qwen보다 약간 부족해요. 영어 + 코드 + 구조 출력에 강점이 있어요."
+      ]
+    }
+  ]
+}

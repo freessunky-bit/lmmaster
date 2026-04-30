@@ -1,18 +1,21 @@
-//! Bench runner — warmup 1회 + measure 2회 + 30초 timeout + cancel.
+//! Bench runner — warmup 1회 + measure 2회 + 분리된 timeout + cancel.
 //!
-//! 정책 (phase-2pc-bench-decision.md §4, §5):
-//! - tokio::select! { harness, sleep(30s), cancel } — partial report 정책.
-//! - warmup pass: keep_alive "5m", load_duration만 보존.
-//! - measure pass × 2: 3 prompts × 2 = 6 호출, 산술평균.
+//! 정책 (phase-2pc-bench-decision.md §4, §5 + 2026-04-30 사용자 첫 실행 보강):
+//! - **warmup**은 cold load (모델을 메모리에 처음 올림) 포함이라 측정 budget과 분리.
+//!   - 1.2B 모델도 CPU에선 첫 응답까지 15-30초 걸릴 수 있고, 7B+면 30-60초.
+//!   - warmup 자체 timeout 90s, 본 측정과 별개.
+//! - **measure budget**: warmup 끝난 후부터 60초. 이때 모델은 warm 상태라 호출당 1-3초.
+//!   - 6 호출 (2 패스 × 3 prompt) × 평균 5초 = 30초 표준, CPU only면 60초까지 여유.
 //! - cancel 시 stream drop → server abort.
-//! - 0 패스 partial = error: Timeout.
+//! - 0 패스 partial = error: ColdLoadTimeout (warmup 단계) 또는 Timeout (measure 단계).
+//! - 각 호출 elapsed_ms를 tracing::info로 로그 — 사용자 진단 + 후속 튜닝.
 
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
-use tracing::warn;
+use tracing::{info, warn};
 
 use shared_types::{HostFingerprint, RuntimeKind};
 
@@ -23,7 +26,10 @@ use crate::types::{
     PromptSeed,
 };
 
-pub const BENCH_BUDGET_SECS: u64 = 30;
+/// 본 측정 (warmup 후) budget. 6 호출에 충분.
+pub const BENCH_BUDGET_SECS: u64 = 60;
+/// Warmup (cold model load + 첫 응답) timeout. measure budget 시작 전에 별도 소진.
+pub const WARMUP_TIMEOUT_SECS: u64 = 90;
 pub const WARMUP_KEEP_ALIVE: &str = "5m";
 pub const MEASURE_KEEP_ALIVE: &str = "5m";
 
@@ -53,6 +59,11 @@ impl BenchPlan {
 ///
 /// 외부에서 `cancel.cancelled()` 호출 시 즉시 부분 보고서 반환.
 /// timeout 발생 시 `timeout_hit: true`로 부분 보고서 반환.
+///
+/// 모든 호출이 실패해 sample이 0개일 때, **마지막 어댑터 에러를 그대로 보존**해
+/// `BenchErrorReport`로 매핑한다. 사용자가 "Ollama가 안 켜졌어요"인지 "이 모델 안 받았어요"인지
+/// 구분할 수 있게 하기 위함 — generic "측정 호출이 모두 실패했어요"는 이제 `BenchError::Internal`이
+/// 마지막일 때만 노출된다.
 pub async fn run_bench(
     adapter: Arc<dyn BenchAdapter>,
     plan: BenchPlan,
@@ -62,18 +73,98 @@ pub async fn run_bench(
     let bench_at = SystemTime::now();
     let key = plan.key();
 
-    let bench_fut = harness_loop(adapter.clone(), &plan, &cancel);
-    let timeout_fut = sleep(Duration::from_secs(BENCH_BUDGET_SECS));
-    let cancel_fut = cancel.cancelled();
+    info!(
+        runtime = ?plan.runtime_kind,
+        model = %plan.model_id,
+        warmup_timeout_s = WARMUP_TIMEOUT_SECS,
+        measure_budget_s = BENCH_BUDGET_SECS,
+        "bench: starting"
+    );
 
-    let (samples, cold_load_ms, partial_reason) = tokio::select! {
-        result = bench_fut => result,
-        () = timeout_fut => {
-            warn!("bench budget hit ({}s)", BENCH_BUDGET_SECS);
-            (Vec::new(), None, Some(PartialReason::Timeout))
+    // ── Phase 1: Warmup (cold load 포함, 90s 한도) — measure budget과 완전 분리 ──
+    if plan.prompts.is_empty() {
+        return aggregate(
+            &plan,
+            &key,
+            Vec::new(),
+            None,
+            Some(PartialReason::Timeout),
+            None,
+            bench_at,
+            started,
+        );
+    }
+    let warmup_started = Instant::now();
+    let warmup_seed = &plan.prompts[0];
+    let warmup_fut = adapter.run_prompt(
+        &plan.model_id,
+        &warmup_seed.id,
+        &warmup_seed.text,
+        WARMUP_KEEP_ALIVE,
+        &cancel,
+    );
+    let cold_load_ms: Option<u32> = tokio::select! {
+        result = warmup_fut => match result {
+            Ok(s) => {
+                let elapsed = warmup_started.elapsed().as_millis() as u32;
+                info!(
+                    elapsed_ms = elapsed,
+                    load_ms = ?s.load_ms,
+                    ttft_ms = s.ttft_ms,
+                    "bench: warmup done (cold load 포함)"
+                );
+                s.load_ms
+            }
+            Err(BenchError::Cancelled) => {
+                return aggregate(&plan, &key, Vec::new(), None, Some(PartialReason::Cancelled), None, bench_at, started);
+            }
+            Err(e) => {
+                warn!(error = %e, elapsed_ms = warmup_started.elapsed().as_millis() as u64, "bench: warmup failed");
+                return aggregate(&plan, &key, Vec::new(), None, None, err_to_report(&e), bench_at, started);
+            }
+        },
+        () = sleep(Duration::from_secs(WARMUP_TIMEOUT_SECS)) => {
+            let elapsed = warmup_started.elapsed().as_secs();
+            warn!(elapsed_s = elapsed, timeout_s = WARMUP_TIMEOUT_SECS, "bench: warmup timeout");
+            return aggregate(
+                &plan,
+                &key,
+                Vec::new(),
+                None,
+                Some(PartialReason::WarmupTimeout),
+                None,
+                bench_at,
+                started,
+            );
         }
-        () = cancel_fut => {
-            (Vec::new(), None, Some(PartialReason::Cancelled))
+        () = cancel.cancelled() => {
+            return aggregate(&plan, &key, Vec::new(), None, Some(PartialReason::Cancelled), None, bench_at, started);
+        }
+    };
+
+    // ── Phase 2: Measurement (60s budget, warm 상태 모델로 6 호출) ──
+    let measure_started = Instant::now();
+    let measure_fut = measure_loop(adapter.clone(), &plan, &cancel);
+    let (samples, partial_reason, last_error) = tokio::select! {
+        result = measure_fut => {
+            let (s, r, e) = result;
+            info!(
+                count = s.len(),
+                elapsed_ms = measure_started.elapsed().as_millis() as u64,
+                partial = ?r,
+                "bench: measure done"
+            );
+            (s, r, e)
+        }
+        () = sleep(Duration::from_secs(BENCH_BUDGET_SECS)) => {
+            warn!(
+                budget_s = BENCH_BUDGET_SECS,
+                "bench: measure budget hit — partial report"
+            );
+            (Vec::new(), Some(PartialReason::Timeout), None)
+        }
+        () = cancel.cancelled() => {
+            (Vec::new(), Some(PartialReason::Cancelled), None)
         }
     };
 
@@ -83,6 +174,7 @@ pub async fn run_bench(
         samples,
         cold_load_ms,
         partial_reason,
+        last_error,
         bench_at,
         started,
     )
@@ -90,51 +182,58 @@ pub async fn run_bench(
 
 #[derive(Debug, Clone, Copy)]
 enum PartialReason {
+    /// measure budget (warmup 후) 타임아웃.
     Timeout,
+    /// warmup 단계 자체가 90s 안에 못 끝남 — 모델이 처음 켜지는 중일 가능성.
+    WarmupTimeout,
     Cancelled,
 }
 
-/// warmup 1회 + 3 prompts × 2 패스 = 6회 측정 — 30초 budget는 호출 측에서 보장.
-async fn harness_loop(
+/// 어댑터 에러를 사용자 향 `BenchErrorReport`로 매핑. `Cancelled`는 호출 측이 별도 처리.
+fn err_to_report(e: &BenchError) -> Option<BenchErrorReport> {
+    match e {
+        BenchError::RuntimeUnreachable(m) => {
+            Some(BenchErrorReport::RuntimeUnreachable { message: m.clone() })
+        }
+        BenchError::ModelNotLoaded(m) => Some(BenchErrorReport::ModelNotLoaded {
+            model_id: m.clone(),
+        }),
+        BenchError::InsufficientVram { need_mb, have_mb } => {
+            Some(BenchErrorReport::InsufficientVram {
+                need_mb: *need_mb,
+                have_mb: *have_mb,
+            })
+        }
+        BenchError::Timeout => Some(BenchErrorReport::Timeout),
+        BenchError::Cancelled => Some(BenchErrorReport::Cancelled),
+        BenchError::Internal(m) => Some(BenchErrorReport::Other { message: m.clone() }),
+    }
+}
+
+/// 본 측정 루프 — 3 prompts × 2 패스 = 6회. warmup은 호출 측이 별도 처리.
+///
+/// 정책:
+/// - 각 호출 elapsed_ms를 tracing::info로 로그 (사용자 진단 + 후속 튜닝).
+/// - 모든 호출이 실패하면 마지막 어댑터 에러를 `last_error`로 반환 (sample_count==0 케이스 진단).
+/// - 한 호출 실패해도 다음 호출 계속 — 일시 hiccup 흡수.
+#[allow(clippy::type_complexity)]
+async fn measure_loop(
     adapter: Arc<dyn BenchAdapter>,
     plan: &BenchPlan,
     cancel: &CancellationToken,
-) -> (Vec<BenchSample>, Option<u32>, Option<PartialReason>) {
-    if plan.prompts.is_empty() {
-        return (Vec::new(), None, Some(PartialReason::Timeout));
-    }
-
-    let mut cold_load_ms: Option<u32> = None;
-
-    // ── warmup ────────────────────────────────────────────────────
-    let warmup_seed = &plan.prompts[0];
-    match adapter
-        .run_prompt(
-            &plan.model_id,
-            &warmup_seed.id,
-            &warmup_seed.text,
-            WARMUP_KEEP_ALIVE,
-            cancel,
-        )
-        .await
-    {
-        Ok(s) => {
-            cold_load_ms = s.load_ms;
-        }
-        Err(BenchError::Cancelled) => return (Vec::new(), None, Some(PartialReason::Cancelled)),
-        Err(e) => {
-            warn!(error = %e, "warmup failed; aborting");
-            return (Vec::new(), cold_load_ms, None);
-        }
-    }
-
-    // ── measure passes — 2회 × prompts ──────────────────────────
+) -> (
+    Vec<BenchSample>,
+    Option<PartialReason>,
+    Option<BenchErrorReport>,
+) {
+    let mut last_error: Option<BenchErrorReport> = None;
     let mut samples: Vec<BenchSample> = Vec::with_capacity(plan.prompts.len() * 2);
     for pass_index in 0..2u8 {
         for seed in &plan.prompts {
             if cancel.is_cancelled() {
-                return (samples, cold_load_ms, Some(PartialReason::Cancelled));
+                return (samples, Some(PartialReason::Cancelled), last_error);
             }
+            let call_started = Instant::now();
             match adapter
                 .run_prompt(
                     &plan.model_id,
@@ -145,41 +244,78 @@ async fn harness_loop(
                 )
                 .await
             {
-                Ok(s) => samples.push(s),
+                Ok(s) => {
+                    let elapsed = call_started.elapsed().as_millis() as u64;
+                    info!(
+                        pass = pass_index,
+                        prompt = %seed.id,
+                        elapsed_ms = elapsed,
+                        tg_tps = s.tg_tps,
+                        ttft_ms = s.ttft_ms,
+                        "bench: measure call ok"
+                    );
+                    samples.push(s);
+                }
                 Err(BenchError::Cancelled) => {
-                    return (samples, cold_load_ms, Some(PartialReason::Cancelled));
+                    return (samples, Some(PartialReason::Cancelled), last_error);
                 }
                 Err(e) => {
-                    warn!(pass = pass_index, prompt = %seed.id, error = %e, "measure failed");
-                    // 한 prompt 실패해도 다음 prompt 계속 시도.
+                    let elapsed = call_started.elapsed().as_millis() as u64;
+                    warn!(
+                        pass = pass_index,
+                        prompt = %seed.id,
+                        elapsed_ms = elapsed,
+                        error = %e,
+                        "bench: measure call failed"
+                    );
+                    last_error = err_to_report(&e);
+                    // 한 prompt 실패해도 다음 prompt 계속 시도 — 일시 hiccup도 있을 수 있음.
                 }
             }
         }
     }
 
-    (samples, cold_load_ms, None)
+    (samples, None, last_error)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn aggregate(
     plan: &BenchPlan,
     key: &BenchKey,
     samples: Vec<BenchSample>,
     cold_load_ms: Option<u32>,
     partial_reason: Option<PartialReason>,
+    last_error: Option<BenchErrorReport>,
     bench_at: SystemTime,
     started: Instant,
 ) -> BenchReport {
     let took_ms = started.elapsed().as_millis() as u64;
-    let timeout_hit = matches!(partial_reason, Some(PartialReason::Timeout));
+    let timeout_hit = matches!(
+        partial_reason,
+        Some(PartialReason::Timeout) | Some(PartialReason::WarmupTimeout)
+    );
     let cancelled = matches!(partial_reason, Some(PartialReason::Cancelled));
+    let warmup_timeout = matches!(partial_reason, Some(PartialReason::WarmupTimeout));
 
     let prompts_used: Vec<String> = plan.prompts.iter().map(|p| p.id.clone()).collect();
 
     if samples.is_empty() {
+        // 우선순위: cancelled > warmup-timeout > timeout > 실제 어댑터 에러 > generic.
+        // warmup_timeout은 사용자에게 "처음 켜지는 중이에요. 다시 하면 빨라져요"로 안내해야
+        // 하므로 분리. 일반 timeout보다 진단성이 높음.
         let error = if cancelled {
             Some(BenchErrorReport::Cancelled)
+        } else if warmup_timeout {
+            Some(BenchErrorReport::Other {
+                message: format!(
+                    "모델을 처음 켜는 중이에요 ({}초). 한 번 더 시도하면 빨라져요.",
+                    WARMUP_TIMEOUT_SECS
+                ),
+            })
         } else if timeout_hit {
             Some(BenchErrorReport::Timeout)
+        } else if let Some(reported) = last_error {
+            Some(reported)
         } else {
             Some(BenchErrorReport::Other {
                 message: "측정 호출이 모두 실패했어요".into(),
@@ -416,8 +552,12 @@ mod tests {
         let cancel = CancellationToken::new();
         let report = run_bench(adapter, plan(), cancel).await;
         assert_eq!(report.sample_count, 0);
-        assert!(report.error.is_some());
-        assert!(matches!(report.error, Some(BenchErrorReport::Other { .. })));
+        // FailAdapter가 RuntimeUnreachable을 던지므로 그대로 매핑 — 더 이상 generic Other 아님.
+        // 사용자가 "Ollama가 안 켜졌어요" 같은 구체적 안내를 받는 것이 새 정책.
+        assert!(matches!(
+            report.error,
+            Some(BenchErrorReport::RuntimeUnreachable { .. })
+        ));
     }
 
     #[tokio::test]
@@ -455,7 +595,16 @@ mod tests {
         let s = vec![sample("a", 10.0), sample("b", 14.0)];
         let p = plan();
         let k = p.key();
-        let r = aggregate(&p, &k, s, Some(50), None, SystemTime::now(), Instant::now());
+        let r = aggregate(
+            &p,
+            &k,
+            s,
+            Some(50),
+            None,
+            None,
+            SystemTime::now(),
+            Instant::now(),
+        );
         assert_eq!(r.tg_tps, 12.0);
         assert!(matches!(r.metrics_source, BenchMetricsSource::Native));
         assert_eq!(r.sample_count, 2);
@@ -475,11 +624,59 @@ mod tests {
             vec![s1, s2],
             None,
             None,
+            None,
             SystemTime::now(),
             Instant::now(),
         );
         assert!(matches!(r.metrics_source, BenchMetricsSource::WallclockEst));
         // pp_tps는 valid sample 1개만 → 평균 = 80.
         assert_eq!(r.pp_tps, Some(80.0));
+    }
+
+    /// invariant: 어댑터가 RuntimeUnreachable을 던지면 BenchReport에 그대로 전달돼야 함.
+    /// 사용자에게 "Ollama 안 켜졌어요" 같은 구체적 안내를 주기 위함 — generic 메시지는 폐기.
+    #[tokio::test]
+    async fn runtime_unreachable_propagates_specific_error() {
+        let adapter = Arc::new(FailAdapter);
+        let cancel = CancellationToken::new();
+        let report = run_bench(adapter, plan(), cancel).await;
+        assert_eq!(report.sample_count, 0);
+        assert!(matches!(
+            report.error,
+            Some(BenchErrorReport::RuntimeUnreachable { .. })
+        ));
+    }
+
+    /// 모델이 등록되지 않은 어댑터 — ModelNotLoaded가 그대로 전달돼야 함.
+    struct ModelMissingAdapter;
+    #[async_trait]
+    impl BenchAdapter for ModelMissingAdapter {
+        fn runtime_label(&self) -> &'static str {
+            "missing"
+        }
+        async fn run_prompt(
+            &self,
+            model_id: &str,
+            _prompt_id: &str,
+            _text: &str,
+            _keep_alive: &str,
+            _cancel: &CancellationToken,
+        ) -> Result<BenchSample, BenchError> {
+            Err(BenchError::ModelNotLoaded(model_id.into()))
+        }
+    }
+
+    #[tokio::test]
+    async fn model_missing_propagates_specific_error() {
+        let adapter = Arc::new(ModelMissingAdapter);
+        let cancel = CancellationToken::new();
+        let report = run_bench(adapter, plan(), cancel).await;
+        assert_eq!(report.sample_count, 0);
+        match report.error {
+            Some(BenchErrorReport::ModelNotLoaded { model_id }) => {
+                assert_eq!(model_id, "test-model");
+            }
+            other => panic!("기대: ModelNotLoaded, 실제: {other:?}"),
+        }
     }
 }

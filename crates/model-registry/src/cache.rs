@@ -155,6 +155,9 @@ mod tests {
             use_case_examples: vec![],
             notes: None,
             warnings: vec![],
+            hub_id: None,
+            tier: crate::manifest::ModelTier::default(),
+            community_insights: None,
         }
     }
 

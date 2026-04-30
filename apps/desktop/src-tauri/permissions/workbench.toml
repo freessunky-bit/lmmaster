@@ -38,3 +38,27 @@ commands.allow = ["get_artifact_stats"]
 identifier = "allow-cleanup-artifacts-now"
 description = "Trigger an immediate cleanup of expired or oversized workbench artifacts."
 commands.allow = ["cleanup_artifacts_now"]
+
+# Phase 8'.b.1 — Catalog 의 "내가 만든 모델" 섹션이 호출하는 list IPC.
+
+[[permission]]
+identifier = "allow-list-custom-models"
+description = "List user-built custom models from model_registry (Workbench output)."
+commands.allow = ["list_custom_models"]
+
+# Phase 9'.b — Workbench Real toggle + LoRA 부트스트랩 (Python venv + LLaMA-Factory).
+
+[[permission]]
+identifier = "allow-workbench-real-status"
+description = "Read whether real quantize/lora is available (binary detection + venv check)."
+commands.allow = ["workbench_real_status"]
+
+[[permission]]
+identifier = "allow-lora-bootstrap-venv"
+description = "Bootstrap a Python venv + install LLaMA-Factory deps (~5-10GB). Streams BootstrapEvent. Requires explicit user consent."
+commands.allow = ["lora_bootstrap_venv"]
+
+[[permission]]
+identifier = "allow-cancel-lora-bootstrap"
+description = "Cancel an in-flight LoRA venv bootstrap (idempotent)."
+commands.allow = ["cancel_lora_bootstrap"]

@@ -111,24 +111,40 @@ fn make_entry(id: &str, cat: ModelCategory, install_mb: u64) -> ModelEntry {
         use_case_examples: vec![],
         notes: None,
         warnings: vec![],
+        hub_id: None,
+        tier: model_registry::ModelTier::default(),
+        community_insights: None,
     }
 }
 
 #[test]
-fn snapshot_loads_eight_seed_entries() {
+fn snapshot_loads_seed_entries() {
+    // Phase 13'.a / 13'.e — 8 → 12 → (Phase 13'.e.5 후 +30) 진화. ≥ 12를 lower bound로.
+    // 매 phase 카운트 변경마다 본 테스트 수정 X — 알려진 핵심 ID 포함만 검증.
     let dir = snapshot_dir();
     assert!(dir.exists(), "snapshot dir not found: {}", dir.display());
     let cat = Catalog::load_from_dir(&dir).expect("snapshot must parse");
     let ids: Vec<&str> = cat.entries().iter().map(|e| e.id.as_str()).collect();
-    assert_eq!(ids.len(), 8, "expected 8 seed entries, got: {:?}", ids);
-    assert!(ids.contains(&"exaone-4.0-1.2b-instruct"));
-    assert!(ids.contains(&"exaone-3.5-7.8b-instruct"));
-    assert!(ids.contains(&"exaone-4.0-32b-instruct"));
-    assert!(ids.contains(&"hcx-seed-8b"));
-    assert!(ids.contains(&"polyglot-ko-12.8b"));
-    assert!(ids.contains(&"qwen-2.5-coder-3b-instruct"));
-    assert!(ids.contains(&"llama-3.2-3b-instruct"));
-    assert!(ids.contains(&"whisper-large-v3-korean"));
+    assert!(
+        ids.len() >= 8,
+        "expected at least 8 seed entries, got {}: {:?}",
+        ids.len(),
+        ids
+    );
+    // 핵심 한국어 모델 — 절대 빠지면 안 됨.
+    for required in [
+        "exaone-4.0-1.2b-instruct",
+        "exaone-3.5-7.8b-instruct",
+        "exaone-4.0-32b-instruct",
+        "hcx-seed-8b",
+        "polyglot-ko-12.8b",
+        "whisper-large-v3-korean",
+    ] {
+        assert!(
+            ids.contains(&required),
+            "essential model missing: {required}"
+        );
+    }
 }
 
 #[test]

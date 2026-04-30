@@ -61,7 +61,9 @@ impl LlamaQuantizer {
             }
             // env가 가리키는 경로가 실제로 없음 → 즉시 에러 (사용자가 명시한 경로니까).
             return Err(WorkbenchError::ToolMissing {
-                tool: format!("{LLAMA_QUANTIZE_ENV} 환경변수가 가리키는 경로에 파일이 없어요: {path}"),
+                tool: format!(
+                    "{LLAMA_QUANTIZE_ENV} 환경변수가 가리키는 경로에 파일이 없어요: {path}"
+                ),
             });
         }
         match which::which("llama-quantize") {
@@ -349,7 +351,8 @@ fn map_quantize_stderr(stderr: &str, exit_code: Option<i32>) -> WorkbenchError {
     } else if lower.contains("invalid") && lower.contains("magic") {
         "GGUF 파일이 손상되었거나 형식이 달라요. 원본 모델을 다시 받아 주세요.".to_string()
     } else if lower.contains("unsupported") || lower.contains("unknown") {
-        "지원하지 않는 양자화 형식이에요. Q4_K_M / Q5_K_M / Q8_0 / FP16 중에서 골라 주세요.".to_string()
+        "지원하지 않는 양자화 형식이에요. Q4_K_M / Q5_K_M / Q8_0 / FP16 중에서 골라 주세요."
+            .to_string()
     } else if lower.contains("out of memory") || lower.contains("oom") {
         "메모리가 부족해요. 더 가벼운 양자화 형식을 골라 주세요.".to_string()
     } else if stderr.trim().is_empty() {

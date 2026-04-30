@@ -20,8 +20,8 @@ use shared_types::{HostFingerprint, ModelCategory};
 
 pub use cache::CacheError;
 pub use manifest::{
-    HfMeta, Maturity, ModelEntry, ModelManifest, ModelSource, QuantOption, VerificationInfo,
-    VerificationTier,
+    CommunityInsights, HfMeta, Maturity, ModelEntry, ModelManifest, ModelSource, ModelTier,
+    QuantOption, VerificationInfo, VerificationTier,
 };
 pub use recommender::{compute as compute_recommendation, ExclusionReason, Recommendation};
 pub use register::{CustomModel, ModelRegistry, ModelRegistryError};
@@ -122,6 +122,9 @@ mod tests {
             use_case_examples: vec![],
             notes: None,
             warnings: vec![],
+            hub_id: None,
+            tier: crate::manifest::ModelTier::default(),
+            community_insights: None,
         }
     }
 

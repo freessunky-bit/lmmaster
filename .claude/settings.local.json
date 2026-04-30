@@ -118,7 +118,8 @@
       "Bash(git remote *)",
       "Bash(gh --version)",
       "Bash(gh auth *)",
-      "PowerShell(gh *)"
+      "PowerShell(gh *)",
+      "Bash(git commit -m 'chore: ignore release-notes-*.md \\(auto-upload temp files\\) *)"
     ]
   }
 }

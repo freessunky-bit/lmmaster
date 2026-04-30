@@ -121,6 +121,8 @@ impl RegistryFetcherService {
 
         let mut fetched = 0usize;
         let mut failed = 0usize;
+        // Phase 13'.a — "catalog" id가 fetch되면 body를 보존해 hot-swap에 사용.
+        let mut catalog_body: Option<Vec<u8>> = None;
         for (id, r) in &results {
             match r {
                 Ok(fm) => {
@@ -131,6 +133,9 @@ impl RegistryFetcherService {
                         "manifest 갱신 완료"
                     );
                     fetched += 1;
+                    if id.as_str() == "catalog" {
+                        catalog_body = Some(fm.body.clone());
+                    }
                 }
                 Err(e) => {
                     tracing::warn!(manifest = %id, error = %e, "manifest 갱신 실패");
@@ -156,14 +161,51 @@ impl RegistryFetcherService {
 
         // 외부 fetch가 1개라도 성공했으면 catalog 무효화 + UI 알림.
         if let Some(handle) = app {
+            // Phase 13'.a — catalog body를 받았으면 직접 deserialize해서 swap.
+            //   기존엔 reload_from_bundled (디스크 재읽기)였지만, 그건 원격 갱신을 반영 못 함.
+            //   이제: 원격 catalog.json → CatalogState::swap_from_bundle_body.
+            let catalog_swapped = if let Some(body) = catalog_body {
+                if let Some(state) =
+                    handle.try_state::<Arc<crate::commands::CatalogState>>()
+                {
+                    match state.swap_from_bundle_body(&body) {
+                        Ok(count) => {
+                            tracing::info!(
+                                entries = count,
+                                "catalog hot-swap 완료 (원격 bundle 반영)"
+                            );
+                            true
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                error = %e,
+                                "catalog body decode 실패 — bundled로 폴백"
+                            );
+                            false
+                        }
+                    }
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
             if fetched > 0 {
                 if let Err(e) = handle.emit("catalog://refreshed", &snapshot) {
                     tracing::debug!(error = %e, "catalog://refreshed emit 실패");
                 }
-                // catalog state hot-reload — try_state로 만져요. 없으면 무시.
-                if let Some(state) = handle.try_state::<Arc<crate::commands::CatalogState>>() {
-                    if let Err(e) = state.reload_from_bundled(&handle) {
-                        tracing::debug!(error = %e, "catalog reload 실패 — 다음 startup에서 반영");
+                // catalog가 hot-swap 안 됐으면 (예: app manifest만 갱신) bundled에서 재로드.
+                if !catalog_swapped {
+                    if let Some(state) =
+                        handle.try_state::<Arc<crate::commands::CatalogState>>()
+                    {
+                        if let Err(e) = state.reload_from_bundled(&handle) {
+                            tracing::debug!(
+                                error = %e,
+                                "catalog reload 실패 — 다음 startup에서 반영"
+                            );
+                        }
                     }
                 }
             }

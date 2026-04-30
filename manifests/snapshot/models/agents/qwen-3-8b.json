@@ -1,0 +1,56 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "qwen-3-8b",
+      "display_name": "Qwen 3 8B",
+      "category": "agent-general",
+      "model_family": "qwen",
+      "source": {
+        "type": "hugging-face",
+        "repo": "Qwen/Qwen3-8B-GGUF",
+        "file": "Qwen3-8B-Q4_K_M.gguf"
+      },
+      "hub_id": "qwen3:8b",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 5200,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Qwen3-8B-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 6144,
+      "rec_vram_mb": 8192,
+      "min_ram_mb": 8192,
+      "rec_ram_mb": 16384,
+      "install_size_mb": 5200,
+      "context_guidance": "최대 128K context. thinking mode + tool use. 다국어 (한국어 포함) + 코드 강함.",
+      "language_strength": 9,
+      "roleplay_strength": 7,
+      "coding_strength": 8,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "Apache-2.0",
+      "maturity": "stable",
+      "portable_suitability": 7,
+      "on_device_suitability": 7,
+      "fine_tune_suitability": 8,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "한국어 + 다국어 비서",
+        "코드 작성/리뷰",
+        "단계별 추론 (thinking mode)"
+      ],
+      "warnings": []
+    }
+  ]
+}

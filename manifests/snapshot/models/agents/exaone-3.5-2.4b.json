@@ -1,0 +1,86 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-04-30T00:00:00Z",
+  "entries": [
+    {
+      "id": "exaone-3.5-2.4b-instruct",
+      "display_name": "EXAONE 3.5 2.4B Instruct",
+      "category": "agent-general",
+      "model_family": "exaone",
+      "source": {
+        "type": "hugging-face",
+        "repo": "LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct-GGUF",
+        "file": "EXAONE-3.5-2.4B-Instruct-Q4_K_M.gguf"
+      },
+      "hub_id": "exaone3.5:2.4b",
+      "tier": "verified",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 1500,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "EXAONE-3.5-2.4B-Instruct-Q4_K_M.gguf"
+        },
+        {
+          "label": "Q8_0",
+          "size_mb": 2600,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "EXAONE-3.5-2.4B-Instruct-Q8_0.gguf"
+        }
+      ],
+      "min_vram_mb": 2048,
+      "rec_vram_mb": 4096,
+      "min_ram_mb": 4096,
+      "rec_ram_mb": 8192,
+      "install_size_mb": 1500,
+      "context_guidance": "최대 32K context. 2.4B로 1.2B보다 답변 품질 명확히 좋고 7.8B보다 가벼워요. 사실관계 + 기본 추론 적정.",
+      "language_strength": 9,
+      "roleplay_strength": 7,
+      "coding_strength": 6,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "EXAONE Custom",
+      "maturity": "stable",
+      "portable_suitability": 8,
+      "on_device_suitability": 9,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "verified",
+        "verified_at": "2026-04-30",
+        "verified_by": "lmmaster-curator"
+      },
+      "use_case_examples": [
+        "한국어 일반 비서 — 1.2B로 부족할 때 권장",
+        "온디바이스 한국어 어시스턴트",
+        "RAG 베이스 모델"
+      ],
+      "warnings": [],
+      "community_insights": {
+        "strengths_ko": [
+          "1.2B와 7.8B 사이 sweet spot — 품질/속도 균형 우수",
+          "EXAONE 시리즈 한국어 정합성 그대로 유지",
+          "RTX 3060 6GB 같은 보급형 GPU에서도 잘 돌아요"
+        ],
+        "weaknesses_ko": [
+          "최신 모델(EXAONE 4.0)보다 사실관계 약간 떨어져요",
+          "코딩은 약함 — Qwen Coder 권장",
+          "vision 지원 X"
+        ],
+        "use_cases_ko": [
+          "온디바이스 일반 비서 (CPU/저-VRAM GPU)",
+          "한국어 RAG 검색 베이스",
+          "캐릭터 / 챗봇 기본 모델"
+        ],
+        "curator_note_ko": "1.2B는 너무 가볍고 7.8B는 무거울 때 정확히 들어맞는 모델이에요. EXAONE 4.0이 나왔지만 3.5는 안정성 + Ollama Hub 검증 wrapper로 권장.",
+        "sources": [
+          "huggingface.co/LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct",
+          "ollama.com/library/exaone3.5"
+        ],
+        "last_reviewed_at": "2026-04-30T00:00:00Z"
+      }
+    }
+  ]
+}

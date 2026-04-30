@@ -65,3 +65,13 @@ minisign.local.key.pwd
 
 # Release notes (자동 업로드용 임시 파일)
 release-notes-*.md
+
+# tsc 컴파일 산출물 — *.tsx/*.ts에서 자동 생성된 *.js (커밋 X)
+apps/desktop/src/**/*.js
+apps/desktop/tsconfig.tsbuildinfo
+
+# vitest 콘솔 출력 (디버그용 임시)
+apps/desktop/vitest*.out
+
+# Claude Code 작업 lock
+.claude/scheduled_tasks.lock

@@ -1,0 +1,14 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase install/bench bugfix: 카탈로그 drawer 안에서 직접 모델을 받을 수 있게 하는
+# Ollama /api/pull 스트리밍 IPC 권한.
+
+[[permission]]
+identifier = "allow-start-model-pull"
+description = "Start an Ollama /api/pull stream for a model_id. Streams ModelPullEvent to caller via Channel."
+commands.allow = ["start_model_pull"]
+
+[[permission]]
+identifier = "allow-cancel-model-pull"
+description = "Cancel an in-flight model pull by model_id (idempotent)."
+commands.allow = ["cancel_model_pull"]

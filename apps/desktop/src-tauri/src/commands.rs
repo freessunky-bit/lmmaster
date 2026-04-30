@@ -153,17 +153,57 @@ impl CatalogState {
         self.swap(Arc::new(catalog));
         Ok(())
     }
+
+    /// 원격에서 받은 catalog bundle (`ModelManifest` JSON) body를 decode해 hot-swap.
+    ///
+    /// 정책 (Phase 13'.a — live model catalog refresh):
+    /// - 받은 body는 단일 `ModelManifest` (모든 모델 entries 합본).
+    /// - schema_version != 1이면 거부 (다음 메이저 릴리스가 schema 깨면 stale fallback 유지).
+    /// - 빈 entries는 거부 (실수로 빈 bundle 푸시 방지).
+    /// - 성공 시 entry 개수 반환 (UI hint chip용).
+    pub fn swap_from_bundle_body(&self, body: &[u8]) -> Result<usize, anyhow::Error> {
+        let manifest: model_registry::ModelManifest = serde_json::from_slice(body)
+            .map_err(|e| anyhow::anyhow!("catalog bundle JSON parse 실패: {e}"))?;
+        if manifest.schema_version != 1 {
+            return Err(anyhow::anyhow!(
+                "catalog bundle schema_version={} 지원 안 함 (앱 업데이트 필요)",
+                manifest.schema_version
+            ));
+        }
+        if manifest.entries.is_empty() {
+            return Err(anyhow::anyhow!(
+                "catalog bundle entries가 비었어요 — stale fallback 유지"
+            ));
+        }
+        let count = manifest.entries.len();
+        let catalog = model_registry::Catalog::from_entries(manifest.entries);
+        self.swap(Arc::new(catalog));
+        Ok(count)
+    }
 }
 
 /// 카탈로그 — entries 필터(category Optional). 추천은 별도 호출.
+///
+/// Phase 13'.e.2: 각 entry에 HF metadata (`hf_meta`) 머지 — 큐레이션 시점엔 비어있는데
+/// 백엔드 cron이 채운 cache 값을 응답에 포함. 큐레이터가 manifest에 직접 작성하지 않아도
+/// downloads/likes/lastModified가 UI에 자동 노출됨.
 #[tauri::command]
 pub fn get_catalog(
     catalog: tauri::State<'_, Arc<CatalogState>>,
+    hf_cache: tauri::State<'_, Arc<crate::hf_meta::HfMetaCache>>,
     category: Option<ModelCategory>,
 ) -> Result<CatalogView, CatalogApiError> {
     let snap = catalog.snapshot();
-    let entries: Vec<model_registry::ModelEntry> =
+    let mut entries: Vec<model_registry::ModelEntry> =
         snap.filter(category).into_iter().cloned().collect();
+    // hf_meta가 manifest에 명시되지 않은 entry는 cache에서 가져와 머지.
+    for e in &mut entries {
+        if e.hf_meta.is_none() {
+            if let Some(meta) = hf_cache.get(&e.id) {
+                e.hf_meta = Some(meta);
+            }
+        }
+    }
     Ok(CatalogView {
         entries,
         recommendation: None,
@@ -235,5 +275,89 @@ mod tests {
         cache.set(dummy.clone());
         let got = cache.get().expect("cached");
         assert_eq!(got.summary_korean, "정상이에요");
+    }
+
+    // ── Phase 13'.a — CatalogState::swap_from_bundle_body invariants ──────
+
+    fn empty_catalog_state() -> CatalogState {
+        CatalogState::new(Arc::new(model_registry::Catalog::default()))
+    }
+
+    fn make_test_bundle(entries_json: &str) -> Vec<u8> {
+        format!(
+            r#"{{"schema_version":1,"generated_at":"2026-04-30T00:00:00Z","entries":[{}]}}"#,
+            entries_json
+        )
+        .into_bytes()
+    }
+
+    fn entry_json(id: &str) -> String {
+        format!(
+            r#"{{
+                "id": "{id}",
+                "display_name": "{id}",
+                "category": "agent-general",
+                "model_family": "test",
+                "source": {{"type": "direct-url", "url": "https://x"}},
+                "runner_compatibility": ["llama-cpp"],
+                "quantization_options": [],
+                "min_vram_mb": null,
+                "rec_vram_mb": null,
+                "min_ram_mb": 1024,
+                "rec_ram_mb": 2048,
+                "install_size_mb": 100,
+                "tool_support": false,
+                "vision_support": false,
+                "structured_output_support": false,
+                "license": "MIT",
+                "maturity": "stable",
+                "portable_suitability": 5,
+                "on_device_suitability": 5,
+                "fine_tune_suitability": 5
+            }}"#
+        )
+    }
+
+    #[test]
+    fn swap_from_bundle_body_accepts_valid_entries() {
+        let state = empty_catalog_state();
+        let body = make_test_bundle(&format!("{},{}", entry_json("alpha"), entry_json("beta")));
+        let count = state.swap_from_bundle_body(&body).expect("valid bundle");
+        assert_eq!(count, 2);
+        let snap = state.snapshot();
+        assert_eq!(snap.entries().len(), 2);
+        assert!(snap.entries().iter().any(|e| e.id == "alpha"));
+    }
+
+    #[test]
+    fn swap_from_bundle_body_rejects_wrong_schema() {
+        let state = empty_catalog_state();
+        let body = format!(
+            r#"{{"schema_version":2,"generated_at":"2026-04-30T00:00:00Z","entries":[{}]}}"#,
+            entry_json("alpha")
+        );
+        let err = state
+            .swap_from_bundle_body(body.as_bytes())
+            .expect_err("schema_version=2 should reject");
+        assert!(err.to_string().contains("schema_version=2"));
+    }
+
+    #[test]
+    fn swap_from_bundle_body_rejects_empty_entries() {
+        let state = empty_catalog_state();
+        let body = make_test_bundle("");
+        let err = state
+            .swap_from_bundle_body(&body)
+            .expect_err("empty entries should reject");
+        assert!(err.to_string().contains("비었어요"));
+    }
+
+    #[test]
+    fn swap_from_bundle_body_rejects_invalid_json() {
+        let state = empty_catalog_state();
+        let err = state
+            .swap_from_bundle_body(b"not json")
+            .expect_err("invalid JSON should reject");
+        assert!(err.to_string().contains("parse"));
     }
 }

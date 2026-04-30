@@ -145,10 +145,9 @@ impl LlamaFactoryTrainer {
         } else {
             run_python_venv(&system_python.path, &venv_dir, &cancel).await
         };
-        bootstrap_outcome.map_err(|e| {
+        bootstrap_outcome.inspect_err(|_| {
             // 부트스트랩 실패 → 깨끗하게 정리 (best-effort).
             let _ = std::fs::remove_dir_all(&venv_dir);
-            e
         })?;
 
         let python_path = venv_python_path(&venv_dir);
@@ -217,7 +216,14 @@ impl LoRATrainer for LlamaFactoryTrainer {
         progress: mpsc::Sender<QuantizeProgress>,
         cancel: &CancellationToken,
     ) -> Result<(), WorkbenchError> {
-        run_train_inner(&self.python_path, self.timeout, job, progress, cancel.clone()).await
+        run_train_inner(
+            &self.python_path,
+            self.timeout,
+            job,
+            progress,
+            cancel.clone(),
+        )
+        .await
     }
 }
 
@@ -246,7 +252,13 @@ async fn find_system_python() -> Result<SystemPython, WorkbenchError> {
         vec![PathBuf::from(p)]
     } else {
         let mut v = Vec::new();
-        for name in ["python3.12", "python3.11", "python3.10", "python3", "python"] {
+        for name in [
+            "python3.12",
+            "python3.11",
+            "python3.10",
+            "python3",
+            "python",
+        ] {
             if let Ok(p) = which::which(name) {
                 v.push(p);
             }
@@ -280,7 +292,9 @@ async fn find_system_python() -> Result<SystemPython, WorkbenchError> {
         }
     }
     Err(WorkbenchError::ToolMissing {
-        tool: format!("{last_err}. python 3.10 이상을 설치해 주세요. (https://www.python.org/downloads/)"),
+        tool: format!(
+            "{last_err}. python 3.10 이상을 설치해 주세요. (https://www.python.org/downloads/)"
+        ),
     })
 }
 
@@ -353,7 +367,12 @@ async fn run_uv_create(
         .stderr(Stdio::piped())
         .stdin(Stdio::null())
         .kill_on_drop(true);
-    spawn_and_wait(cmd, Duration::from_secs(DEFAULT_BOOTSTRAP_TIMEOUT_SECS), cancel).await
+    spawn_and_wait(
+        cmd,
+        Duration::from_secs(DEFAULT_BOOTSTRAP_TIMEOUT_SECS),
+        cancel,
+    )
+    .await
 }
 
 /// `python -m venv <dir>` fallback.
@@ -370,7 +389,12 @@ async fn run_python_venv(
         .stderr(Stdio::piped())
         .stdin(Stdio::null())
         .kill_on_drop(true);
-    spawn_and_wait(cmd, Duration::from_secs(DEFAULT_BOOTSTRAP_TIMEOUT_SECS), cancel).await
+    spawn_and_wait(
+        cmd,
+        Duration::from_secs(DEFAULT_BOOTSTRAP_TIMEOUT_SECS),
+        cancel,
+    )
+    .await
 }
 
 /// `python -m pip install llamafactory[torch,metrics]` (또는 단순 `llamafactory`).
@@ -633,7 +657,11 @@ async fn run_train_inner(
 
 /// 단일 yaml 파일 렌더 — LLaMA-Factory `train` config schema에 부합.
 fn render_llamafactory_yaml(job: &LoRAJob) -> String {
-    let template = if job.korean_preset { "alpaca_ko" } else { "alpaca" };
+    let template = if job.korean_preset {
+        "alpaca_ko"
+    } else {
+        "alpaca"
+    };
     format!(
         "model_name_or_path: {model}\n\
          dataset: {dataset}\n\
@@ -883,9 +911,7 @@ mod tests {
                 path: "/usr/bin/python3".into(),
             },
             BootstrapEvent::Done,
-            BootstrapEvent::Failed {
-                error: "x".into(),
-            },
+            BootstrapEvent::Failed { error: "x".into() },
         ];
         for e in evs {
             let s = serde_json::to_string(&e).unwrap();
@@ -969,21 +995,14 @@ mod tests {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let _ = std::fs::set_permissions(
-                &python_dest,
-                std::fs::Permissions::from_mode(0o755),
-            );
+            let _ = std::fs::set_permissions(&python_dest, std::fs::Permissions::from_mode(0o755));
         }
 
         let (tx, mut rx) = mpsc::channel::<BootstrapEvent>(32);
         let cancel = CancellationToken::new();
-        let result = LlamaFactoryTrainer::bootstrap_or_open(
-            venv_dir,
-            Duration::from_secs(10),
-            tx,
-            cancel,
-        )
-        .await;
+        let result =
+            LlamaFactoryTrainer::bootstrap_or_open(venv_dir, Duration::from_secs(10), tx, cancel)
+                .await;
 
         // event 수신 확인.
         let mut got_python_ready = false;
@@ -1011,13 +1030,9 @@ mod tests {
         let cancel = CancellationToken::new();
         cancel.cancel();
         // venv가 존재하지 않으니 system python 탐색 단계까지 진행.
-        let result = LlamaFactoryTrainer::bootstrap_or_open(
-            venv_dir,
-            Duration::from_secs(5),
-            tx,
-            cancel,
-        )
-        .await;
+        let result =
+            LlamaFactoryTrainer::bootstrap_or_open(venv_dir, Duration::from_secs(5), tx, cancel)
+                .await;
         // Cancelled 또는 system python 탐색 실패 (ToolMissing) — 둘 다 OK.
         let err = result.unwrap_err();
         assert!(matches!(

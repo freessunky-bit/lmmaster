@@ -16,3 +16,10 @@ commands.allow = ["list_api_keys"]
 identifier = "allow-revoke-api-key"
 description = "Revoke an API key by id (idempotent)."
 commands.allow = ["revoke_api_key"]
+
+# Phase 6'.c — 키 단위 pipelines override.
+
+[[permission]]
+identifier = "allow-update-api-key-pipelines"
+description = "Update the per-key pipelines override (matrix of enabled flags)."
+commands.allow = ["update_api_key_pipelines"]
