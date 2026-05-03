@@ -106,14 +106,15 @@ pub struct MetalInfo {
 
 /// `MTLCreateSystemDefaultDevice` → name + recommendedMaxWorkingSetSize + tier.
 /// 헤드리스/no-GPU 환경에선 None.
+///
+/// 정책 (2026-05-03 — clippy unused_unsafe fix):
+/// - objc2-metal v0.2+에서 wrapper API가 safe로 expose됨. unsafe 블록 제거.
 pub fn probe_metal() -> Option<MetalInfo> {
     use objc2_metal::{MTLCreateSystemDefaultDevice, MTLDevice, MTLGPUFamily};
 
-    // SAFETY: Metal API는 thread-safe하지만 main run loop와 무관하게 호출 가능.
-    let device = unsafe { MTLCreateSystemDefaultDevice() }?;
-
-    let name = unsafe { device.name() }.to_string();
-    let vram = unsafe { device.recommendedMaxWorkingSetSize() } as u64;
+    let device = MTLCreateSystemDefaultDevice()?;
+    let name = device.name().to_string();
+    let vram = device.recommendedMaxWorkingSetSize() as u64;
 
     let tier = [
         (MTLGPUFamily::Apple9, "Apple9"),
@@ -122,7 +123,7 @@ pub fn probe_metal() -> Option<MetalInfo> {
         (MTLGPUFamily::Mac2, "Mac2"),
     ]
     .iter()
-    .find(|(f, _)| unsafe { device.supportsFamily(*f) })
+    .find(|(f, _)| device.supportsFamily(*f))
     .map(|(_, s)| (*s).to_string())
     .unwrap_or_else(|| "Unknown".into());
 
