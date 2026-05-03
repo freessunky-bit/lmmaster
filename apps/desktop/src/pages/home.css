@@ -23,6 +23,15 @@
   letter-spacing: -0.01em;
 }
 
+/* Phase 14' v6 — sage gradient accent (splash와 일관 톤). */
+.home-hero-accent {
+  background: linear-gradient(135deg, #7cd4cc 0%, #5eddae 60%, #3fb887 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 6px rgba(94, 221, 174, 0.18));
+}
+
 .home-hero-subtitle {
   margin: 0;
   font-size: var(--fs-15);
