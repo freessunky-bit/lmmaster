@@ -11,6 +11,7 @@
 import {
   AmbientLight,
   BackSide,
+  BufferAttribute,
   BufferGeometry,
   Group,
   LineBasicMaterial,
@@ -19,6 +20,8 @@ import {
   MeshBasicMaterial,
   PerspectiveCamera,
   PointLight,
+  Points,
+  PointsMaterial,
   QuadraticBezierCurve3,
   Scene,
   SphereGeometry,
@@ -105,46 +108,46 @@ export function Globe3D({
     renderer.setPixelRatio(Math.min(globalThis.window?.devicePixelRatio ?? 1, 2));
     container.appendChild(renderer.domElement);
 
-    // Ambient + point light — 입체감.
-    scene.add(new AmbientLight(0x335544, 0.6));
-    const pointLight = new PointLight(0x7cfff5, 1.2, 10);
+    // Ambient + point light — 입체감 (톤다운 v6).
+    scene.add(new AmbientLight(0x2a4a3e, 0.5));
+    const pointLight = new PointLight(0x7cd4cc, 0.9, 10);
     pointLight.position.set(2, 3, 4);
     scene.add(pointLight);
 
-    // Globe sphere — 어두운 청록 + 약간 light reflection.
+    // Globe sphere — 더 깊은 dark teal (톤다운 v6).
     const sphereGeo = new SphereGeometry(1, 64, 32);
     const sphereMat = new MeshBasicMaterial({
-      color: 0x0a2818,
+      color: 0x081a13,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.65,
     });
     const sphere = new Mesh(sphereGeo, sphereMat);
     scene.add(sphere);
 
-    // Wireframe overlay — lat/long 그리드.
+    // Wireframe overlay — sage green lat/long 그리드 (톤다운).
     const wireSourceGeo = new SphereGeometry(1.003, 24, 12);
     const wireGeo = new WireframeGeometry(wireSourceGeo);
     const wireMat = new LineBasicMaterial({
-      color: 0x38ff7e,
+      color: 0x5eddae,
       transparent: true,
-      opacity: 0.16,
+      opacity: 0.11,
     });
     const wire = new LineSegments(wireGeo, wireMat);
     scene.add(wire);
     wireSourceGeo.dispose();
 
-    // Atmosphere glow — back-side sphere로 외곽 halo.
-    const atmGeo = new SphereGeometry(1.06, 32, 16);
+    // Atmosphere glow — back-side sphere로 외곽 halo (톤다운 + 더 큰 layer).
+    const atmGeo = new SphereGeometry(1.08, 32, 16);
     const atmMat = new MeshBasicMaterial({
-      color: 0x4cffa0,
+      color: 0x3fb887,
       transparent: true,
-      opacity: 0.08,
+      opacity: 0.06,
       side: BackSide,
     });
     const atm = new Mesh(atmGeo, atmMat);
     scene.add(atm);
 
-    // 노드들 — 표면 약간 위에 작은 sphere.
+    // 노드들 — 표면 약간 위에 작은 sphere (사이즈 작게 0.022 -> 0.018 톤다운 v6).
     const nodeGroup = new Group();
     const NODE_RADIUS_OFFSET = 1.012;
     type NodeRecord = {
@@ -157,8 +160,8 @@ export function Globe3D({
       const x = Math.cos(n.lat) * Math.sin(n.lon) * NODE_RADIUS_OFFSET;
       const y = Math.sin(n.lat) * NODE_RADIUS_OFFSET;
       const z = Math.cos(n.lat) * Math.cos(n.lon) * NODE_RADIUS_OFFSET;
-      const geo = new SphereGeometry(0.022, 12, 8);
-      const mat = new MeshBasicMaterial({ color: 0x7cfff5 });
+      const geo = new SphereGeometry(0.018, 12, 8);
+      const mat = new MeshBasicMaterial({ color: 0x7cd4cc });
       const mesh = new Mesh(geo, mat);
       mesh.position.set(x, y, z);
       nodeGroup.add(mesh);
@@ -166,7 +169,7 @@ export function Globe3D({
     });
     scene.add(nodeGroup);
 
-    // Connection arcs — bezier curve가 globe 표면 위로 솟아오름.
+    // Connection arcs — 더 얇은 stroke + opacity 낮음 (톤다운 v6).
     const arcGroup = new Group();
     type ArcRecord = { line: Line; geo: BufferGeometry; mat: LineBasicMaterial };
     const arcRecords: ArcRecord[] = [];
@@ -181,15 +184,40 @@ export function Globe3D({
       const points = curve.getPoints(40);
       const geo = new BufferGeometry().setFromPoints(points);
       const mat = new LineBasicMaterial({
-        color: 0x7cfff5,
+        color: 0x7cd4cc,
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.32,
       });
       const line = new Line(geo, mat);
       arcGroup.add(line);
       arcRecords.push({ line, geo, mat });
     });
     scene.add(arcGroup);
+
+    // Dust particles — globe 주변 부유하는 미세 점 (Phase 14' v6 권장).
+    // 200개 Points를 sphere 주위 random distribution + 천천히 회전 (입체감).
+    const dustCount = 200;
+    const dustGeo = new BufferGeometry();
+    const dustPositions = new Float32Array(dustCount * 3);
+    for (let i = 0; i < dustCount; i++) {
+      // sphere 주위 1.4 ~ 2.6 radius random.
+      const r = 1.4 + Math.random() * 1.2;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      dustPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      dustPositions[i * 3 + 1] = r * Math.cos(phi);
+      dustPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+    }
+    dustGeo.setAttribute("position", new BufferAttribute(dustPositions, 3));
+    const dustMat = new PointsMaterial({
+      size: 0.012,
+      color: 0xa8e6d4,
+      transparent: true,
+      opacity: 0.32,
+      sizeAttenuation: true,
+    });
+    const dust = new Points(dustGeo, dustMat);
+    scene.add(dust);
 
     // 라벨 div 생성 — HTML overlay.
     if (labelsContainer) {
@@ -216,12 +244,14 @@ export function Globe3D({
       atm.rotation.y += rotationSpeed;
       nodeGroup.rotation.y += rotationSpeed;
       arcGroup.rotation.y += rotationSpeed;
+      // Dust — 반대 방향 더 천천히 (parallax depth).
+      dust.rotation.y -= rotationSpeed * 0.3;
 
-      // Arc opacity sine wave — 데이터 흐르는 시각.
+      // Arc opacity sine wave — 톤다운 (Phase 14' v6, 글로우 축소).
       arcPhase += 0.012;
       arcRecords.forEach((rec, i) => {
         const phase = arcPhase + i * 0.7;
-        rec.mat.opacity = 0.3 + 0.4 * (Math.sin(phase) * 0.5 + 0.5);
+        rec.mat.opacity = 0.18 + 0.22 * (Math.sin(phase) * 0.5 + 0.5);
       });
 
       // Node 라벨 위치 갱신 — 3D → 2D projection.
@@ -243,8 +273,9 @@ export function Globe3D({
         const sy = -projector.y * halfSize + halfSize;
         rec.labelEl.style.transform = `translate3d(${sx}px, ${sy}px, 0)`;
 
-        if (isFront && dot > 0.15) {
-          rec.labelEl.style.opacity = String(Math.min(0.9, dot * 1.2));
+        // Phase 14' v6 — back-side cutoff 0.05 (거의 보이지만 매우 dim).
+        if (isFront && dot > 0.05) {
+          rec.labelEl.style.opacity = String(Math.min(0.85, dot * 1.0));
         } else {
           rec.labelEl.style.opacity = "0";
         }
@@ -264,6 +295,8 @@ export function Globe3D({
       wireMat.dispose();
       atmGeo.dispose();
       atmMat.dispose();
+      dustGeo.dispose();
+      dustMat.dispose();
       nodeRecords.forEach((rec) => {
         rec.mesh.geometry.dispose();
         (rec.mesh.material as MeshBasicMaterial).dispose();

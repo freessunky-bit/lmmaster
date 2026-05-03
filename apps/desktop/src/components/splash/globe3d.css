@@ -12,9 +12,10 @@
 
 .globe3d-canvas canvas {
   display: block;
+  /* 글로우 축소 (Phase 14' v6 권장) — 톤다운 sage green. */
   filter:
-    drop-shadow(0 0 28px rgba(56, 255, 126, 0.32))
-    drop-shadow(0 0 56px rgba(124, 255, 245, 0.18));
+    drop-shadow(0 0 16px rgba(94, 221, 174, 0.18))
+    drop-shadow(0 0 32px rgba(124, 212, 204, 0.10));
 }
 
 .globe3d-labels {
@@ -29,26 +30,24 @@
   position: absolute;
   top: 0;
   left: 0;
-  /* transform 기준점 — 라벨 좌측 + 노드 우측 6px offset. */
   margin-left: 8px;
   margin-top: -7px;
-  font-size: 11px;
+  font-family: var(--font-sans, "Pretendard Variable", system-ui, sans-serif);
+  font-size: 10.5px;
   font-weight: 500;
-  color: rgba(200, 230, 230, 0.95);
-  letter-spacing: 0.03em;
+  color: rgba(200, 230, 222, 0.92);
+  letter-spacing: 0.04em;
   white-space: nowrap;
+  /* 글로우 톤다운 (Phase 14' v6) — text-shadow 부드럽게. */
   text-shadow:
-    0 0 4px rgba(0, 0, 0, 0.95),
-    0 0 8px rgba(0, 0, 0, 0.7),
-    0 0 12px rgba(56, 255, 126, 0.25);
-  /* 미세 슬라이드 fade 위해 opacity transition만. transform은 매 frame이라 transition X. */
+    0 0 3px rgba(0, 0, 0, 0.95),
+    0 0 6px rgba(0, 0, 0, 0.6),
+    0 0 10px rgba(94, 221, 174, 0.18);
   transition: opacity 280ms cubic-bezier(0.16, 1, 0.3, 1);
-  /* 깔끔한 픽셀 정렬. */
   will-change: transform, opacity;
-  font-family: var(--font-sans, system-ui, sans-serif);
 }
 
-/* 라벨 옆 작은 점 — 노드와 라벨 시각 연결. */
+/* 라벨 옆 작은 점 — 노드와 라벨 시각 연결 (톤다운). */
 .globe3d-label::before {
   content: "";
   position: absolute;
@@ -56,6 +55,6 @@
   top: 50%;
   width: 4px;
   height: 1px;
-  background: rgba(124, 255, 245, 0.4);
+  background: rgba(124, 212, 204, 0.32);
   transform: translateY(-50%);
 }
