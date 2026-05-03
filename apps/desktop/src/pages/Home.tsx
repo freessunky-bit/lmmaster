@@ -59,7 +59,10 @@ export function Home({ gw, scanSummary, onPickModel }: HomeProps) {
     <div className="home-root">
       <section className="home-hero" aria-labelledby="home-hero-title">
         <h2 id="home-hero-title" className="home-hero-title">
-          {t("home.hero.title")}
+          <span className="home-hero-accent">
+            {t("home.hero.titleAccent", "함께여서")}
+          </span>
+          {t("home.hero.titleSuffix", " 가능한 것들")}
         </h2>
         <p className="home-hero-subtitle">{t("home.hero.subtitle")}</p>
         <GatewayPillLarge gw={gw} />

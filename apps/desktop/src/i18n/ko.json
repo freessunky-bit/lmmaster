@@ -20,7 +20,9 @@
     "gateway-failed": "로컬 게이트웨이를 켜지 못했어요. 원인: {{error}}",
     "gateway-stopping": "로컬 게이트웨이를 끄고 있어요…",
     "hero": {
-      "title": "오늘도 잘 와주셨어요",
+      "title": "함께여서 가능한 것들",
+      "titleAccent": "함께여서",
+      "titleSuffix": " 가능한 것들",
       "subtitle": "로컬 AI를 한국어로, 안전하게 써보세요."
     },
     "recommend": {
@@ -870,9 +872,11 @@
       "aria": "LMmaster를 준비하고 있어요",
       "skipHint": "Esc로 건너뛰기",
       "headline": {
-        "prefix": "지능을 모으고 ",
-        "accent": "있어요"
+        "prefix": "지금 ",
+        "accent": "여기",
+        "suffix": ", 나만의 AI"
       },
+      "copyright": "© 2026 MOJITO Lab",
       "subline": "런타임 · 모델 · 카탈로그가 한자리에 모여요",
       "stats": {
         "runtime": "런타임",
