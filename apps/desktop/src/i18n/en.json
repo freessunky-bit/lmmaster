@@ -20,7 +20,9 @@
     "gateway-failed": "Local gateway didn't start. Reason: {{error}}",
     "gateway-stopping": "Stopping the local gateway…",
     "hero": {
-      "title": "Welcome back",
+      "title": "Together, what we can build",
+      "titleAccent": "Together",
+      "titleSuffix": ", what we can build",
       "subtitle": "Local AI, in Korean, safely."
     },
     "recommend": {
@@ -870,9 +872,11 @@
       "aria": "Preparing LMmaster",
       "skipHint": "Press Esc to skip",
       "headline": {
-        "prefix": "Intelligence is gathering ",
-        "accent": "now"
+        "prefix": "Right ",
+        "accent": "here",
+        "suffix": ", my own AI"
       },
+      "copyright": "© 2026 MOJITO Lab",
       "subline": "Runtimes · models · catalog converge in one place",
       "stats": {
         "runtime": "runtimes",

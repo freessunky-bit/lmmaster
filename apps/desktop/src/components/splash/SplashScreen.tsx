@@ -193,10 +193,11 @@ export function SplashScreen({
               }}
             >
               <h1 className="splash-v4-headline">
-                {t("screens.splash.headline.prefix", "지능을 모으고 ")}
+                {t("screens.splash.headline.prefix", "지금 ")}
                 <span className="splash-v4-accent">
-                  {t("screens.splash.headline.accent", "있어요")}
+                  {t("screens.splash.headline.accent", "여기")}
                 </span>
+                {t("screens.splash.headline.suffix", ", 나만의 AI")}
               </h1>
               <p className="splash-v4-subline">
                 {t(
@@ -465,6 +466,20 @@ export function SplashScreen({
               {t("screens.splash.skipHint", "Esc로 건너뛰기")}
             </motion.div>
           </div>
+
+          {/* MOJITO Lab 카피라이트 — splash 절대 하단 (회사 정체성 / 브랜딩). */}
+          <motion.div
+            className="splash-copyright"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.4 }}
+            transition={{
+              delay: reducedMotion ? 0.5 : 2.8,
+              duration: 0.6,
+              ease: LINEAR_EASE,
+            }}
+          >
+            {t("screens.splash.copyright", "© 2026 MOJITO Lab")}
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

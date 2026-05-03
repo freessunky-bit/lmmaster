@@ -289,6 +289,23 @@
   font-variant: small-caps;
 }
 
+/* MOJITO Lab 카피라이트 — splash 절대 하단 중앙. */
+.splash-copyright {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+
 /* === reduced-motion === */
 
 @media (prefers-reduced-motion: reduce) {
