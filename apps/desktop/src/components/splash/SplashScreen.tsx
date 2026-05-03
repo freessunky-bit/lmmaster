@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BrandMark } from "../Brand";
+import { Globe3D } from "./Globe3D";
 import "./splash.css";
 
 export interface SplashScreenProps {
@@ -225,13 +226,18 @@ export function SplashScreen({
               </div>
             </motion.div>
 
-            {/* 우측 — globe + arcs. */}
+            {/* 우측 — Three.js Globe3D (Phase 14' v5). */}
             <div className="splash-v4-globe-wrap" aria-hidden="true">
+              <Globe3D
+                size={520}
+                rotationSpeed={reducedMotion ? 0 : 0.0014}
+              />
               <svg
-                className="splash-v4-globe"
+                className="splash-v4-globe-legacy"
                 viewBox={`0 0 ${VB} ${VB}`}
                 width="100%"
                 height="100%"
+                style={{ display: "none" }}
               >
                 <defs>
                   <radialGradient id="globe-fill-v4" cx="0.42" cy="0.4" r="0.7">
