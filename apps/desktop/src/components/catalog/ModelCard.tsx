@@ -6,6 +6,7 @@
 // - 카드 자체는 SpotlightCard 위에 얹어 hover spotlight.
 // - Drawer 열기는 onSelect 콜백 — Catalog가 owner.
 
+import { EyeOff, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type {
@@ -84,7 +85,8 @@ export function ModelCard({
                 "성인 콘텐츠 — 필터로 노출 중",
               )}
             >
-              {t("catalog.adultContent.chip", "🔞 성인")}
+              <EyeOff size={12} aria-hidden="true" />
+              {t("catalog.adultContent.chip", "성인")}
             </span>
           )}
           {model.commercial === false && (
@@ -96,7 +98,8 @@ export function ModelCard({
                 "비상업 라이선스 — 상업 사용 거부",
               )}
             >
-              {t("catalog.commercial.chip", "⚠ 비상업")}
+              <TriangleAlert size={12} aria-hidden="true" />
+              {t("catalog.commercial.chip", "비상업")}
             </span>
           )}
         </div>

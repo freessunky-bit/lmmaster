@@ -8,6 +8,7 @@
 // - "이 모델 설치할게요" → in-place 풀 진행 패널 (페이지 이동 없음).
 // - 풀 완료 시 자동으로 30초 측정 가능 상태로 전환 + CTA 강조.
 
+import { Sparkles } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -376,7 +377,10 @@ export function ModelDetailDrawer({
                 업데이트: {formatHfDate(model.hf_meta.last_modified)}
               </span>
               {model.tier === "new" && (
-                <span className="catalog-drawer-hfmeta-pill is-new">🔥 NEW</span>
+                <span className="catalog-drawer-hfmeta-pill is-new">
+                  <Sparkles size={12} aria-hidden="true" />
+                  NEW
+                </span>
               )}
             </div>
           )}

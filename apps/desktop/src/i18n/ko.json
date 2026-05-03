@@ -917,10 +917,10 @@
       "startWorkbenchTitle": "Workbench에서 이 모델로 시작해 볼래요? 의도와 모델 컨텍스트가 함께 전달돼요."
     },
     "adultContent": {
-      "on": "🔞 성인 모델 보임",
-      "off": "🔞 성인 모델 숨김",
+      "on": "성인 모델 보임",
+      "off": "성인 모델 숨김",
       "toggleTitle": "성인 콘텐츠 모델을 카탈로그에 노출할지 선택해요. 기본 OFF — 켜면 NSFW 라벨 모델이 ⚠ chip과 함께 표시돼요.",
-      "chip": "🔞 성인",
+      "chip": "성인",
       "chipTitle": "성인 콘텐츠 — 필터로 노출 중"
     },
     "commercial": {
@@ -929,7 +929,7 @@
     },
     "category": {
       "all": "전체",
-      "new": "🔥 새 모델",
+      "new": "새 모델",
       "agent-general": "일반 어시스턴트",
       "roleplay": "롤플레이",
       "coding": "코딩",

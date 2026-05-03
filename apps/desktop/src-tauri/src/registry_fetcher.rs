@@ -458,6 +458,7 @@ mod tests {
             fetcher: Arc::new(fetcher),
             manifest_ids,
             last_refresh: Arc::new(Mutex::new(None)),
+            last_signature_status: Arc::new(Mutex::new(None)),
             sched: Mutex::new(None),
         }
     }

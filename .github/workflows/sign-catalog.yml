@@ -45,8 +45,10 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$MINISIGN_SECRET_KEY" ]; then
-            echo "::error::CATALOG_MINISIGN_SECRET_KEY secret이 설정되지 않았어요."
-            exit 1
+            # v1.x 후속 — catalog signing keypair 등록 전. graceful skip(workflow는 success).
+            # 사용자가 secret 등록하면 다음 main push부터 자동 서명.
+            echo "::warning::CATALOG_MINISIGN_SECRET_KEY secret이 설정되지 않았어요. 서명 skip — v1.x 후속에 keypair 등록 후 활성."
+            exit 0
           fi
           # secret을 임시 파일로 — process substitution은 일부 환경에서 불안정.
           KEY_FILE=$(mktemp)
