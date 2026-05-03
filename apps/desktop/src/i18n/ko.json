@@ -868,7 +868,14 @@
     },
     "splash": {
       "aria": "LMmaster를 준비하고 있어요",
-      "skipHint": "Esc로 건너뛰기"
+      "skipHint": "Esc로 건너뛰기",
+      "stage": {
+        "checking": "환경을 점검하고 있어요",
+        "detecting": "런타임을 감지하고 있어요",
+        "catalog": "카탈로그를 불러오고 있어요",
+        "gateway": "게이트웨이를 깨우고 있어요",
+        "ready": "곧 만나요"
+      }
     },
     "help": {
       "triggerAria": "이 화면 도움말을 볼게요",

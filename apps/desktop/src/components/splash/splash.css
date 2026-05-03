@@ -1,4 +1,16 @@
-/* SplashScreen — Phase 14' v2 (2026-05-04). 디자인 토큰만. */
+/* SplashScreen v3 — Phase 14' v3 (2026-05-04). 세계 최고 사례 종합 디자인.
+ *
+ * 레이어 구조 (z-index 낮음 → 높음):
+ *   0. background    — solid dark
+ *   1. grid overlay  — 미세 grid (pseudo-element)
+ *   2. bloom-1/2     — 다층 radial bloom (loop 호흡)
+ *   3. network SVG   — node + line + data packet + concentric pulse + outer ring
+ *   4. center brand  — BrandMark + orbital ring
+ *   5. bottom area   — wordmark + 진행 텍스트 + dot + skip hint
+ *
+ * 디자인 토큰만 (--surface-1 / --text / --text-muted).
+ * 명시 hex는 brand 컬러(네온 그린 + cyan accent) — gradient + glow 정확 제어.
+ */
 
 .splash-screen {
   position: fixed;
@@ -10,98 +22,243 @@
   justify-content: center;
   background: var(--surface-1, #0e0f12);
   user-select: none;
-  /* Tauri custom titlebar 영역 무시 — 전체 cover. */
   overflow: hidden;
+  font-family: var(--font-sans, system-ui, sans-serif);
 }
 
-/* PulseGlow — 배경 radial. node 등장 직전부터 호흡. */
-.splash-pulse-glow {
+/* Grid overlay — 미세 텍스처 깊이감. */
+.splash-screen::before {
+  content: "";
   position: absolute;
-  width: 720px;
-  height: 720px;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(56, 255, 126, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 255, 126, 0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  mask-image: radial-gradient(circle at center, black 0%, transparent 70%);
+}
+
+/* Bloom layer 1 — 큰 radial bloom (소프트 외각). */
+.splash-bloom-1 {
+  position: absolute;
+  width: 880px;
+  height: 880px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
     rgba(56, 255, 126, 0.18) 0%,
-    rgba(56, 255, 126, 0.06) 40%,
-    transparent 70%
+    rgba(56, 255, 126, 0.05) 35%,
+    transparent 65%
   );
-  filter: blur(48px);
+  filter: blur(56px);
   pointer-events: none;
-  animation: splash-pulse-breathe 3.2s ease-in-out infinite;
-  animation-delay: 0.1s;
+  animation: splash-bloom-breathe-1 3.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  animation-delay: 0.05s;
 }
 
-@keyframes splash-pulse-breathe {
+/* Bloom layer 2 — 작은 radial cyan accent (tighter glow). */
+.splash-bloom-2 {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(124, 255, 245, 0.16) 0%,
+    rgba(76, 255, 160, 0.08) 30%,
+    transparent 60%
+  );
+  filter: blur(36px);
+  pointer-events: none;
+  animation: splash-bloom-breathe-2 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  animation-delay: 0.4s;
+}
+
+@keyframes splash-bloom-breathe-1 {
   0%, 100% {
     transform: scale(0.92);
-    opacity: 0.6;
+    opacity: 0.65;
   }
   50% {
-    transform: scale(1.08);
+    transform: scale(1.1);
     opacity: 1;
   }
 }
 
-/* Network SVG — viewBox 400×400 + drop-shadow glow. */
+@keyframes splash-bloom-breathe-2 {
+  0%, 100% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+}
+
+/* Network SVG — 다층 drop-shadow glow. */
 .splash-network {
   position: relative;
   z-index: 1;
-  filter: drop-shadow(0 0 16px rgba(56, 255, 126, 0.3))
-    drop-shadow(0 0 32px rgba(56, 255, 126, 0.15));
+  filter:
+    drop-shadow(0 0 14px rgba(56, 255, 126, 0.32))
+    drop-shadow(0 0 32px rgba(56, 255, 126, 0.18))
+    drop-shadow(0 0 64px rgba(124, 255, 245, 0.12));
 }
 
-/* BrandMark — Network 정중앙에 absolute 배치. z-index로 line 위. */
+/* BrandMark center — z-index 2 (line 위) + 다층 글로우. */
 .splash-center-brand {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 2;
-  /* Brand 자체 drop-shadow + 추가 외부 글로우. */
-  filter: drop-shadow(0 0 20px rgba(56, 255, 126, 0.45))
-    drop-shadow(0 0 40px rgba(56, 255, 126, 0.2));
+  display: grid;
+  place-items: center;
+  filter:
+    drop-shadow(0 0 18px rgba(56, 255, 126, 0.5))
+    drop-shadow(0 0 36px rgba(76, 255, 160, 0.3))
+    drop-shadow(0 0 60px rgba(124, 255, 245, 0.2));
 }
 
-/* Wordmark — Network 하단 직후. */
-.splash-wordmark {
-  position: relative;
+/* Orbital ring — BrandMark 주변 회전 ring. */
+.splash-orbital-ring {
+  position: absolute;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background:
+    conic-gradient(
+      from 0deg,
+      rgba(56, 255, 126, 0) 0%,
+      rgba(56, 255, 126, 0.4) 25%,
+      rgba(124, 255, 245, 0.5) 50%,
+      rgba(56, 255, 126, 0.4) 75%,
+      rgba(56, 255, 126, 0) 100%
+    );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  padding: 1px;
+  animation: splash-orbital-spin 5s linear infinite;
+  animation-delay: 1s;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+@keyframes splash-orbital-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Bottom area — wordmark + stage text + dot + skip. */
+.splash-bottom-area {
+  position: absolute;
+  bottom: clamp(48px, 12vh, 96px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
   z-index: 1;
-  margin-top: 24px;
-  font-size: 28px;
+  text-align: center;
+}
+
+.splash-wordmark {
+  font-size: 30px;
   font-weight: var(--weight-semi, 600);
   letter-spacing: 0.02em;
   color: var(--text);
   line-height: 1;
-  text-shadow: 0 0 24px rgba(56, 255, 126, 0.25);
+  text-shadow: 0 0 24px rgba(56, 255, 126, 0.3);
 }
 
-/* Esc skip 힌트 — 화면 하단. */
-.splash-skip-hint {
+/* Stage text — 진행 단계 텍스트 (cycling). */
+.splash-stage-text-wrap {
+  position: relative;
+  height: 18px;
+  width: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-stage-text {
   position: absolute;
-  bottom: 32px;
-  font-size: var(--fs-12, 12px);
-  color: var(--text-muted);
+  font-size: var(--fs-13, 13px);
+  color: var(--text-secondary, #b8c2c2);
   letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
-/* prefers-reduced-motion — pulse 정지 + 짧은 fade. */
+/* Dot 인디케이터 — 5 dot, 활성 시 네온 그린. */
+.splash-dots {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.splash-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(180, 200, 200, 0.18);
+  transition: background 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.splash-dot.is-active {
+  background: var(--primary, #38ff7e);
+  box-shadow: 0 0 8px rgba(56, 255, 126, 0.65);
+  transform: scale(1.15);
+}
+
+.splash-skip-hint {
+  font-size: var(--fs-11, 11px);
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  margin-top: 14px;
+  font-variant: small-caps;
+}
+
+/* prefers-reduced-motion — bloom + orbital 정지. */
 @media (prefers-reduced-motion: reduce) {
-  .splash-pulse-glow {
+  .splash-bloom-1,
+  .splash-bloom-2 {
     animation: none;
-    opacity: 0.4;
+    opacity: 0.5;
     transform: scale(1);
   }
+  .splash-orbital-ring {
+    animation: none;
+    opacity: 0.6;
+  }
 }
 
-/* 작은 viewport — minWidth 1180 환경에서도 안전. */
+/* 작은 viewport — minWidth 1180에서도 안전 + 비례 축소. */
 @media (max-width: 1280px) {
   .splash-network {
-    width: 320px;
-    height: 320px;
+    width: 380px;
+    height: 380px;
   }
-  .splash-pulse-glow {
-    width: 560px;
-    height: 560px;
+  .splash-bloom-1 {
+    width: 720px;
+    height: 720px;
+  }
+  .splash-bloom-2 {
+    width: 360px;
+    height: 360px;
+  }
+  .splash-orbital-ring {
+    width: 112px;
+    height: 112px;
+  }
+  .splash-wordmark {
+    font-size: 26px;
   }
 }
