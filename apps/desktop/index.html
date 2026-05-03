@@ -4,6 +4,38 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LMmaster</title>
+    <style>
+      /* Phase 14' v6 — pre-mount splash (window flicker 제거).
+       * cargo 빌드 직후 흰색 frame 깜빡임을 검은 splash bg로 미리 칠함.
+       * React mount 즉시 :empty 해제 -> pulse 자연 사라짐 -> SplashScreen 등장. */
+      html, body { margin: 0; padding: 0; background: #0a0c10; }
+      #root { min-height: 100vh; background: #0a0c10; }
+      #root:empty::before {
+        content: "";
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 200px;
+        height: 200px;
+        margin: -100px 0 0 -100px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(94, 221, 174, 0.18) 0%,
+          rgba(94, 221, 174, 0.06) 40%,
+          transparent 70%
+        );
+        filter: blur(28px);
+        animation: pre-pulse 2s ease-in-out infinite;
+      }
+      @keyframes pre-pulse {
+        0%, 100% { opacity: 0.5; transform: scale(0.92); }
+        50% { opacity: 0.9; transform: scale(1.08); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #root:empty::before { animation: none; opacity: 0.6; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
