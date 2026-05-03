@@ -163,6 +163,7 @@ mod tests {
             purpose: Default::default(),
             commercial: true,
             content_warning: None,
+            mmproj: None,
         }
     }
 

@@ -1,24 +1,23 @@
 [package]
-name = "adapter-llama-cpp"
+name = "runner-llama-cpp"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+# Phase 13'.h.2.b (ADR-0051) — `llama-server` 자식 프로세스 supervisor.
+# adapter-llama-cpp가 HTTP client wrapping 책임이라면, 본 crate는 process lifecycle 책임.
+# `LMMASTER_LLAMA_SERVER_PATH` env override로 binary 발견 (ADR-0043 패턴 차용).
+
 [dependencies]
 shared-types.workspace = true
-runtime-manager.workspace = true
-runner-llama-cpp.workspace = true
-adapter-ollama.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
-async-trait.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
 thiserror.workspace = true
-anyhow.workspace = true
-futures.workspace = true
 
 [dev-dependencies]
 wiremock.workspace = true
+tempfile.workspace = true

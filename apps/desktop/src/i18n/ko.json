@@ -426,7 +426,10 @@
         "sqlcipher.envHint": "OS 키체인에 자동으로 발급된 비밀번호로 SQLCipher 암호화를 켜요. 키체인을 쓸 수 없으면 평문 모드로 폴백돼요.",
         "exportLogs": "진단 로그 내보내기",
         "exportLogs.comingSoon": "다음 업데이트에서 만나요",
-        "buildInfo": "빌드 정보"
+        "buildInfo": "빌드 정보",
+        "publisher": "제작",
+        "copyright": "저작권",
+        "copyrightValue": "© 2026 MOJITO Lab. 모든 권리 보유."
       },
       "workbench": {
         "artifacts": {

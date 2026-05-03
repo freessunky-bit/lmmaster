@@ -10,19 +10,94 @@
 
 ### ~~Phase 13'.h.2.a — LM Studio chat + vision 어댑터~~ — **2026-05-01 머지 완료**
 
-### Phase 13'.h.2.b/c — llama.cpp server 자동 spawn + mmproj sidecar (v2)
+### ~~Phase 13'.h.2.b/c — llama.cpp server 자동 spawn + mmproj sidecar~~ — **2026-05-03 핵심 머지** (ADR-0051)
 
-* **상태**: v2 마이그레이션 (v1.x ship 후 검토)
-* **이유**: Ollama + LM Studio 두 어댑터로 카탈로그 `vision_support` 모델(gemma-3-4b)이 작동 — 일반 사용자 vision 흐름 거의 100% 커버. llama.cpp 직접 사용자(고급)는 외부 `llama-server` 수동 실행 + `--mmproj` 파일 별도 다운로드 필요한 환경이라 sidecar 자동화의 ROI가 v1 ship 직전 시점에 낮음.
-* **선행 의존성**: ✅ 13'.h.1 (Ollama) + 13'.h.2.a (LM Studio).
-* **예상 작업량**: 8-10h (server 모드 spawn + LLaVA mmproj 검증 + 어댑터 분기 + sidecar 패키징).
+* **상태**: 13'.h.2.b (runner-llama-cpp) + 13'.h.2.c.1 (ModelEntry mmproj 스키마 + gemma-3-4b 백필 + validator) ✅ 머지. 잔여 13'.h.2.d (chat IPC LlamaCpp wiring) → 우선순위 1로 승격.
+* **머지 산출**: `crates/runner-llama-cpp` 신규 (22 invariant) + `adapter-llama-cpp::chat_stream` OpenAI compat SSE + vision content array (10 invariant) + `MmprojSpec` 백워드 호환 (4 invariant) + build-catalog validator. 합계 +36 신규 테스트.
 
-작업 스코프 (v2):
-1. `runner-llama-cpp` server 모드 spawn (Tauri sidecar 또는 외부 binary attach).
-2. mmproj 파일 별도 다운로드 + 페어링 검증 (vision 모델은 GGUF + mmproj 두 파일).
-3. `adapter-llama-cpp::chat_stream` images payload 변환 (LLaVA endpoint 또는 OpenAI compat).
-4. chat IPC LlamaCpp 분기 — 현재 unsupported. 어댑터 후처리 후 wiring.
-5. e2e 검증 — 사용자 PC 실 binary 필요한 영역.
+### Phase 13'.h.2.d/e/f — 사용자 명시 결정(2026-05-03) 따라 순차 진행
+
+세 sub-phase 합계 약 9-13h. 사용자 결정 = "권장안 채택 + 수동 단계는 친절 가이드 + 가이드 자동 갱신 시스템".
+
+### Phase 13'.h.2.d — chat IPC LlamaCpp 분기 wiring (다음 진입 후보, 3-4h)
+
+* **상태**: pending. 진입 조건 ✅ — runner-llama-cpp + adapter-llama-cpp 머지 완료.
+* **결정 노트**: `docs/research/phase-13ph2bc-llama-server-mmproj-decision.md` §6 인계.
+* **작업 스코프**:
+  1. `apps/desktop/src-tauri/src/chat/mod.rs::start_chat`에 `RuntimeKind::LlamaCpp` 분기 추가 — 현재 `UnsupportedRuntime` 자리.
+  2. Tauri State `Arc<Mutex<Option<LlamaServerHandle>>>` 보관 — 채팅 시 동일 model_path면 재사용, 다르면 기존 shutdown + 새 spawn (단일 instance 정책).
+  3. ModelEntry → ServerSpec 변환 헬퍼 (model_path/mmproj_path는 catalog에서 가져온 후 사용자 cache dir 경로로 매핑).
+  4. 사용자가 `LMMASTER_LLAMA_SERVER_PATH` env 미설정 시 한국어 안내 카피 + Settings link.
+  5. 30~90초 모델 로드 진행률 ChatEvent로 emit (UI Chat.tsx에 stalled microinteraction). 또는 단순 spinner.
+  6. Tauri `RunEvent::ExitRequested` 훅 + LlamaServerHandle::shutdown 명시 cleanup (보강 리서치 #6 권장).
+
+### Phase 13'.h.2.e — `LlamaCppSetupWizard` 단계별 셋업 가이드 (4-6h)
+
+* **상태**: pending. 사용자 명시 결정 2026-05-03 (ADR-0051 §결정 7).
+* **선행 의존성**: ✅ runner-llama-cpp 머지. Phase 12' guide system 인프라 (ADR-0040 — `Guide.tsx` / `_render-markdown.ts` / `HelpButton.tsx`).
+* **결정 노트**: `phase-13ph2bc-llama-server-mmproj-decision.md` §A6.
+
+작업 스코프 (7단계 stepper):
+1. **GPU 자동 감지** — `hardware-probe::probe_gpu()` 결과 그대로 카드 표시 (NVIDIA / AMD / Intel / Apple Silicon / CPU).
+2. **권장 빌드 카드** — GPU별 ggml-org Releases asset 추천. 본문은 가이드 manifest(13'.h.2.f)에서 동적 fetch.
+3. **ggml-org Releases 페이지 열기** — `tauri-plugin-shell::open` 화이트리스트 `github.com` 추가 + 한국어 안내 카피.
+4. **압축 풀기 위치 안내** — Win `C:\Tools\llama-cpp\`, Mac `/usr/local/llama-cpp/`, Linux `~/.local/bin/llama-cpp/` 권장. clipboard 복사 버튼.
+5. **환경변수 설정 가이드** — OS 분기:
+   - Win: `setx LMMASTER_LLAMA_SERVER_PATH "C:\Tools\llama-cpp\llama-server.exe"` (PowerShell)
+   - Mac/Linux: `export LMMASTER_LLAMA_SERVER_PATH=/usr/local/llama-cpp/llama-server` + `~/.zshrc` append 명령
+   - clipboard 복사 + "환경변수 적용 후 LMmaster 다시 시작" 안내.
+6. **자동 검증** — `runner-llama-cpp::spawn::resolve_binary_path()` 호출 + `--version` spawn 1회 + 한국어 결과 (✅ 잡혔어요 / ❌ 아직 안 보여요 + retry).
+7. **mmproj 별개 wizard** — 카탈로그 `vision_support: true` 모델 선택 시 "이미지 분석에 필요한 vision 파일이에요" + `mmproj.url` direct download 안내(13'.h.2.c.2 자동 다운로드 머지 후 in-place pull).
+
+진입점 3종:
+- Settings → "고급 런타임" 카드 → "셋업 마법사 열기" 버튼.
+- Diagnostics → "외부 런타임" 카드 → llama.cpp 미감지 시 빨간 카드 + 마법사 link.
+- Chat → 처음 vision 모델 시도 시 LlamaCpp 미감지면 자동 modal (한 번만, 다시 안 보임 토글).
+
+a11y: `role="dialog" aria-modal aria-labelledby` + Esc 닫기 + 첫 input auto-focus + 진행 percentage. i18n ko/en 동시.
+
+### Phase 13'.h.2.f — 셋업 가이드 자동 갱신 시스템 (2-3h)
+
+* **상태**: pending. 사용자 명시 결정 2026-05-03 (ADR-0051 §결정 8).
+* **선행 의존성**: ✅ registry-fetcher (ADR-0026 + Phase 13'.a 패턴), ✅ minisign infrastructure (ADR-0047 + 13'.g.2.c).
+* **결정 노트**: `phase-13ph2bc-llama-server-mmproj-decision.md` §A7.
+
+작업 스코프:
+1. **`manifests/guides/llama-cpp-setup.json`** 신규 — 마크다운 본문 + 권장 빌드 버전(예: `b9010+`) + GPU별 asset URL 룰 + `known_issues: Vec<KnownIssue>` 마커 + `last_reviewed_at`.
+2. **`GuideManifest` Rust struct** — `crates/registry-fetcher` 또는 별개 crate. schema_version + 한국어 마크다운 + asset rules. serde 표준.
+3. **registry-fetcher `manifest_ids`** — `"llama-cpp-setup"` 추가. 6h polling (catalog와 동일 cron). jsDelivr 1순위 / GitHub raw 2순위 / Bundled 폴백.
+4. **minisign 서명 검증** — ADR-0047 `SignatureVerifier::from_embedded()` 재사용. `.minisig` fetch + verify. 실패 시 bundled fallback.
+5. **GuideState IPC** — `get_setup_guide() -> GuideManifest` + 갱신 시 `guide-updated` event emit. ACL `allow-get-setup-guide`.
+6. **Diagnostics 카드** — "셋업 가이드 v{n} 도착" 알림 + 다음 wizard 진입 시 자동 적용. 사용자 동의 dialog 없음 (읽기 전용 안내).
+7. **CI 자동 서명** — `.github/workflows/sign-guides.yml` (catalog signing 패턴 차용 — `sign-catalog.yml`). main push 시 가이드 변경 감지 → minisign sign → commit.
+8. **큐레이터 SOP** — `docs/runbooks/guide-update.md` 신설. 새 llama.cpp 빌드 회귀 / 새 GPU 변종 / 새 mmproj 모델 발견 시 manifest 갱신 절차.
+
+frontend `LlamaCppSetupWizard`(13'.h.2.e)는 manifest의 빌드 버전/asset URL을 동적 표시 — 마크다운 본문은 기존 `_render-markdown.ts` 차용.
+
+### Phase 13'.h.2.c.2 — mmproj 자동 다운로드 IPC (3-4h, v1.x)
+
+* **상태**: pending. 진입 조건 ✅ — MmprojSpec 스키마 머지.
+* **작업 스코프**: `start_mmproj_pull(model_id) → cancel_mmproj_pull` IPC. knowledge-stack `embed_download::download_with_progress` 차용 (256KB throttle + atomic rename + sha256). ModelDetailDrawer에서 vision 모델은 model.gguf + mmproj 둘 다 받기 표시. ACL 2건 추가.
+
+### Phase 13'.h.3 — chat_template_hint 카탈로그 필드 (2-3h, v1.x)
+
+* **상태**: pending. 보강 리서치 §1.7 #4.
+* **작업 스코프**: ModelEntry에 `chat_template_hint: Option<String>` (gemma3 / llava / qwen2-vision / chatml). `ServerSpec::chat_template`에 자동 주입.
+
+### Phase 13'.h.4 — llama-server binary 자동 다운로드 + GPU detect (옵션 C, 6-8h, v1.x)
+
+* **상태**: deferred. 보강 리서치 §1.1 + §1.3 #2 권장.
+* **작업 스코프**: ggml-org/llama.cpp Releases asset 자동 발견 + GPU detect (NVIDIA / Vulkan / Metal / ROCm / CPU 분기) + 화이트리스트 도메인 추가 + 사용자 동의 dialog. Phase 1A.1A 패턴 차용. ADR 신설 후보.
+
+### Phase 13'.h.5 — known_issues 카탈로그 마커 (2-3h, v1.x)
+
+* **상태**: deferred. 보강 리서치 §1.7 + §8.
+* **작업 스코프**: `known_issues: Vec<String>` 카탈로그 필드 — gemma4_cuda_mmproj_abort / vulkan_amd_mmproj_heap 마커. 사용자 GPU+모델+빌드 조합이 마커에 걸리면 사전 경고. v2에서 자동 우회(`--cache-ram 0`, `--no-mmproj-offload`).
+
+### Phase 13'.h.6 — Windows Job Object + ExitRequested 훅 cleanup (1-2h, v1.x)
+
+* **상태**: deferred. 보강 리서치 §1.4 + #6.
+* **작업 스코프**: `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`로 손자 프로세스 트리 종료 보장. Tauri `RunEvent::ExitRequested` 훅에서 명시 cleanup.
 
 ---
 

@@ -97,6 +97,69 @@ function validateEntry(e) {
       process.exit(1);
     }
   }
+
+  // Phase 13'.h.2.c (ADR-0051) — mmproj 필드 검증.
+  if (e.mmproj !== undefined && e.mmproj !== null) {
+    const m = e.mmproj;
+    // url: https + huggingface.co 또는 github.com 화이트리스트.
+    if (typeof m.url !== "string" || !/^https:\/\//.test(m.url)) {
+      console.error(`${e.id}: mmproj.url은 https URL이어야 해요. 받은 값: ${m.url}`);
+      process.exit(1);
+    }
+    if (
+      !/^https:\/\/(huggingface\.co|github\.com)\//.test(m.url)
+    ) {
+      console.error(
+        `${e.id}: mmproj.url은 huggingface.co 또는 github.com 도메인만 허용 — ${m.url}`,
+      );
+      process.exit(1);
+    }
+    // size_mb 양수 정수.
+    if (
+      typeof m.size_mb !== "number" ||
+      !Number.isInteger(m.size_mb) ||
+      m.size_mb <= 0
+    ) {
+      console.error(`${e.id}: mmproj.size_mb는 양의 정수여야 해요. 받은 값: ${m.size_mb}`);
+      process.exit(1);
+    }
+    // sha256: null 또는 64-char hex.
+    if (m.sha256 !== undefined && m.sha256 !== null) {
+      if (typeof m.sha256 !== "string" || !/^[0-9a-f]{64}$/i.test(m.sha256)) {
+        console.error(
+          `${e.id}: mmproj.sha256은 64자 hex 또는 null이어야 해요. 받은 값: ${m.sha256}`,
+        );
+        process.exit(1);
+      }
+    }
+    // precision: f16 / bf16 / f32 또는 미지정.
+    if (m.precision !== undefined && m.precision !== null) {
+      if (!["f16", "bf16", "f32"].includes(m.precision)) {
+        console.error(
+          `${e.id}: mmproj.precision은 f16/bf16/f32 중 하나여야 해요. 받은 값: ${m.precision}`,
+        );
+        process.exit(1);
+      }
+    }
+    // source: 큐레이터 출처 (known set + null OK).
+    const knownSources = ["bartowski", "ggml-org", "unsloth", "lmstudio-community", "Mungert"];
+    if (m.source !== undefined && m.source !== null) {
+      if (!knownSources.includes(m.source)) {
+        console.warn(
+          `${e.id}: mmproj.source '${m.source}'은(는) 알려진 큐레이터가 아니에요 (warning only).`,
+        );
+      }
+    }
+  }
+
+  // vision_support=true + tier=verified면 mmproj 권장 (warning, v1.x에 강제 검토).
+  if (e.vision_support === true && (e.tier === "verified" || e.tier === undefined)) {
+    if (e.mmproj === undefined || e.mmproj === null) {
+      console.warn(
+        `${e.id}: vision_support=true이지만 mmproj 필드가 없어요 (llama.cpp 사용자에 한국어 안내 노출).`,
+      );
+    }
+  }
 }
 
 function walkJson(dir) {
