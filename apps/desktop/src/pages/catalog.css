@@ -159,27 +159,52 @@
   border-color: var(--primary-a-3);
 }
 
-/* Phase 13'.e.3 — 🔥 NEW 탭 — count 배지 + 약간 강조. */
+/* Phase 14' (2026-05-03 v2) — NEW 탭 minimalist 폴리싱.
+ *
+ * 정책: count 배지를 노란색 동그라미 → 네온 그린 outline chip으로 변경.
+ *      Sparkles icon + 라벨 + count chip 3 요소 시각 hierarchy 정리.
+ *      엘리트 웹앱(Linear / Vercel) 수준의 minimalist 톤. */
 .catalog-category.is-new {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-2, 8px);
+}
+
+.catalog-category.is-new .catalog-category-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+/* 라벨 span은 flex-grow로 좌측 정렬, count chip은 자연스럽게 우측 끝. */
+.catalog-category.is-new > span:not(.catalog-category-count) {
+  flex-grow: 1;
+  text-align: left;
 }
 
 .catalog-category-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 18px;
-  padding: 0 6px;
-  margin-left: var(--space-2);
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
   border-radius: var(--radius-pill);
-  background: var(--warn-a-2);
-  color: var(--warn);
+  background: transparent;
+  border: 1px solid var(--primary-a-3);
+  color: var(--primary);
   font-size: var(--fs-11);
-  font-weight: 700;
+  font-weight: var(--weight-medium, 500);
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* active 상태에서 chip 강조. */
+.catalog-category.is-new.is-active .catalog-category-count {
+  background: var(--primary-a-2);
+  border-color: var(--primary);
 }
 
 /* ── Main ──────────────────────────────────────────────────────── */
