@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StatusPill, type PillStatus } from "@lmmaster/design-system/react";
 
+import { BrandLockup } from "./components/Brand";
 import { CommandPalette } from "./components/command-palette/CommandPalette";
 import { EulaGate } from "./components/EulaGate";
 import {
@@ -261,7 +262,9 @@ function MainShell({
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand">LMmaster</div>
+        <div className="brand">
+          <BrandLockup size={26} />
+        </div>
         <WorkspaceSwitcher />
         <nav>
           {NAV_KEYS.map((key) => (

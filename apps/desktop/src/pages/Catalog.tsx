@@ -6,6 +6,7 @@
 // - 카드 클릭 → ModelDetailDrawer 슬라이드.
 // - 데이터: getCatalog() 1회 + getRecommendation(category) (카테고리 변경 시).
 
+import { Eye, EyeOff, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -33,6 +34,7 @@ import { ModelDetailDrawer } from "../components/catalog/ModelDetailDrawer";
 import { RecommendationStrip } from "../components/catalog/RecommendationStrip";
 import { idOf, modelHasFlag } from "../components/catalog/format";
 import { HelpButton } from "../components/HelpButton";
+import { HuggingFaceMark } from "../components/HuggingFaceMark";
 import { useAdultContentAllowed } from "../hooks/useAdultContentAllowed";
 
 import "./catalog.css";
@@ -304,9 +306,16 @@ export function CatalogPage() {
                 "성인 콘텐츠 모델을 카탈로그에 노출할지 선택해요. 기본 OFF — 켜면 NSFW 라벨 모델이 ⚠ chip과 함께 표시돼요.",
               )}
             >
-              {adultAllowed
-                ? t("catalog.adultContent.on", "🔞 성인 모델 보임")
-                : t("catalog.adultContent.off", "🔞 성인 모델 숨김")}
+              {adultAllowed ? (
+                <Eye size={14} aria-hidden="true" />
+              ) : (
+                <EyeOff size={14} aria-hidden="true" />
+              )}
+              <span>
+                {adultAllowed
+                  ? t("catalog.adultContent.on", "성인 모델 보임")
+                  : t("catalog.adultContent.off", "성인 모델 숨김")}
+              </span>
             </button>
           </div>
         </div>
@@ -336,7 +345,8 @@ export function CatalogPage() {
               "HuggingFace에서 직접 모델을 찾아볼래요? 큐레이션 외 모델은 ⚠ 라벨이 붙어요.",
             )}
           >
-            🤗 {t("catalog.hfSearch.triggerLabel", "HuggingFace에서 찾기")}
+            <HuggingFaceMark size={16} aria-hidden="true" />
+            <span>{t("catalog.hfSearch.triggerLabel", "HuggingFace에서 찾기")}</span>
           </button>
           <nav
             className="catalog-categories"
@@ -357,7 +367,10 @@ export function CatalogPage() {
                   className={`catalog-category${category === key ? " is-active" : ""}${isNew ? " is-new" : ""}`}
                   onClick={() => setCategory(key)}
                 >
-                  {t(`catalog.category.${key}`, key === "new" ? "🔥 새 모델" : key)}
+                  {isNew && (
+                    <Sparkles size={14} aria-hidden="true" className="catalog-category-icon" />
+                  )}
+                  <span>{t(`catalog.category.${key}`, key === "new" ? "새 모델" : key)}</span>
                   {isNew && newCount > 0 && (
                     <span className="catalog-category-count num">{newCount}</span>
                   )}

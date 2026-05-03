@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "description": "Local AI Companion for existing web apps — desktop orchestrator (Tauri 2 + Rust + React)",
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@9.15.9",
   "engines": {
     "node": ">=20"
   },

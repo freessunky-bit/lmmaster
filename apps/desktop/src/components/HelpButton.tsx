@@ -6,17 +6,27 @@
 // - design-system token, prefers-reduced-motion 존중.
 // - sectionId는 Guide.tsx의 SECTION_IDS와 일치해야 해요.
 
+import { HelpCircle } from "lucide-react";
 import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import "./helpButton.css";
+
+interface PopoverPosition {
+  top: number;
+  left: number;
+  /** popover가 trigger 좌측 정렬(false) 또는 우측 정렬(true)인지 — viewport edge 충돌 회피용. */
+  alignRight: boolean;
+}
 
 export interface HelpButtonProps {
   /** Guide section id — popover의 "전체 가이드 보기"로 진입할 섹션. */
@@ -40,11 +50,45 @@ export function HelpButton({
 }: HelpButtonProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<PopoverPosition | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const linkBtnRef = useRef<HTMLButtonElement | null>(null);
   const popoverId = useId();
+  const POPOVER_WIDTH = 280;
+  const VIEWPORT_MARGIN = 12;
+
+  // 트리거 위치 측정 → viewport-relative 좌표 + collision-aware align 결정.
+  const computePosition = useCallback((): PopoverPosition | null => {
+    const trigger = triggerRef.current;
+    if (!trigger) return null;
+    const rect = trigger.getBoundingClientRect();
+    const viewportWidth = globalThis.window?.innerWidth ?? 0;
+    // trigger 우측 끝 + popover 폭이 viewport 우측 margin을 침범하면 우측 정렬.
+    const wouldOverflowRight = rect.left + POPOVER_WIDTH + VIEWPORT_MARGIN > viewportWidth;
+    const top = rect.bottom + 8;
+    const left = wouldOverflowRight
+      ? Math.max(VIEWPORT_MARGIN, rect.right - POPOVER_WIDTH)
+      : rect.left;
+    return { top, left, alignRight: wouldOverflowRight };
+  }, []);
+
+  // open 시 위치 측정 + resize/scroll listener.
+  useLayoutEffect(() => {
+    if (!open) {
+      setPosition(null);
+      return undefined;
+    }
+    setPosition(computePosition());
+    const onResize = () => setPosition(computePosition());
+    globalThis.window?.addEventListener("resize", onResize);
+    globalThis.window?.addEventListener("scroll", onResize, true);
+    return () => {
+      globalThis.window?.removeEventListener("resize", onResize);
+      globalThis.window?.removeEventListener("scroll", onResize, true);
+    };
+  }, [open, computePosition]);
 
   // popover 열릴 때 close 버튼에 포커스.
   useEffect(() => {
@@ -153,45 +197,59 @@ export function HelpButton({
         onClick={handleToggle}
         data-testid={tid}
       >
-        <span aria-hidden="true">?</span>
+        <HelpCircle
+          size={16}
+          strokeWidth={2}
+          aria-hidden="true"
+          className="help-button-icon"
+        />
       </button>
 
-      {open && (
-        <div
-          ref={popoverRef}
-          id={popoverId}
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("screens.help.popoverAria") ?? undefined}
-          className="help-button-popover"
-          data-testid={`${tid}-popover`}
-          onKeyDown={handleKeyDown}
-        >
-          <p className="help-button-hint" data-testid={`${tid}-hint`}>
-            {hint ?? t("screens.help.defaultHint")}
-          </p>
-          <div className="help-button-actions">
-            <button
-              type="button"
-              ref={linkBtnRef}
-              className="help-button-link"
-              onClick={handleOpenGuide}
-              data-testid={`${tid}-open-guide`}
-            >
-              {t("screens.help.openGuide")}
-            </button>
-            <button
-              type="button"
-              ref={closeBtnRef}
-              className="help-button-close"
-              onClick={() => setOpen(false)}
-              data-testid={`${tid}-close`}
-            >
-              {t("screens.help.close")}
-            </button>
-          </div>
-        </div>
-      )}
+      {open &&
+        position &&
+        globalThis.document?.body &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            id={popoverId}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("screens.help.popoverAria") ?? undefined}
+            className="help-button-popover"
+            data-testid={`${tid}-popover`}
+            onKeyDown={handleKeyDown}
+            style={{
+              top: `${position.top}px`,
+              left: `${position.left}px`,
+              width: `${POPOVER_WIDTH}px`,
+            }}
+          >
+            <p className="help-button-hint" data-testid={`${tid}-hint`}>
+              {hint ?? t("screens.help.defaultHint")}
+            </p>
+            <div className="help-button-actions">
+              <button
+                type="button"
+                ref={linkBtnRef}
+                className="help-button-link"
+                onClick={handleOpenGuide}
+                data-testid={`${tid}-open-guide`}
+              >
+                {t("screens.help.openGuide")}
+              </button>
+              <button
+                type="button"
+                ref={closeBtnRef}
+                className="help-button-close"
+                onClick={() => setOpen(false)}
+                data-testid={`${tid}-close`}
+              >
+                {t("screens.help.close")}
+              </button>
+            </div>
+          </div>,
+          globalThis.document.body,
+        )}
     </span>
   );
 }

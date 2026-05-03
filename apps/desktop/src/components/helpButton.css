@@ -49,20 +49,29 @@
 
 /* ── Popover ───────────────────────────────────────────────────────── */
 
+/*
+ * Portal로 body에 마운트 — sidebar/main의 overflow + z-index 영향 회피.
+ * top/left는 JS의 useLayoutEffect에서 viewport-relative로 동적 주입.
+ * 우측 viewport edge 충돌 시 자동 우측 정렬(JS computePosition 처리).
+ */
 .help-button-popover {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  right: 0;
-  width: 280px;
+  position: fixed;
   background: var(--surface-2);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-2);
   padding: var(--space-3);
   box-shadow: var(--shadow-md);
-  z-index: 50;
+  /* sidebar/header/banner 등 모든 레이어 위 — 999는 modal/dialog 표준 hierarchy. */
+  z-index: 999;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+/* lucide HelpCircle icon — 트리거 가운데 정렬 + currentColor. */
+.help-button-icon {
+  display: block;
+  color: inherit;
 }
 
 @media (prefers-reduced-motion: no-preference) {

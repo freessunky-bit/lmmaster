@@ -1,0 +1,39 @@
+/* LMmaster 공식 픽토그램 — Phase 14' (2026-05-03). 디자인 토큰만. */
+
+.brand-mark {
+  display: inline-block;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .brand-mark {
+    transition:
+      filter var(--dur-2, 200ms) var(--ease-out, ease-out),
+      transform var(--dur-2, 200ms) var(--ease-out, ease-out);
+    filter: drop-shadow(0 0 6px var(--primary-a-2));
+  }
+}
+
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  user-select: none;
+}
+
+.brand-lockup .brand-wordmark {
+  font-size: var(--fs-15, 15px);
+  font-weight: var(--weight-semi, 600);
+  letter-spacing: 0.01em;
+  color: var(--text);
+  line-height: 1;
+}
+
+/* hover 상태 — 마이크로 인터랙션 (prefers-reduced-motion 자동 비활성). */
+@media (prefers-reduced-motion: no-preference) {
+  .brand-lockup:hover .brand-mark {
+    filter: drop-shadow(0 0 10px var(--primary-a-3));
+    transform: translateY(-1px);
+  }
+}

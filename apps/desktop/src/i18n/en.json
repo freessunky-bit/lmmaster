@@ -917,10 +917,10 @@
       "startWorkbenchTitle": "Start in Workbench with this model? Intent and model context travel together."
     },
     "adultContent": {
-      "on": "🔞 Adult models shown",
-      "off": "🔞 Adult models hidden",
+      "on": "Adult models shown",
+      "off": "Adult models hidden",
       "toggleTitle": "Choose whether to show adult-content models in the catalog. Default OFF — turning it on reveals NSFW-labeled models with a ⚠ chip.",
-      "chip": "🔞 Adult",
+      "chip": "Adult",
       "chipTitle": "Adult content — visible because the filter is on"
     },
     "commercial": {
@@ -929,7 +929,7 @@
     },
     "category": {
       "all": "All",
-      "new": "🔥 New",
+      "new": "New",
       "agent-general": "General Assistant",
       "roleplay": "Roleplay",
       "coding": "Coding",
