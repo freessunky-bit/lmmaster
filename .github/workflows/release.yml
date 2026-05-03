@@ -176,6 +176,25 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
+      # 한 번만 (windows-x86_64 job) — GitHub의 `--generate-notes` API로
+      # 이전 tag 이후 commit/PR 자동 changelog 추가 (releaseBody 끝에 append).
+      # 다른 matrix job이 동시 진행해도 release는 첫 생성 후 edit이 idempotent.
+      - name: Auto-generate release notes (one-time)
+        if: matrix.platform == 'windows-x86_64' && success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # tauri-action이 release를 막 만들었으니 잠시 대기 — race 회피.
+          sleep 6
+          if gh release view "${{ steps.tag.outputs.tag }}" >/dev/null 2>&1; then
+            gh release edit "${{ steps.tag.outputs.tag }}" --generate-notes \
+              || echo "::warning::Auto-generated release notes 추가 실패 (release.yml step skip)."
+            echo "✅ Auto-generated release notes 추가 시도 완료"
+          else
+            echo "::warning::Release '${{ steps.tag.outputs.tag }}' 미존재 — generate-notes skip."
+          fi
+
       - name: Compute SHA256 + sizes (job summary)
         if: always()
         shell: bash
