@@ -600,7 +600,15 @@
 
 .catalog-card-footer {
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+  margin-top: var(--space-3, 12px);
+  /*
+   * Phase 14' v6 polish — chip(정보성)과 CTA(액션) 시각 hierarchy 분리.
+   * 좌측: compat chip (적합도 정보) / 우측: 진짜 CTA.
+   * gap 12px 최소 + space-between으로 명확한 영역 분리.
+   */
 }
 
 .catalog-card-compat {
@@ -1523,30 +1531,66 @@
   background: var(--primary-a-3);
 }
 
-/* ── Phase 12'.a — ModelCard "이 모델로 시작" CTA (ADR-0050) ──────── */
+/* ── Phase 14' v6 polish — "이 모델로 시작" primary CTA (ADR-0050).
+ *
+ * 디자인 결정 (Linear / Stripe / Vercel 차용):
+ * - Compat chip(정보)과 시각 차별화 — ghost border CTA로 액션 명확.
+ * - Solid filled은 카드 정보 밀도 高 환경에서 과시. ghost border가 균형.
+ * - hover 시 micro arrow translateX(2px) - 클릭 가능 신호. */
 
 .catalog-card-start-btn {
   appearance: none;
-  background: var(--primary-a-2);
-  border: 1px solid var(--primary-a-3);
+  background: transparent;
+  border: 1px solid var(--primary);
   color: var(--primary);
-  padding: var(--space-1) var(--space-3);
+  padding: 6px 14px;
   border-radius: var(--radius-1);
   font: inherit;
+  font-family: var(--font-sans);
   font-size: var(--fs-12);
+  font-weight: 600;
+  letter-spacing: -0.005em;
   cursor: pointer;
   text-align: center;
   width: auto;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition:
+    background var(--dur-instant, 120ms) var(--ease-out, ease-out),
+    border-color var(--dur-instant, 120ms) var(--ease-out, ease-out),
+    color var(--dur-instant, 120ms) var(--ease-out, ease-out);
 }
 
 .catalog-card-start-btn:hover {
-  background: var(--primary-a-3);
+  background: var(--primary-a-2);
+  border-color: var(--primary-hover);
+  color: var(--primary-hover);
+}
+
+/* arrow 미세 translateX — 클릭 신호. ::after 화살표는 텍스트 안에 inline → 별도 span 없이도 동작. */
+@media (prefers-reduced-motion: no-preference) {
+  .catalog-card-start-btn {
+    transition:
+      background var(--dur-instant, 120ms) var(--ease-out, ease-out),
+      border-color var(--dur-instant, 120ms) var(--ease-out, ease-out),
+      color var(--dur-instant, 120ms) var(--ease-out, ease-out),
+      transform var(--dur-instant, 120ms) var(--ease-out, ease-out);
+  }
+  .catalog-card-start-btn:hover {
+    transform: translateX(1px);
+  }
 }
 
 .catalog-card-start-btn:focus-visible {
   outline: 2px solid var(--primary-a-3);
   outline-offset: 2px;
+}
+
+.catalog-card-start-btn:active {
+  background: var(--primary-a-3);
+  transform: translateX(0);
 }
 
 /* ── Phase 13'.f.2.3 — NSFW + 비상업 라벨 (DEFERRED §13'.f.2 §3-4) ─── */
