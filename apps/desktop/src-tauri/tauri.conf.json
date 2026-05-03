@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "LMmaster",
-        "width": 1280,
-        "height": 800,
-        "minWidth": 960,
-        "minHeight": 600,
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1180,
+        "minHeight": 740,
         "decorations": true,
         "transparent": false,
         "theme": "Dark"
