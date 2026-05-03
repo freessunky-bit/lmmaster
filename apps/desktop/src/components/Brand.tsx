@@ -1,16 +1,10 @@
-// LMmaster 공식 픽토그램 v3 — Phase 14' v3 하이엔드 리뉴얼 (2026-05-04).
+// LMmaster 공식 픽토그램 v4 — Phase 14' v6 (2026-05-04, 권장안 채택).
 //
-// 디자인 컨셉: Triangulated Network Mark.
-// - 외곽: 둥근 사각 (rx 7) + 4-stop diagonal gradient (cyan→neon green→deep green).
-// - 내부: center dot (결집) + 4 corner dot + 4 connection line. AI 네트워크가 결집하는 메타.
-// - 모든 내부 element는 어두운 fill (#04140a == --primary-on) — gradient 위 음각 효과.
-// - drop-shadow 다층 글로우 (brand.css).
-// - 3-tone gradient + cyan accent stop으로 "Vercel + Anthropic" 톤.
-//
-// 정책 (CLAUDE.md §4.3 / §4.6):
-// - 외부 브랜드 마크 예외 정책 따라 컬러 SVG OK.
-// - linear-gradient `<defs>` 안 — currentColor와 분리.
-// - useId()로 instance별 gradient ID 고유화.
+// 디자인 컨셉: chunky filled M letterform + 깊이감 gradient + 위쪽 작은 status dot.
+// - Anthropic Claude / Notion / Linear 스타일 (단순 + 직관 + 작은 사이즈 가독성).
+// - Triangulated Network Mark (v3)가 작은 사이즈에서 X로 보이던 문제 해결.
+// - 톤다운된 sage green gradient (#5eddae 권장 컬러 채택, "전문 AI 테크놀로지" 느낌).
+// - 상단 작은 dot — Local AI status / signal 메타.
 
 import { useId } from "react";
 
@@ -38,32 +32,29 @@ export function BrandMark({ size = 28, className, ariaLabel }: BrandMarkProps) {
       {...labelProps}
     >
       <defs>
-        {/* 3-tone gradient + cyan accent — diagonal flow. */}
+        {/* 3-tone gradient — cyan accent → sage green → deep green. 톤다운된 채도. */}
         <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#7cfff5" />
-          <stop offset="40%" stopColor="#4cffa0" />
-          <stop offset="80%" stopColor="#38ff7e" />
-          <stop offset="100%" stopColor="#1ee063" />
+          <stop offset="0%" stopColor="#7cd4cc" />
+          <stop offset="50%" stopColor="#5eddae" />
+          <stop offset="100%" stopColor="#3fb887" />
         </linearGradient>
       </defs>
 
-      {/* 둥근 사각 컨테이너 — gradient fill (브랜드 본체). */}
+      {/* 둥근 사각 컨테이너 — gradient fill. */}
       <rect x="0" y="0" width="32" height="32" rx="7.5" fill={`url(#${gradId})`} />
 
-      {/* 4 connection line — 외곽 corner → 중앙. 네트워크 메타. */}
-      <line x1="9.8" y1="9.8" x2="14.2" y2="14.2" stroke="#04140a" strokeWidth="1.2" strokeLinecap="round" />
-      <line x1="22.2" y1="9.8" x2="17.8" y2="14.2" stroke="#04140a" strokeWidth="1.2" strokeLinecap="round" />
-      <line x1="22.2" y1="22.2" x2="17.8" y2="17.8" stroke="#04140a" strokeWidth="1.2" strokeLinecap="round" />
-      <line x1="9.8" y1="22.2" x2="14.2" y2="17.8" stroke="#04140a" strokeWidth="1.2" strokeLinecap="round" />
+      {/*
+       * Chunky M letterform — outline path.
+       * 좌측 stroke + 좌측 dip → 가운데 peak ↑ → 우측 dip → 우측 stroke.
+       * 두께 4px, 가운데 V dip 깊이 약 50%.
+       */}
+      <path
+        d="M7 22 V10 L11 14.5 L16 9 L21 14.5 L25 10 V22 H21.5 V14.8 L16.5 21 H15.5 L11 14.8 V22 Z"
+        fill="#0a1a14"
+      />
 
-      {/* 4 corner dot — 외곽 노드 (작음). */}
-      <circle cx="9" cy="9" r="1.5" fill="#04140a" />
-      <circle cx="23" cy="9" r="1.5" fill="#04140a" />
-      <circle cx="23" cy="23" r="1.5" fill="#04140a" />
-      <circle cx="9" cy="23" r="1.5" fill="#04140a" />
-
-      {/* center dot — 결집 (가장 큼, 시각 hierarchy). */}
-      <circle cx="16" cy="16" r="2.8" fill="#04140a" />
+      {/* 상단 status dot — Local AI signal 메타. 작고 미세. */}
+      <circle cx="16" cy="6" r="0.9" fill="#0a1a14" opacity="0.65" />
     </svg>
   );
 }

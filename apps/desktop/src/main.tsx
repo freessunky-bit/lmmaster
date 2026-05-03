@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "@lmmaster/design-system/tokens.css";
 import "@lmmaster/design-system/base.css";
 import "@lmmaster/design-system/components.css";

@@ -1,146 +1,171 @@
-/* SplashScreen v4 — Phase 14' v4 (2026-05-04). Anthropic Imagine 시연 영상 차용.
+/* SplashScreen v6 — Phase 14' v6 (2026-05-04). 사용자 권장안 채택.
  *
- * 레이어 구조:
- *   0. background    — solid dark
- *   1. grid overlay  — 미세 grid (pseudo-element, radial mask)
- *   2. bloom-1/2     — 다층 radial bloom (loop 호흡)
- *   3. layout grid   — 좌측 message + 우측 globe (시연 영상 패턴)
- *      ├── message: typography + 통계
- *      └── globe-wrap: SVG sphere + arcs + center BrandMark
- *   4. bottom        — 5단계 진행 텍스트 + dot indicator + skip hint
+ * 핵심 변경:
+ * - 컬러 톤다운: 형광 네온 (#38ff7e) → sage green (#5eddae). 채도 -36%.
+ * - 폰트: var(--font-sans) Pretendard 우선.
+ * - 타이포 hierarchy: h1 700 + sub 400 + stat-num 600 + stat-label 400.
+ * - 줄바꿈: word-break: keep-all + overflow-wrap: break-word + max-width: ch.
+ * - 여백: h1↔sub 24px, sub↔stats 48px (시각적 숨통).
+ * - 글로우 50% 축소: drop-shadow 강도 ↓, opacity 기반 ambient만.
+ * - bg: #0e0f12 → #0a0c10 (더 깊은 검정).
  *
- * 디자인 토큰만 (--surface-1 / --text / --text-muted) + brand 컬러 명시 hex.
+ * 톤다운 컬러 매핑:
+ *   #38ff7e (네온) -> #5eddae (sage)
+ *   #4cffa0 (hover) -> #6ee5b8
+ *   #1ee063 (press) -> #3fb887
+ *   #7cfff5 (cyan)  -> #7cd4cc
+ *   rgba(56, 255, 126, X) -> rgba(94, 221, 174, X)
+ *   rgba(124, 255, 245, X) -> rgba(124, 212, 204, X)
  */
 
 .splash-screen {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: var(--surface-1, #0e0f12);
+  background: #0a0c10;
   user-select: none;
   overflow: hidden;
-  font-family: var(--font-sans, system-ui, sans-serif);
+  font-family: var(--font-sans, "Pretendard Variable", -apple-system, system-ui, sans-serif);
   display: flex;
   flex-direction: column;
 }
 
-/* Grid overlay — 미세 텍스처 깊이감. */
+/* Grid overlay — 미세 텍스처 깊이감 (톤다운 + 더 micro). */
 .splash-screen::before {
   content: "";
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(56, 255, 126, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56, 255, 126, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
+    linear-gradient(rgba(94, 221, 174, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(94, 221, 174, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
   pointer-events: none;
   mask-image: radial-gradient(circle at 65% 50%, black 0%, transparent 75%);
 }
 
-/* Bloom layers. */
+/* Bloom layer 1 — 메인 ambient (톤다운). */
 .splash-bloom-1 {
   position: absolute;
   top: 50%;
   left: 65%;
   transform: translate(-50%, -50%);
-  width: 1000px;
-  height: 1000px;
+  width: 1100px;
+  height: 1100px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(56, 255, 126, 0.16) 0%,
-    rgba(56, 255, 126, 0.05) 40%,
+    rgba(94, 221, 174, 0.10) 0%,
+    rgba(94, 221, 174, 0.03) 40%,
     transparent 70%
   );
-  filter: blur(64px);
+  filter: blur(80px);
   pointer-events: none;
-  animation: splash-bloom-breathe-1 4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  animation: splash-bloom-breathe-1 4.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
+/* Bloom layer 2 — cyan accent (작고 미세). */
 .splash-bloom-2 {
   position: absolute;
   top: 50%;
   left: 65%;
   transform: translate(-50%, -50%);
-  width: 480px;
-  height: 480px;
+  width: 520px;
+  height: 520px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(124, 255, 245, 0.18) 0%,
-    rgba(76, 255, 160, 0.08) 30%,
+    rgba(124, 212, 204, 0.10) 0%,
+    rgba(110, 229, 184, 0.04) 30%,
     transparent 60%
   );
-  filter: blur(40px);
+  filter: blur(48px);
   pointer-events: none;
-  animation: splash-bloom-breathe-2 3s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  animation-delay: 0.5s;
+  animation: splash-bloom-breathe-2 3.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  animation-delay: 0.6s;
 }
 
 @keyframes splash-bloom-breathe-1 {
-  0%, 100% { opacity: 0.65; transform: translate(-50%, -50%) scale(0.95); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(0.95); }
+  50% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.06); }
 }
 
 @keyframes splash-bloom-breathe-2 {
-  0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.12); }
 }
 
-/* === V4 layout: 좌측 message + 우측 globe === */
+/* === V4/v6 layout: 좌측 message + 우측 globe === */
 
 .splash-v4-layout {
   position: relative;
   z-index: 1;
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(360px, 1fr) minmax(420px, 1.2fr);
+  grid-template-columns: minmax(380px, 1fr) minmax(440px, 1.15fr);
   align-items: center;
-  gap: clamp(24px, 4vw, 64px);
-  padding: clamp(32px, 5vw, 80px) clamp(32px, 6vw, 96px);
+  gap: clamp(32px, 5vw, 80px);
+  padding: clamp(40px, 5vw, 88px) clamp(40px, 6vw, 104px);
 }
 
-/* 좌측 message — typography + 통계. */
+/* === 좌측 message — typography hierarchy 강화 === */
+
 .splash-v4-message {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  max-width: 520px;
+  /* h1 -> sub 사이 24px (직접 sub gap), sub -> stats는 stats가 큰 margin-top으로 처리. */
+  gap: 0;
+  max-width: 540px;
 }
 
 .splash-v4-headline {
-  margin: 0;
-  font-size: clamp(36px, 4.2vw, 56px);
-  font-weight: 600;
+  margin: 0 0 24px 0;
+  font-family: var(--font-sans, "Pretendard Variable", system-ui, sans-serif);
+  font-size: clamp(40px, 4.5vw, 64px);
+  font-weight: 700;
   line-height: 1.08;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   color: var(--text, #f0f4f4);
-  text-shadow: 0 0 32px rgba(56, 255, 126, 0.18);
+
+  /* 줄바꿈 정책 — 한국어 단어 중간 분리 X. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  /* 폭 제한 — 너무 넓으면 한 줄, 너무 좁으면 어색 분리. ch 기반 자연. */
+  max-width: 18ch;
+
+  /* 글로우 축소 — text-shadow 부드럽게. */
+  text-shadow: 0 0 24px rgba(94, 221, 174, 0.12);
 }
 
 .splash-v4-accent {
-  background: linear-gradient(135deg, #7cfff5 0%, #4cffa0 60%, #38ff7e 100%);
+  /* 사용자 권장 — sage green gradient (#5eddae 베이스). */
+  background: linear-gradient(135deg, #7cd4cc 0%, #5eddae 60%, #3fb887 100%);
   -webkit-background-clip: text;
           background-clip: text;
   -webkit-text-fill-color: transparent;
   text-shadow: none;
-  filter: drop-shadow(0 0 12px rgba(124, 255, 245, 0.4));
+  /* 글로우 축소 — drop-shadow 강도 ↓ + 더 부드러움. */
+  filter: drop-shadow(0 0 8px rgba(94, 221, 174, 0.25));
 }
 
 .splash-v4-subline {
   margin: 0;
-  font-size: clamp(14px, 1.1vw, 16px);
+  font-family: var(--font-sans, "Pretendard Variable", system-ui, sans-serif);
+  font-size: clamp(14px, 1.05vw, 16px);
+  font-weight: 400;
   color: var(--text-secondary, #b8c2c2);
-  letter-spacing: 0.005em;
-  line-height: 1.5;
-  max-width: 380px;
+  letter-spacing: -0.005em;
+  line-height: 1.55;
+
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  max-width: 30ch;
 }
 
-/* 통계 row. */
+/* 통계 row — h1 group과 시각적 숨통(48px) 확보. */
 .splash-v4-stats {
   display: flex;
-  gap: clamp(20px, 2.5vw, 36px);
-  margin-top: 8px;
+  gap: clamp(28px, 3vw, 48px);
+  margin-top: 48px;
 }
 
 .splash-v4-stat {
@@ -150,59 +175,52 @@
 }
 
 .splash-v4-stat-num {
+  font-family: var(--font-sans, "Pretendard Variable", system-ui, sans-serif);
   font-size: clamp(32px, 3vw, 44px);
   font-weight: 600;
   color: var(--text);
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 20px rgba(56, 255, 126, 0.25);
+  text-shadow: 0 0 16px rgba(94, 221, 174, 0.16);
 }
 
 .splash-v4-stat-label {
   font-size: var(--fs-12, 12px);
+  font-weight: 400;
   color: var(--text-muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-/* 우측 globe wrap. */
+/* === 우측 globe wrap === */
+
 .splash-v4-globe-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
   max-width: 600px;
-  max-height: 70vh;
+  aspect-ratio: 1;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.splash-v4-globe {
-  width: 100%;
-  height: 100%;
-  filter:
-    drop-shadow(0 0 24px rgba(56, 255, 126, 0.25))
-    drop-shadow(0 0 48px rgba(124, 255, 245, 0.12));
-  /*
-   * 정적 globe — 회전 X. 사유: 2D Z축 회전은 평면 swirl 효과로 부자연스러움.
-   * 진짜 3D globe rotation은 Three.js 필요 (50KB+, ROI 낮음).
-   * 대신 arcs traveling stroke + 노드 호흡 + bloom breathe로 *살아있는 느낌* 차용.
-   */
-}
-
-/* center BrandMark — globe 정중앙 (z-index 위) + 강한 글로우. */
+/* center BrandMark — globe 정중앙 + 톤다운된 글로우. */
 .splash-v4-center-brand {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 2;
+  /*
+   * 글로우 축소 (Phase 14' v6) — 사용자 권장.
+   * 이전: 3층 18px+36px+80px (강한 형광)
+   * 현재: 2층 12px+28px (sharp + ambient soft, 톤다운).
+   */
   filter:
-    drop-shadow(0 0 22px rgba(56, 255, 126, 0.55))
-    drop-shadow(0 0 44px rgba(76, 255, 160, 0.3))
-    drop-shadow(0 0 80px rgba(124, 255, 245, 0.22));
+    drop-shadow(0 0 12px rgba(94, 221, 174, 0.32))
+    drop-shadow(0 0 28px rgba(94, 221, 174, 0.14));
 }
 
 /* === 하단 진행 panel === */
@@ -210,7 +228,7 @@
 .splash-v4-bottom {
   position: relative;
   z-index: 1;
-  padding: 0 clamp(32px, 5vw, 80px) clamp(28px, 4vh, 56px);
+  padding: 0 clamp(40px, 5vw, 88px) clamp(32px, 4vh, 56px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -229,9 +247,11 @@
 
 .splash-stage-text {
   position: absolute;
+  font-family: var(--font-sans);
   font-size: var(--fs-13, 13px);
+  font-weight: 400;
   color: var(--text-secondary, #b8c2c2);
-  letter-spacing: 0.01em;
+  letter-spacing: -0.005em;
   white-space: nowrap;
 }
 
@@ -248,21 +268,23 @@
   border-radius: 50%;
   background: rgba(180, 200, 200, 0.18);
   transition:
-    background 220ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    background 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .splash-dot.is-active {
-  background: var(--primary, #38ff7e);
-  box-shadow: 0 0 8px rgba(56, 255, 126, 0.65);
+  background: #5eddae;
+  box-shadow: 0 0 6px rgba(94, 221, 174, 0.5);
   transform: scale(1.2);
 }
 
 .splash-skip-hint {
+  font-family: var(--font-sans);
   font-size: var(--fs-11, 11px);
+  font-weight: 400;
   color: var(--text-muted);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   margin-top: 8px;
   font-variant: small-caps;
 }
@@ -274,9 +296,6 @@
   .splash-bloom-2 {
     animation: none;
     opacity: 0.5;
-  }
-  .splash-v4-globe {
-    animation: none;
   }
 }
 
@@ -292,6 +311,11 @@
     max-width: none;
     align-items: center;
   }
+  .splash-v4-headline,
+  .splash-v4-subline {
+    margin-left: auto;
+    margin-right: auto;
+  }
   .splash-v4-stats {
     justify-content: center;
   }
@@ -300,11 +324,11 @@
   }
 }
 
-@media (max-height: 720px) {
+@media (max-height: 760px) {
   .splash-v4-globe-wrap {
     max-height: 60vh;
   }
-  .splash-v4-headline {
-    font-size: clamp(28px, 3.5vw, 44px);
+  .splash-v4-stats {
+    margin-top: 32px;
   }
 }

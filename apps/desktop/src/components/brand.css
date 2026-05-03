@@ -1,9 +1,8 @@
-/* LMmaster 공식 픽토그램 — Phase 14' v2 리뉴얼 (2026-05-03). 디자인 토큰 + 명시 색만. */
+/* Brand v4 — Phase 14' v6 (2026-05-04). 글로우 톤다운 + 깊이감 우선. */
 
 .brand-mark {
   display: inline-block;
   flex-shrink: 0;
-  /* SVG 자체에 gradient fill 내장 — color 토큰 무관. */
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -11,10 +10,14 @@
     transition:
       filter var(--dur-2, 200ms) var(--ease-out, ease-out),
       transform var(--dur-2, 200ms) var(--ease-out, ease-out);
-    /* 두 단계 글로우 — 강한 시각적 깊이 (Kling AI 스타일). */
+    /*
+     * 글로우 축소 (Phase 14' v6) — 형광 야광 → 차분한 깊이감.
+     * 이전: drop-shadow 12px + 24px (강한 네온)
+     * 현재: drop-shadow 6px (sharp) + 18px (ambient soft, 낮은 opacity)
+     */
     filter:
-      drop-shadow(0 1px 2px rgba(30, 224, 99, 0.25))
-      drop-shadow(0 0 12px rgba(56, 255, 126, 0.35));
+      drop-shadow(0 1px 2px rgba(63, 184, 135, 0.18))
+      drop-shadow(0 0 8px rgba(94, 221, 174, 0.18));
   }
 }
 
@@ -26,19 +29,19 @@
 }
 
 .brand-lockup .brand-wordmark {
+  font-family: var(--font-sans);
   font-size: var(--fs-15, 15px);
-  font-weight: var(--weight-semi, 600);
-  letter-spacing: 0.01em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text);
   line-height: 1;
 }
 
-/* hover — 마이크로 인터랙션 (prefers-reduced-motion 자동 비활성). */
 @media (prefers-reduced-motion: no-preference) {
   .brand-lockup:hover .brand-mark {
     filter:
-      drop-shadow(0 2px 4px rgba(30, 224, 99, 0.3))
-      drop-shadow(0 0 16px rgba(56, 255, 126, 0.5));
+      drop-shadow(0 2px 3px rgba(63, 184, 135, 0.22))
+      drop-shadow(0 0 12px rgba(94, 221, 174, 0.28));
     transform: translateY(-1px);
   }
 }
