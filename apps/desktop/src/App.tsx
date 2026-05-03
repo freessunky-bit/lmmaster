@@ -5,6 +5,7 @@ import { StatusPill, type PillStatus } from "@lmmaster/design-system/react";
 import { BrandLockup } from "./components/Brand";
 import { CommandPalette } from "./components/command-palette/CommandPalette";
 import { EulaGate } from "./components/EulaGate";
+import { SplashScreen } from "./components/splash/SplashScreen";
 import {
   CommandPaletteProvider,
   useCommandRegistration,
@@ -63,6 +64,10 @@ const NAV_KEYS = [
 ] as const;
 
 export default function App() {
+  // SplashScreen — Phase 14' v2 (2026-05-04). 첫 mount 시 1.5s 환상적 연출 + Esc skip.
+  // 메인 트리는 splash 뒤에서 백그라운드 mount → splash 끝나면 EulaGate/Onboarding 즉시 표시.
+  const [splashShown, setSplashShown] = useState(true);
+
   const [completed, setCompleted] = useState<boolean>(isOnboardingCompleted);
   // 첫 onboarding 직후를 표시 — TourWelcomeToast trigger.
   // 페이지 새로고침 시 리셋되지만 toast는 localStorage `lmmaster.tour.shown` 1회 영속이라 안전.
@@ -88,10 +93,14 @@ export default function App() {
   }, []);
 
   return (
-    <CommandPaletteProvider>
-      <PaletteHotkey />
-      <CommandPalette />
-      <EulaGate eulaVersion="1.0.0" onAccept={handleEulaAccept}>
+    <>
+      {splashShown && (
+        <SplashScreen onComplete={() => setSplashShown(false)} />
+      )}
+      <CommandPaletteProvider>
+        <PaletteHotkey />
+        <CommandPalette />
+        <EulaGate eulaVersion="1.0.0" onAccept={handleEulaAccept}>
         <ActiveWorkspaceProvider>
           {!completed ? (
             <OnboardingApp onComplete={handleComplete} />
@@ -103,7 +112,8 @@ export default function App() {
           )}
         </ActiveWorkspaceProvider>
       </EulaGate>
-    </CommandPaletteProvider>
+      </CommandPaletteProvider>
+    </>
   );
 }
 
