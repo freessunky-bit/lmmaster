@@ -866,6 +866,10 @@
         "faq": "FAQ"
       }
     },
+    "splash": {
+      "aria": "Preparing LMmaster",
+      "skipHint": "Press Esc to skip"
+    },
     "help": {
       "triggerAria": "Open help for this screen",
       "popoverAria": "Help popover",

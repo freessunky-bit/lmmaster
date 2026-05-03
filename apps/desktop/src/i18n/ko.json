@@ -866,6 +866,10 @@
         "faq": "자주 묻는 질문 (FAQ)"
       }
     },
+    "splash": {
+      "aria": "LMmaster를 준비하고 있어요",
+      "skipHint": "Esc로 건너뛰기"
+    },
     "help": {
       "triggerAria": "이 화면 도움말을 볼게요",
       "popoverAria": "도움말 팝오버",

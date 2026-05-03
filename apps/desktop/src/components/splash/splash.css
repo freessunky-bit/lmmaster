@@ -1,0 +1,107 @@
+/* SplashScreen — Phase 14' v2 (2026-05-04). 디자인 토큰만. */
+
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-1, #0e0f12);
+  user-select: none;
+  /* Tauri custom titlebar 영역 무시 — 전체 cover. */
+  overflow: hidden;
+}
+
+/* PulseGlow — 배경 radial. node 등장 직전부터 호흡. */
+.splash-pulse-glow {
+  position: absolute;
+  width: 720px;
+  height: 720px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(56, 255, 126, 0.18) 0%,
+    rgba(56, 255, 126, 0.06) 40%,
+    transparent 70%
+  );
+  filter: blur(48px);
+  pointer-events: none;
+  animation: splash-pulse-breathe 3.2s ease-in-out infinite;
+  animation-delay: 0.1s;
+}
+
+@keyframes splash-pulse-breathe {
+  0%, 100% {
+    transform: scale(0.92);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+/* Network SVG — viewBox 400×400 + drop-shadow glow. */
+.splash-network {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 0 16px rgba(56, 255, 126, 0.3))
+    drop-shadow(0 0 32px rgba(56, 255, 126, 0.15));
+}
+
+/* BrandMark — Network 정중앙에 absolute 배치. z-index로 line 위. */
+.splash-center-brand {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  /* Brand 자체 drop-shadow + 추가 외부 글로우. */
+  filter: drop-shadow(0 0 20px rgba(56, 255, 126, 0.45))
+    drop-shadow(0 0 40px rgba(56, 255, 126, 0.2));
+}
+
+/* Wordmark — Network 하단 직후. */
+.splash-wordmark {
+  position: relative;
+  z-index: 1;
+  margin-top: 24px;
+  font-size: 28px;
+  font-weight: var(--weight-semi, 600);
+  letter-spacing: 0.02em;
+  color: var(--text);
+  line-height: 1;
+  text-shadow: 0 0 24px rgba(56, 255, 126, 0.25);
+}
+
+/* Esc skip 힌트 — 화면 하단. */
+.splash-skip-hint {
+  position: absolute;
+  bottom: 32px;
+  font-size: var(--fs-12, 12px);
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+/* prefers-reduced-motion — pulse 정지 + 짧은 fade. */
+@media (prefers-reduced-motion: reduce) {
+  .splash-pulse-glow {
+    animation: none;
+    opacity: 0.4;
+    transform: scale(1);
+  }
+}
+
+/* 작은 viewport — minWidth 1180 환경에서도 안전. */
+@media (max-width: 1280px) {
+  .splash-network {
+    width: 320px;
+    height: 320px;
+  }
+  .splash-pulse-glow {
+    width: 560px;
+    height: 560px;
+  }
+}
