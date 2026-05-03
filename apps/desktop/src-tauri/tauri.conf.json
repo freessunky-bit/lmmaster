@@ -32,8 +32,8 @@
     "category": "DeveloperTool",
     "shortDescription": "LM Studio + Ollama을 묶는 한국어 기반 로컬 AI 운영 허브",
     "longDescription": "LM Studio와 Ollama를 자동 설치·관리하고, 한국어 큐레이션 모델 카탈로그·워크벤치·자가스캔·자동 갱신을 제공하는 데스크톱 동반자.",
-    "publisher": "LMmaster",
-    "copyright": "© 2026 LMmaster",
+    "publisher": "MOJITO Lab",
+    "copyright": "© 2026 MOJITO Lab. All rights reserved.",
     "licenseFile": "../../../LICENSE",
     "icon": [
       "icons/32x32.png",
@@ -86,7 +86,7 @@
         "depends": []
       }
     },
-    "createUpdaterArtifacts": false
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "updater": {

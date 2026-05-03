@@ -915,6 +915,14 @@ function AdvancedPanel({ version, commit }: AdvancedPanelProps) {
             <dt>commit</dt>
             <dd className="num">{commit}</dd>
           </div>
+          <div className="settings-build-info-row">
+            <dt>{t("screens.settings.advanced.publisher")}</dt>
+            <dd>MOJITO Lab</dd>
+          </div>
+          <div className="settings-build-info-row">
+            <dt>{t("screens.settings.advanced.copyright")}</dt>
+            <dd>{t("screens.settings.advanced.copyrightValue")}</dd>
+          </div>
         </dl>
       </fieldset>
     </form>

@@ -119,6 +119,7 @@ fn make_entry(id: &str, cat: ModelCategory, install_mb: u64) -> ModelEntry {
         purpose: Default::default(),
         commercial: true,
         content_warning: None,
+        mmproj: None,
     }
 }
 

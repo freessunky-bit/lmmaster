@@ -426,7 +426,10 @@
         "sqlcipher.envHint": "SQLCipher is enabled with a secret stored in the OS keychain. Falls back to plaintext when the keychain is unavailable.",
         "exportLogs": "Export diagnostic logs",
         "exportLogs.comingSoon": "Coming in the next update",
-        "buildInfo": "Build info"
+        "buildInfo": "Build info",
+        "publisher": "Publisher",
+        "copyright": "Copyright",
+        "copyrightValue": "© 2026 MOJITO Lab. All rights reserved."
       },
       "workbench": {
         "artifacts": {

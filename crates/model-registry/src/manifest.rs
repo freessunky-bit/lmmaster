@@ -138,6 +138,37 @@ pub struct ModelEntry {
     pub notes: Option<String>,
     #[serde(default)]
     pub warnings: Vec<String>,
+
+    /// 비전 모델의 mmproj projector 파일 정보 — Phase 13'.h.2.c (ADR-0051).
+    ///
+    /// 정책:
+    /// - llama.cpp는 vision 모델이 GGUF 본체 + mmproj-*.gguf 두 파일로 구성됨.
+    /// - `vision_support: true` + 본 필드 누락 시 → llama.cpp 어댑터에서 한국어 안내 노출.
+    /// - Ollama / LM Studio는 내부 처리하므로 본 필드 무시.
+    /// - 누락 시 `None` 폴백 — 기존 entries 호환.
+    #[serde(default)]
+    pub mmproj: Option<MmprojSpec>,
+}
+
+/// 멀티모달 projector 파일 사양 — Phase 13'.h.2.c (ADR-0051, 보강 리서치 §1.2).
+///
+/// 정책:
+/// - HF resolve 직링 (외부 통신 화이트리스트 `huggingface.co`).
+/// - sha256 32-byte hex. None이면 사용자 경고 노출 (ADR-0042 정책).
+/// - precision은 F16 표준 권장. BF16/F32 옵션.
+/// - source 큐레이터 출처 기록 (`bartowski` / `ggml-org` / `unsloth` / `lmstudio-community`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MmprojSpec {
+    pub url: String,
+    #[serde(default)]
+    pub sha256: Option<String>,
+    pub size_mb: u64,
+    /// "f16" / "bf16" / "f32". F16이 표준.
+    #[serde(default)]
+    pub precision: Option<String>,
+    /// "bartowski" / "ggml-org" / "unsloth" / "lmstudio-community".
+    #[serde(default)]
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -454,6 +485,7 @@ mod tests {
                 purpose: ModelPurpose::default(),
                 commercial: true,
                 content_warning: None,
+                mmproj: None,
             }],
         };
         let s = serde_json::to_string(&m).unwrap();
@@ -463,6 +495,109 @@ mod tests {
         assert_eq!(m2.entries[0].verification.tier, VerificationTier::Community);
         assert!(m2.entries[0].intents.is_empty());
         assert!(m2.entries[0].domain_scores.is_empty());
+        assert!(m2.entries[0].mmproj.is_none());
+    }
+
+    // ── Phase 13'.h.2.c — MmprojSpec invariants (ADR-0051) ─────────────
+
+    #[test]
+    fn legacy_entry_without_mmproj_still_parses() {
+        // 기존 39 entries는 mmproj 없이 작성됨 — schema bump 없이 호환.
+        let json = r#"{
+            "schema_version": 1,
+            "generated_at": "2026-05-03T00:00:00Z",
+            "entries": [{
+                "id": "legacy-vision",
+                "display_name": "Legacy Vision",
+                "category": "agent-general",
+                "model_family": "x",
+                "source": {"type": "direct-url", "url": "https://x"},
+                "runner_compatibility": ["llama-cpp"],
+                "quantization_options": [],
+                "min_ram_mb": 4096,
+                "rec_ram_mb": 8192,
+                "install_size_mb": 2000,
+                "tool_support": true,
+                "vision_support": true,
+                "structured_output_support": false,
+                "license": "MIT",
+                "maturity": "stable",
+                "portable_suitability": 5,
+                "on_device_suitability": 5,
+                "fine_tune_suitability": 5
+            }]
+        }"#;
+        let m: ModelManifest = serde_json::from_str(json).unwrap();
+        // mmproj 누락 시 None 폴백.
+        assert!(m.entries[0].mmproj.is_none());
+        assert!(m.entries[0].vision_support);
+    }
+
+    #[test]
+    fn mmproj_spec_round_trip_full_fields() {
+        let spec = MmprojSpec {
+            url: "https://huggingface.co/ggml-org/gemma-3-4b-it-GGUF/resolve/main/mmproj-model-f16.gguf".into(),
+            sha256: Some("a".repeat(64)),
+            size_mb: 851,
+            precision: Some("f16".into()),
+            source: Some("ggml-org".into()),
+        };
+        let s = serde_json::to_string(&spec).unwrap();
+        let back: MmprojSpec = serde_json::from_str(&s).unwrap();
+        assert_eq!(back.url, spec.url);
+        assert_eq!(back.sha256, spec.sha256);
+        assert_eq!(back.size_mb, spec.size_mb);
+        assert_eq!(back.precision, spec.precision);
+        assert_eq!(back.source, spec.source);
+    }
+
+    #[test]
+    fn mmproj_spec_minimal_fields_parses() {
+        // sha256/precision/source 누락 — None 폴백.
+        let json = r#"{"url": "https://huggingface.co/x/mmproj.gguf", "size_mb": 500}"#;
+        let spec: MmprojSpec = serde_json::from_str(json).unwrap();
+        assert!(spec.sha256.is_none());
+        assert!(spec.precision.is_none());
+        assert!(spec.source.is_none());
+        assert_eq!(spec.size_mb, 500);
+    }
+
+    #[test]
+    fn entry_with_mmproj_round_trip() {
+        let json = r#"{
+            "id": "gemma-3-4b",
+            "display_name": "Gemma 3 4B",
+            "category": "agent-general",
+            "model_family": "gemma-3",
+            "source": {"type": "hugging-face", "repo": "google/gemma-3-4b-it"},
+            "runner_compatibility": ["ollama", "lm-studio", "llama-cpp"],
+            "quantization_options": [],
+            "min_ram_mb": 8192,
+            "rec_ram_mb": 16384,
+            "install_size_mb": 2500,
+            "tool_support": true,
+            "vision_support": true,
+            "structured_output_support": true,
+            "license": "Gemma Terms of Use",
+            "maturity": "stable",
+            "portable_suitability": 7,
+            "on_device_suitability": 8,
+            "fine_tune_suitability": 6,
+            "mmproj": {
+                "url": "https://huggingface.co/ggml-org/gemma-3-4b-it-GGUF/resolve/main/mmproj-model-f16.gguf",
+                "sha256": null,
+                "size_mb": 851,
+                "precision": "f16",
+                "source": "ggml-org"
+            }
+        }"#;
+        let entry: ModelEntry = serde_json::from_str(json).unwrap();
+        let mmproj = entry.mmproj.expect("mmproj 필드 deserialize");
+        assert_eq!(mmproj.size_mb, 851);
+        assert_eq!(mmproj.precision.as_deref(), Some("f16"));
+        assert_eq!(mmproj.source.as_deref(), Some("ggml-org"));
+        assert!(mmproj.sha256.is_none());
+        assert!(mmproj.url.starts_with("https://huggingface.co/"));
     }
 
     #[test]
@@ -569,6 +704,7 @@ mod tests {
             purpose: ModelPurpose::default(),
             commercial: true,
             content_warning: None,
+            mmproj: None,
         }
     }
 

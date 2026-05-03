@@ -15,6 +15,7 @@ members = [
   "crates/adapter-ollama",
   "crates/adapter-lmstudio",
   "crates/adapter-vllm",
+  "crates/runner-llama-cpp",
   "crates/hardware-probe",
   "crates/model-registry",
   "crates/portable-workspace",
@@ -141,6 +142,7 @@ bench-harness = { path = "crates/bench-harness" }
 preset-registry = { path = "crates/preset-registry" }
 adapter-ollama = { path = "crates/adapter-ollama" }
 adapter-lmstudio = { path = "crates/adapter-lmstudio" }
+runner-llama-cpp = { path = "crates/runner-llama-cpp" }
 hardware-probe = { path = "crates/hardware-probe" }
 model-registry = { path = "crates/model-registry" }
 portable-workspace = { path = "crates/portable-workspace" }
