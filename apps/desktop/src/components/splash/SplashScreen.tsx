@@ -32,15 +32,26 @@ export interface SplashScreenProps {
   onComplete?: () => void;
 }
 
-// 5단계 — 각 ~360ms (총 1.8s). 마지막 stage는 minDuration까지 hold.
+// 5단계 — duration weight (합산 5.0). 실제 ms는 minDuration에 비례 자동 분배.
+// dev: minDuration 4500 → 각 ~900ms / prod: 3000 → 각 ~600ms.
 // i18n 키만 명시 — 실제 텍스트는 ko/en에서 fetch.
 const STAGES = [
-  { key: "checking", durationMs: 360 },
-  { key: "detecting", durationMs: 360 },
-  { key: "catalog", durationMs: 360 },
-  { key: "gateway", durationMs: 360 },
-  { key: "ready", durationMs: 360 },
+  { key: "checking", weight: 1 },
+  { key: "detecting", weight: 1 },
+  { key: "catalog", weight: 1 },
+  { key: "gateway", weight: 1 },
+  { key: "ready", weight: 1 },
 ] as const;
+const STAGE_WEIGHT_TOTAL = STAGES.reduce((s, x) => s + x.weight, 0);
+
+/** dev/prod 자동 감지 — dev는 사용자가 콘솔 + window 두 번 봐야 해서 더 길게 보여줌. */
+const DEFAULT_MIN_DURATION_MS = (() => {
+  try {
+    return import.meta.env?.DEV ? 4500 : 3000;
+  } catch {
+    return 3000;
+  }
+})();
 
 const NODE_COUNT = 8;
 const SVG_SIZE = 460;
@@ -68,8 +79,8 @@ const LINEAR_EASE = [0.16, 1, 0.3, 1] as const;
 
 export function SplashScreen({
   ready = true,
-  minDurationMs = 1800,
-  maxDurationMs = 6000,
+  minDurationMs = DEFAULT_MIN_DURATION_MS,
+  maxDurationMs = 8000,
   onComplete,
 }: SplashScreenProps) {
   const { t } = useTranslation();
@@ -78,20 +89,21 @@ export function SplashScreen({
   const [minElapsed, setMinElapsed] = useState(false);
   const [stageIdx, setStageIdx] = useState(0);
 
-  // 단계 진행 — 시간 기반 5 stage (총 1.8s).
+  // 단계 진행 — minDuration에 비례 분배. dev 4.5s = 각 stage ~900ms.
   useEffect(() => {
     const speedFactor = reducedMotion ? 0.4 : 1;
+    const totalMs = minDurationMs * speedFactor;
     let cumulative = 0;
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (let i = 0; i < STAGES.length; i++) {
       const stage = STAGES[i];
       if (!stage) continue;
-      cumulative += stage.durationMs * speedFactor;
+      cumulative += (stage.weight / STAGE_WEIGHT_TOTAL) * totalMs;
       const nextIdx = Math.min(i + 1, STAGES.length - 1);
       timers.push(setTimeout(() => setStageIdx(nextIdx), cumulative));
     }
     return () => timers.forEach(clearTimeout);
-  }, [reducedMotion]);
+  }, [reducedMotion, minDurationMs]);
 
   // 최소 시간 보장.
   useEffect(() => {
@@ -191,7 +203,7 @@ export function SplashScreen({
                 rotate: reducedMotion ? 0 : 360,
               }}
               transition={{
-                opacity: { delay: 0.2, duration: 0.5, ease: LINEAR_EASE },
+                opacity: { delay: 0.4, duration: 0.6, ease: LINEAR_EASE },
                 rotate: {
                   duration: reducedMotion ? 0 : 24,
                   repeat: reducedMotion ? 0 : Infinity,
@@ -216,8 +228,8 @@ export function SplashScreen({
                   scale: [0.4, 3.0, 4.0],
                 }}
                 transition={{
-                  delay: 1.0,
-                  duration: 1.8,
+                  delay: 1.8,
+                  duration: 2.2,
                   ease: LINEAR_EASE,
                   repeat: Infinity,
                   repeatDelay: 0.4,
@@ -244,8 +256,8 @@ export function SplashScreen({
                   initial={{ pathLength: 0, opacity: 0 }}
                   animate={{ pathLength: 1, opacity: 0.55 }}
                   transition={{
-                    delay: 0.5 + i * 0.04,
-                    duration: reducedMotion ? 0.18 : 0.5,
+                    delay: 1.2 + i * 0.06,
+                    duration: reducedMotion ? 0.18 : 0.55,
                     ease: LINEAR_EASE,
                   }}
                 />
@@ -277,8 +289,8 @@ export function SplashScreen({
                       opacity: [0, 1, 0.8, 0],
                     }}
                     transition={{
-                      delay: 1.0 + i * 0.18,
-                      duration: 1.4,
+                      delay: 2.2 + i * 0.18,
+                      duration: 1.6,
                       ease: LINEAR_EASE,
                       repeat: Infinity,
                       repeatDelay: 1.2,
@@ -301,8 +313,8 @@ export function SplashScreen({
                   opacity: reducedMotion ? 1 : [0, 1, 0.85],
                 }}
                 transition={{
-                  delay: 0.25 + i * 0.06,
-                  duration: reducedMotion ? 0.18 : 0.55,
+                  delay: 0.6 + i * 0.08,
+                  duration: reducedMotion ? 0.2 : 0.6,
                   ease: LINEAR_EASE,
                 }}
                 style={{
@@ -322,8 +334,8 @@ export function SplashScreen({
               opacity: 1,
             }}
             transition={{
-              delay: reducedMotion ? 0.15 : 0.95,
-              duration: reducedMotion ? 0.2 : 0.6,
+              delay: reducedMotion ? 0.2 : 1.7,
+              duration: reducedMotion ? 0.22 : 0.7,
               ease: LINEAR_EASE,
             }}
             aria-hidden="true"
@@ -339,8 +351,8 @@ export function SplashScreen({
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                delay: reducedMotion ? 0.25 : 1.15,
-                duration: reducedMotion ? 0.2 : 0.45,
+                delay: reducedMotion ? 0.3 : 2.1,
+                duration: reducedMotion ? 0.22 : 0.5,
                 ease: LINEAR_EASE,
               }}
             >
@@ -378,8 +390,9 @@ export function SplashScreen({
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.55 }}
               transition={{
-                delay: reducedMotion ? 0.4 : 1.5,
-                duration: 0.4,
+                delay: reducedMotion ? 0.4 : 2.5,
+                duration: 0.5,
+                ease: LINEAR_EASE,
               }}
             >
               {t("screens.splash.skipHint", "Esc로 건너뛰기")}
