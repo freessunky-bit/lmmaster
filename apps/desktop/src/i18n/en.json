@@ -869,6 +869,16 @@
     "splash": {
       "aria": "Preparing LMmaster",
       "skipHint": "Press Esc to skip",
+      "headline": {
+        "prefix": "Intelligence is gathering ",
+        "accent": "now"
+      },
+      "subline": "Runtimes · models · catalog converge in one place",
+      "stats": {
+        "runtime": "runtimes",
+        "model": "models",
+        "intent": "domains"
+      },
       "stage": {
         "checking": "Checking environment",
         "detecting": "Detecting runtimes",
