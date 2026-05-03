@@ -54,6 +54,19 @@ if errorlevel 1 (
 echo pnpm install OK
 
 echo.
+echo [pre] cleanup leftover dev processes (vite port 1420 / lmmaster-desktop.exe)
+echo --- pre cleanup --- >> "%LOG%"
+REM 이전 batch 종료 안 된 채로 다시 실행 시 vite 1420 포트 잡혀 있으면 fail.
+REM PID는 netstat 5번째 토큰(LISTENING 기준).
+for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr :1420 ^| findstr LISTENING') do (
+    echo killing PID %%a holding port 1420 >> "%LOG%"
+    taskkill /F /PID %%a >nul 2>&1
+)
+taskkill /F /IM lmmaster-desktop.exe /T >nul 2>&1
+REM port release time 짧게 대기.
+timeout /t 1 /nobreak >nul
+
+echo.
 echo [step 4/4] tauri:dev
 echo (First build: 5-15 minutes for Rust release compile.)
 echo (Look for "gateway://ready port=NNNNN" + desktop window.)

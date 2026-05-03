@@ -24,6 +24,7 @@
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-updater": "^2.10.1",
+    "@types/three": "^0.184.0",
     "@xstate/react": "^5.0.0",
     "framer-motion": "^11.11.0",
     "i18next": "^23.0.0",
@@ -32,6 +33,7 @@
     "react-dom": "^18.3.0",
     "react-error-boundary": "^4.1.2",
     "react-i18next": "^14.0.0",
+    "three": "^0.184.0",
     "xstate": "^5.19.0",
     "zustand": "^4.5.0"
   },
