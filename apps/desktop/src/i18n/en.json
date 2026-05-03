@@ -868,7 +868,14 @@
     },
     "splash": {
       "aria": "Preparing LMmaster",
-      "skipHint": "Press Esc to skip"
+      "skipHint": "Press Esc to skip",
+      "stage": {
+        "checking": "Checking environment",
+        "detecting": "Detecting runtimes",
+        "catalog": "Loading catalog",
+        "gateway": "Waking the gateway",
+        "ready": "Almost there"
+      }
     },
     "help": {
       "triggerAria": "Open help for this screen",
