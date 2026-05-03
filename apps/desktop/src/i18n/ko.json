@@ -869,6 +869,16 @@
     "splash": {
       "aria": "LMmaster를 준비하고 있어요",
       "skipHint": "Esc로 건너뛰기",
+      "headline": {
+        "prefix": "지능을 모으고 ",
+        "accent": "있어요"
+      },
+      "subline": "런타임 · 모델 · 카탈로그가 한자리에 모여요",
+      "stats": {
+        "runtime": "런타임",
+        "model": "모델",
+        "intent": "도메인"
+      },
       "stage": {
         "checking": "환경을 점검하고 있어요",
         "detecting": "런타임을 감지하고 있어요",

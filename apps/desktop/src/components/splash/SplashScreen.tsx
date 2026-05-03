@@ -1,21 +1,17 @@
-// SplashScreen v3 — 세계 최고 수준 레퍼런스 종합 (Phase 14' v3 디자인 결정 2026-05-04).
+// SplashScreen v4 — Anthropic Imagine 시연 영상 차용 (Phase 14' v4 디자인 결정 2026-05-04).
 //
-// 차용 패턴:
-// - 진행 텍스트 cycling (JetBrains IDE / Adobe Suite / League of Legends Client)
-// - 레이어드 radial bloom (Kling AI / Runway / Stripe Mesh)
-// - Network + data packet (Linear team Loop / Apple Music)
-// - Concentric pulse (Spotify Wave / Stripe)
-// - Orbital ring (Apple Vision Pro / Halo)
-// - Cubic-bezier(0.16, 1, 0.3, 1) Linear 시그니처 easing
-// - 3-tone gradient + cyan accent (Vercel / Anthropic)
+// 컨셉: 회전하는 globe + 표면 노드 + connection arcs + 좌측 typography + 우측 진행 panel.
+// 시연 영상 패턴 적용:
+//   - 큰 globe (radial gradient + lat/long lines + perspective fake)
+//   - 표면 노드 (depth 기반 size/opacity — 앞은 밝음/큼, 뒤는 흐림/작음)
+//   - Connection arcs (bezier curve가 globe 표면 위로 솟아오름, traveling stroke)
+//   - 좌측 큰 typography ("지능을 모으고 있어요", "있어요" cyan accent)
+//   - 좌측 통계 ("3 런타임 / 40 모델 / 11 도메인")
+//   - 우측 진행 panel (5단계 텍스트 cycling 유지)
 //
-// 동작:
-// - 5단계 시간 기반 진행 (텍스트 cycling + dot indicator).
-// - 8 node 45° 간격 orbital + 외각 faded ring.
-// - 6 connection line stroke draw + data packet motion (line 따라 점 흐름).
-// - BrandMark center + orbital ring (회전 loop) + concentric pulse 외부 방출.
-// - 3-tone gradient (#4cffa0 / #38ff7e / #1ee063) + cyan accent (#7cfff5).
-// - prefers-reduced-motion 자동 정적 + 시간 압축.
+// 정책:
+// - 진짜 3D rotation은 Three.js 필요 (50KB+, ROI 낮음). SVG sphere illusion + traveling arcs로 90% 체감 차용.
+// - prefers-reduced-motion 자동 정적.
 // - role=status aria-live=polite + Esc skip.
 
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -32,9 +28,7 @@ export interface SplashScreenProps {
   onComplete?: () => void;
 }
 
-// 5단계 — duration weight (합산 5.0). 실제 ms는 minDuration에 비례 자동 분배.
-// dev: minDuration 4500 → 각 ~900ms / prod: 3000 → 각 ~600ms.
-// i18n 키만 명시 — 실제 텍스트는 ko/en에서 fetch.
+// 5단계 weight 비례 분배.
 const STAGES = [
   { key: "checking", weight: 1 },
   { key: "detecting", weight: 1 },
@@ -44,7 +38,6 @@ const STAGES = [
 ] as const;
 const STAGE_WEIGHT_TOTAL = STAGES.reduce((s, x) => s + x.weight, 0);
 
-/** dev/prod 자동 감지 — dev는 사용자가 콘솔 + window 두 번 봐야 해서 더 길게 보여줌. */
 const DEFAULT_MIN_DURATION_MS = (() => {
   try {
     return import.meta.env?.DEV ? 4500 : 3000;
@@ -53,28 +46,64 @@ const DEFAULT_MIN_DURATION_MS = (() => {
   }
 })();
 
-const NODE_COUNT = 8;
-const SVG_SIZE = 460;
-const CENTER = SVG_SIZE / 2; // 230
-const ORBIT_RADIUS = 150;
-const NODE_RADIUS = 5;
-const INNER_RADIUS = 40;
-const OUTER_FADED_RING_RADIUS = 175;
+// SVG viewBox + globe 좌표.
+const VB = 600;
+const CENTER = VB / 2; // 300
+const GLOBE_RADIUS = 220;
 
-// 8 node — 12시 시작 시계방향 45° 간격.
-function nodeAngle(i: number) {
-  return -90 + i * (360 / NODE_COUNT);
+// 노드 좌표 (lat: -π/2 ~ π/2, lon: -π ~ π). depth는 cos(lon) — 1(앞) ~ -1(뒤).
+// 12개 노드 — 시연영상의 도시 분포 차용 (균일 분포 + 일부 앞/뒤 섞임).
+const NODES_LATLON = [
+  [0.4, -0.3],
+  [0.1, 0.3],
+  [-0.3, 0.5],
+  [-0.6, 0.0],
+  [0.7, 0.4],
+  [-0.5, -0.7],
+  [0.2, -0.9],
+  [-0.1, 1.3],   // 뒤
+  [0.5, 1.6],    // 뒤
+  [-0.4, -1.5],  // 뒤
+  [0.0, -2.0],   // 뒤 (반대편)
+  [0.8, -0.1],
+];
+
+interface ProjectedNode {
+  x: number;
+  y: number;
+  depth: number; // 1 (front) ~ -1 (back)
 }
 
-function nodePos(angleDeg: number, radius = ORBIT_RADIUS) {
-  const rad = (angleDeg * Math.PI) / 180;
-  return {
-    x: CENTER + radius * Math.cos(rad),
-    y: CENTER + radius * Math.sin(rad),
-  };
+function project(lat: number, lon: number): ProjectedNode {
+  const x = CENTER + GLOBE_RADIUS * Math.cos(lat) * Math.sin(lon);
+  const y = CENTER - GLOBE_RADIUS * Math.sin(lat);
+  const depth = Math.cos(lon) * Math.cos(lat);
+  return { x, y, depth };
 }
 
-// Linear 시그니처 easing (cubic-bezier(0.16, 1, 0.3, 1)) — Framer Motion 표기.
+const PROJECTED_NODES: ProjectedNode[] = NODES_LATLON.map(([lat, lon]) =>
+  project(lat as number, lon as number),
+);
+
+// Connection arcs — 앞쪽 노드 위주 페어. 뒤쪽 (depth < 0) 노드는 arc 표시 안 함.
+const ARC_PAIRS: [number, number][] = [
+  [0, 1],
+  [1, 4],
+  [4, 6],
+  [3, 5],
+  [5, 0],
+  [6, 11],
+  [11, 4],
+  [0, 3],
+];
+
+function arcPath(from: ProjectedNode, to: ProjectedNode): string {
+  // bezier control point — 두 노드 중점에서 globe 위쪽 (y - 80px)으로 솟아오름.
+  const midX = (from.x + to.x) / 2;
+  const midY = (from.y + to.y) / 2 - 80;
+  return `M ${from.x.toFixed(1)} ${from.y.toFixed(1)} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${to.x.toFixed(1)} ${to.y.toFixed(1)}`;
+}
+
 const LINEAR_EASE = [0.16, 1, 0.3, 1] as const;
 
 export function SplashScreen({
@@ -89,7 +118,7 @@ export function SplashScreen({
   const [minElapsed, setMinElapsed] = useState(false);
   const [stageIdx, setStageIdx] = useState(0);
 
-  // 단계 진행 — minDuration에 비례 분배. dev 4.5s = 각 stage ~900ms.
+  // Stage 진행 — minDuration 비례 분배.
   useEffect(() => {
     const speedFactor = reducedMotion ? 0.4 : 1;
     const totalMs = minDurationMs * speedFactor;
@@ -105,24 +134,20 @@ export function SplashScreen({
     return () => timers.forEach(clearTimeout);
   }, [reducedMotion, minDurationMs]);
 
-  // 최소 시간 보장.
   useEffect(() => {
     const t = setTimeout(() => setMinElapsed(true), minDurationMs);
     return () => clearTimeout(t);
   }, [minDurationMs]);
 
-  // 최대 시간 강제 dismiss.
   useEffect(() => {
     const t = setTimeout(() => setShown(false), maxDurationMs);
     return () => clearTimeout(t);
   }, [maxDurationMs]);
 
-  // ready + 최소 시간 충족 시 dismiss.
   useEffect(() => {
     if (ready && minElapsed) setShown(false);
   }, [ready, minElapsed]);
 
-  // Esc skip.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setShown(false);
@@ -134,18 +159,11 @@ export function SplashScreen({
   const currentStage = STAGES[stageIdx] ?? STAGES[0]!;
   const stageLabel = t(`screens.splash.stage.${currentStage.key}`, currentStage.key);
 
-  // 8 node positions — 미리 계산.
-  const nodes = Array.from({ length: NODE_COUNT }, (_, i) => ({
-    i,
-    angleDeg: nodeAngle(i),
-    pos: nodePos(nodeAngle(i)),
-  }));
-
   return (
     <AnimatePresence onExitComplete={onComplete}>
       {shown && (
         <motion.div
-          className="splash-screen"
+          className="splash-screen splash-v4"
           role="status"
           aria-live="polite"
           aria-busy="true"
@@ -156,210 +174,254 @@ export function SplashScreen({
         >
           {/* Layer 1 — 배경 grid overlay (CSS pseudo). */}
 
-          {/* Layer 2 — 다층 radial bloom (CSS keyframes loop). */}
+          {/* Layer 2 — 다층 radial bloom. */}
           <div className="splash-bloom-1" aria-hidden="true" />
           <div className="splash-bloom-2" aria-hidden="true" />
 
-          {/* Layer 3 — Network SVG: outer faded ring + 8 nodes + 6 connection + 6 data packets. */}
-          <svg
-            className="splash-network"
-            viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
-            width={SVG_SIZE}
-            height={SVG_SIZE}
-            aria-hidden="true"
-          >
-            <defs>
-              {/* 3-tone gradient + cyan accent stop. */}
-              <linearGradient id="splash-grad-line" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#4cffa0" />
-                <stop offset="60%" stopColor="#38ff7e" />
-                <stop offset="100%" stopColor="#7cfff5" />
-              </linearGradient>
-              <radialGradient id="splash-grad-node" cx="0.5" cy="0.5" r="0.5">
-                <stop offset="0%" stopColor="#7cfff5" />
-                <stop offset="50%" stopColor="#4cffa0" />
-                <stop offset="100%" stopColor="#1ee063" />
-              </radialGradient>
-              {/* Concentric pulse — center에서 외부로 방출하는 ring stroke. */}
-              <radialGradient id="splash-grad-pulse" cx="0.5" cy="0.5" r="0.5">
-                <stop offset="60%" stopColor="rgba(56,255,126,0)" />
-                <stop offset="80%" stopColor="rgba(56,255,126,0.4)" />
-                <stop offset="100%" stopColor="rgba(56,255,126,0)" />
-              </radialGradient>
-            </defs>
-
-            {/* Outer faded ring — orbit 위 ambient ring. */}
-            <motion.circle
-              cx={CENTER}
-              cy={CENTER}
-              r={OUTER_FADED_RING_RADIUS}
-              fill="none"
-              stroke="rgba(56,255,126,0.12)"
-              strokeWidth="1"
-              strokeDasharray="2 6"
-              initial={{ opacity: 0, rotate: 0 }}
-              animate={{
-                opacity: 1,
-                rotate: reducedMotion ? 0 : 360,
-              }}
-              transition={{
-                opacity: { delay: 0.4, duration: 0.6, ease: LINEAR_EASE },
-                rotate: {
-                  duration: reducedMotion ? 0 : 24,
-                  repeat: reducedMotion ? 0 : Infinity,
-                  ease: "linear",
-                },
-              }}
-              style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
-            />
-
-            {/* Concentric pulse — center에서 ring 방출 1.8s 주기. */}
-            {!reducedMotion && (
-              <motion.circle
-                cx={CENTER}
-                cy={CENTER}
-                r={1}
-                fill="none"
-                stroke="url(#splash-grad-pulse)"
-                strokeWidth="2"
-                initial={{ opacity: 0, scale: 0.4 }}
-                animate={{
-                  opacity: [0, 0.5, 0],
-                  scale: [0.4, 3.0, 4.0],
-                }}
-                transition={{
-                  delay: 1.8,
-                  duration: 2.2,
-                  ease: LINEAR_EASE,
-                  repeat: Infinity,
-                  repeatDelay: 0.4,
-                }}
-                style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
-              />
-            )}
-
-            {/* Connection lines — 외곽 node에서 BrandMark 외각으로. */}
-            {nodes.map((node, i) => {
-              const start = node.pos;
-              const end = nodePos(node.angleDeg, INNER_RADIUS);
-              return (
-                <motion.line
-                  key={`line-${i}`}
-                  x1={start.x}
-                  y1={start.y}
-                  x2={end.x}
-                  y2={end.y}
-                  stroke="url(#splash-grad-line)"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeOpacity={0.55}
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 0.55 }}
-                  transition={{
-                    delay: 1.2 + i * 0.06,
-                    duration: reducedMotion ? 0.18 : 0.55,
-                    ease: LINEAR_EASE,
-                  }}
-                />
-              );
-            })}
-
-            {/* Data packets — line을 따라 흐르는 작은 점 (4개만 — 시각 정신없음 회피). */}
-            {!reducedMotion &&
-              nodes.slice(0, 4).map((node, i) => {
-                const angleRad = (node.angleDeg * Math.PI) / 180;
-                const dx = Math.cos(angleRad);
-                const dy = Math.sin(angleRad);
-                return (
-                  <motion.circle
-                    key={`packet-${i}`}
-                    r={2.5}
-                    fill="#7cfff5"
-                    filter="url(#splash-bloom-filter)"
-                    initial={{ opacity: 0 }}
-                    animate={{
-                      cx: [
-                        CENTER + ORBIT_RADIUS * dx,
-                        CENTER + INNER_RADIUS * dx,
-                      ],
-                      cy: [
-                        CENTER + ORBIT_RADIUS * dy,
-                        CENTER + INNER_RADIUS * dy,
-                      ],
-                      opacity: [0, 1, 0.8, 0],
-                    }}
-                    transition={{
-                      delay: 2.2 + i * 0.18,
-                      duration: 1.6,
-                      ease: LINEAR_EASE,
-                      repeat: Infinity,
-                      repeatDelay: 1.2,
-                    }}
-                  />
-                );
-              })}
-
-            {/* 8 outer nodes — stagger fade-in + scale spring + 호흡 loop. */}
-            {nodes.map((node, i) => (
-              <motion.circle
-                key={`node-${i}`}
-                cx={node.pos.x}
-                cy={node.pos.y}
-                r={NODE_RADIUS}
-                fill="url(#splash-grad-node)"
-                initial={{ scale: 0.3, opacity: 0 }}
-                animate={{
-                  scale: reducedMotion ? 1 : [0.3, 1.2, 1],
-                  opacity: reducedMotion ? 1 : [0, 1, 0.85],
-                }}
-                transition={{
-                  delay: 0.6 + i * 0.08,
-                  duration: reducedMotion ? 0.2 : 0.6,
-                  ease: LINEAR_EASE,
-                }}
-                style={{
-                  transformBox: "fill-box",
-                  transformOrigin: "center",
-                }}
-              />
-            ))}
-          </svg>
-
-          {/* BrandMark center + orbital ring (회전 loop). */}
-          <motion.div
-            className="splash-center-brand"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{
-              scale: reducedMotion ? 1 : [0, 1.08, 1],
-              opacity: 1,
-            }}
-            transition={{
-              delay: reducedMotion ? 0.2 : 1.7,
-              duration: reducedMotion ? 0.22 : 0.7,
-              ease: LINEAR_EASE,
-            }}
-            aria-hidden="true"
-          >
-            <div className="splash-orbital-ring" />
-            <BrandMark size={96} />
-          </motion.div>
-
-          {/* Wordmark + 진행 텍스트 + dot 인디케이터 (한 영역). */}
-          <div className="splash-bottom-area">
+          {/* 메인 layout — 좌측 typography + 우측 globe. */}
+          <div className="splash-v4-layout">
+            {/* 좌측 — 큰 typography + 통계. */}
             <motion.div
-              className="splash-wordmark"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
+              className="splash-v4-message"
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{
-                delay: reducedMotion ? 0.3 : 2.1,
-                duration: reducedMotion ? 0.22 : 0.5,
+                delay: reducedMotion ? 0.2 : 1.0,
+                duration: reducedMotion ? 0.3 : 0.9,
                 ease: LINEAR_EASE,
               }}
             >
-              LMmaster
+              <h1 className="splash-v4-headline">
+                {t("screens.splash.headline.prefix", "지능을 모으고 ")}
+                <span className="splash-v4-accent">
+                  {t("screens.splash.headline.accent", "있어요")}
+                </span>
+              </h1>
+              <p className="splash-v4-subline">
+                {t(
+                  "screens.splash.subline",
+                  "런타임 · 모델 · 카탈로그가 한자리에 모여요",
+                )}
+              </p>
+              <div className="splash-v4-stats">
+                <div className="splash-v4-stat">
+                  <span className="splash-v4-stat-num num">3</span>
+                  <span className="splash-v4-stat-label">
+                    {t("screens.splash.stats.runtime", "런타임")}
+                  </span>
+                </div>
+                <div className="splash-v4-stat">
+                  <span className="splash-v4-stat-num num">40</span>
+                  <span className="splash-v4-stat-label">
+                    {t("screens.splash.stats.model", "모델")}
+                  </span>
+                </div>
+                <div className="splash-v4-stat">
+                  <span className="splash-v4-stat-num num">11</span>
+                  <span className="splash-v4-stat-label">
+                    {t("screens.splash.stats.intent", "도메인")}
+                  </span>
+                </div>
+              </div>
             </motion.div>
 
-            {/* 진행 텍스트 cycling — fade in/out 300ms. */}
+            {/* 우측 — globe + arcs. */}
+            <div className="splash-v4-globe-wrap" aria-hidden="true">
+              <svg
+                className="splash-v4-globe"
+                viewBox={`0 0 ${VB} ${VB}`}
+                width="100%"
+                height="100%"
+              >
+                <defs>
+                  <radialGradient id="globe-fill-v4" cx="0.42" cy="0.4" r="0.7">
+                    <stop offset="0%" stopColor="rgba(56,255,126,0.18)" />
+                    <stop offset="50%" stopColor="rgba(20,40,40,0.5)" />
+                    <stop offset="100%" stopColor="rgba(0,0,0,0.85)" />
+                  </radialGradient>
+                  <linearGradient id="arc-grad-v4" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="rgba(124,255,245,0)" />
+                    <stop offset="50%" stopColor="rgba(124,255,245,1)" />
+                    <stop offset="100%" stopColor="rgba(76,255,160,0)" />
+                  </linearGradient>
+                  <radialGradient id="node-grad-v4" cx="0.5" cy="0.5" r="0.5">
+                    <stop offset="0%" stopColor="#7cfff5" />
+                    <stop offset="60%" stopColor="#4cffa0" />
+                    <stop offset="100%" stopColor="#1ee063" />
+                  </radialGradient>
+                </defs>
+
+                {/* Globe 본체 — radial gradient (밝은 부분 좌상). */}
+                <motion.circle
+                  cx={CENTER}
+                  cy={CENTER}
+                  r={GLOBE_RADIUS}
+                  fill="url(#globe-fill-v4)"
+                  stroke="rgba(56,255,126,0.25)"
+                  strokeWidth="1"
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    delay: reducedMotion ? 0.1 : 0.3,
+                    duration: reducedMotion ? 0.25 : 0.9,
+                    ease: LINEAR_EASE,
+                  }}
+                />
+
+                {/* Latitude lines (3 horizontal ellipses). */}
+                {[60, 130, 190].map((ry, i) => (
+                  <motion.ellipse
+                    key={`lat-${i}`}
+                    cx={CENTER}
+                    cy={CENTER}
+                    rx={GLOBE_RADIUS}
+                    ry={ry}
+                    fill="none"
+                    stroke="rgba(56,255,126,0.1)"
+                    strokeWidth="0.7"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{
+                      delay: reducedMotion ? 0.2 : 0.6 + i * 0.07,
+                      duration: 0.5,
+                    }}
+                  />
+                ))}
+
+                {/* Longitude lines (3 vertical ellipses). */}
+                {[60, 130, 190].map((rx, i) => (
+                  <motion.ellipse
+                    key={`lon-${i}`}
+                    cx={CENTER}
+                    cy={CENTER}
+                    rx={rx}
+                    ry={GLOBE_RADIUS}
+                    fill="none"
+                    stroke="rgba(56,255,126,0.1)"
+                    strokeWidth="0.7"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{
+                      delay: reducedMotion ? 0.2 : 0.7 + i * 0.07,
+                      duration: 0.5,
+                    }}
+                  />
+                ))}
+
+                {/* Connection arcs — bezier traveling stroke. */}
+                {ARC_PAIRS.map(([a, b], i) => {
+                  const from = PROJECTED_NODES[a];
+                  const to = PROJECTED_NODES[b];
+                  if (!from || !to) return null;
+                  // 둘 다 앞쪽이거나 한쪽이라도 앞쪽이면 표시.
+                  if (from.depth < -0.3 && to.depth < -0.3) return null;
+                  const path = arcPath(from, to);
+                  return (
+                    <motion.path
+                      key={`arc-${i}`}
+                      d={path}
+                      stroke="url(#arc-grad-v4)"
+                      strokeWidth="1.4"
+                      fill="none"
+                      strokeLinecap="round"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{
+                        pathLength: 1,
+                        opacity: reducedMotion ? 0.5 : [0, 0.7, 0.5, 0.8, 0.5],
+                      }}
+                      transition={{
+                        pathLength: {
+                          delay: reducedMotion ? 0.4 : 1.5 + i * 0.12,
+                          duration: reducedMotion ? 0.3 : 0.9,
+                          ease: LINEAR_EASE,
+                        },
+                        opacity: reducedMotion
+                          ? { delay: 0.4, duration: 0.3 }
+                          : {
+                              delay: 1.5 + i * 0.12,
+                              duration: 3.5,
+                              repeat: Infinity,
+                              ease: "easeInOut",
+                            },
+                      }}
+                    />
+                  );
+                })}
+
+                {/* 표면 노드 — depth로 size + opacity 결정. */}
+                {PROJECTED_NODES.map((node, i) => {
+                  const isFront = node.depth >= 0;
+                  const radius = isFront
+                    ? 4 + node.depth * 2
+                    : 1.5 + (1 + node.depth) * 1.2;
+                  const opacity = isFront
+                    ? 0.6 + node.depth * 0.4
+                    : 0.15 + (1 + node.depth) * 0.25;
+                  return (
+                    <motion.circle
+                      key={`node-${i}`}
+                      cx={node.x}
+                      cy={node.y}
+                      r={radius}
+                      fill={isFront ? "url(#node-grad-v4)" : "rgba(124,255,245,0.4)"}
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{
+                        scale: reducedMotion ? 1 : [0, 1.4, 1],
+                        opacity: reducedMotion
+                          ? opacity
+                          : isFront
+                            ? [0, 1, opacity, 1, opacity]
+                            : opacity,
+                      }}
+                      transition={{
+                        scale: {
+                          delay: reducedMotion ? 0.2 : 0.9 + i * 0.05,
+                          duration: reducedMotion ? 0.25 : 0.55,
+                          ease: LINEAR_EASE,
+                        },
+                        opacity: reducedMotion
+                          ? { delay: 0.2, duration: 0.3 }
+                          : {
+                              delay: 0.9 + i * 0.05,
+                              duration: isFront ? 3.5 : 0.55,
+                              repeat: isFront ? Infinity : 0,
+                              ease: "easeInOut",
+                            },
+                      }}
+                      style={{
+                        transformBox: "fill-box",
+                        transformOrigin: "center",
+                        filter: isFront
+                          ? `drop-shadow(0 0 ${4 + node.depth * 4}px rgba(124,255,245,0.6))`
+                          : "none",
+                      }}
+                    />
+                  );
+                })}
+              </svg>
+
+              {/* Globe 정중앙 — BrandMark + 글로우 (z-index 위). */}
+              <motion.div
+                className="splash-v4-center-brand"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{
+                  scale: reducedMotion ? 1 : [0, 1.08, 1],
+                  opacity: 1,
+                }}
+                transition={{
+                  delay: reducedMotion ? 0.3 : 1.9,
+                  duration: reducedMotion ? 0.25 : 0.7,
+                  ease: LINEAR_EASE,
+                }}
+                aria-hidden="true"
+              >
+                <BrandMark size={84} />
+              </motion.div>
+            </div>
+          </div>
+
+          {/* 하단 진행 panel — 5단계 텍스트 + dot + skip. */}
+          <div className="splash-v4-bottom">
             <div className="splash-stage-text-wrap" aria-live="polite">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -375,7 +437,6 @@ export function SplashScreen({
               </AnimatePresence>
             </div>
 
-            {/* 5 dot 인디케이터. */}
             <div className="splash-dots" aria-hidden="true">
               {STAGES.map((s, i) => (
                 <span
@@ -390,7 +451,7 @@ export function SplashScreen({
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.55 }}
               transition={{
-                delay: reducedMotion ? 0.4 : 2.5,
+                delay: reducedMotion ? 0.4 : 2.6,
                 duration: 0.5,
                 ease: LINEAR_EASE,
               }}
