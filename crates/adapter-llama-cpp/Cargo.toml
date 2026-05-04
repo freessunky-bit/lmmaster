@@ -9,6 +9,8 @@ shared-types.workspace = true
 runtime-manager.workspace = true
 runner-llama-cpp.workspace = true
 adapter-ollama.workspace = true
+# Phase R-E.2 (ADR-0057) — OpenAI compat DTO 공통화 (adapter-lmstudio와 공유).
+openai-compat-dto.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 async-trait.workspace = true
