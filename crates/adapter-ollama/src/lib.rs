@@ -1471,4 +1471,122 @@ mod tests {
         let m: ChatMessage = serde_json::from_str(json).unwrap();
         assert_eq!(m.images.as_deref().map(|v| v.len()), Some(1));
     }
+
+    // ── Phase R-E.1 (T3, ADR-0058) — chat_stream graceful early disconnect ──
+    //
+    // R-C.2 fix(2026-05-03)의 delta_emitted 분기를 자동 회귀 가드로 락인.
+    // wiremock은 mid-stream abrupt disconnect를 직접 지원하지 않아 raw TcpListener로
+    // Content-Length mismatch + socket drop 패턴 사용 — 실 transport 에러 유발.
+
+    use std::sync::{Arc as TestArc, Mutex as TestMutex};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    /// 응답 헤더 + 부분 body 만 보내고 socket drop. Content-Length는 body 길이보다 *크게* 설정해
+    /// hyper가 EOF를 transport error로 인지하도록 유도.
+    async fn spawn_partial_ndjson_server(payload: String) -> std::net::SocketAddr {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            if let Ok((mut socket, _)) = listener.accept().await {
+                // 요청 헤더 일부만 읽고 무시 (POST body까지 다 읽지 않아도 응답 가능).
+                let mut buf = [0u8; 4096];
+                let _ = socket.read(&mut buf).await;
+                // Content-Length 99999 — 실 body는 짧음 → hyper 측 transport error.
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/x-ndjson\r\nContent-Length: 99999\r\n\r\n{}",
+                    payload
+                );
+                let _ = socket.write_all(response.as_bytes()).await;
+                // socket을 즉시 drop — 클라이언트는 Content-Length 미달성 → reqwest::Error 받음.
+                drop(socket);
+            }
+        });
+        addr
+    }
+
+    /// delta 1건 emit 후 transport 에러 → graceful Completed.
+    #[tokio::test]
+    async fn chat_stream_graceful_completed_after_delta_when_disconnect() {
+        // Ollama NDJSON 한 줄 (done=false 라 stream 이어짐)
+        let body = serde_json::to_string(&serde_json::json!({
+            "message": {"role": "assistant", "content": "안녕하세요"},
+            "done": false
+        }))
+        .unwrap()
+            + "\n";
+        let addr = spawn_partial_ndjson_server(body).await;
+        let endpoint = format!("http://{}", addr);
+        let a = OllamaAdapter::with_endpoint(endpoint);
+
+        let events: TestArc<TestMutex<Vec<ChatEvent>>> = TestArc::new(TestMutex::new(Vec::new()));
+        let events_for_cb = events.clone();
+        let on_event = move |e: ChatEvent| {
+            events_for_cb.lock().unwrap().push(e);
+        };
+
+        let cancel = CancellationToken::new();
+        let messages = vec![ChatMessage {
+            role: "user".into(),
+            content: "ping".into(),
+            images: None,
+        }];
+        let outcome = a.chat_stream("test", &messages, on_event, &cancel).await;
+
+        // R-C.2 정책: delta 1건 이상 emit + transport 에러 → Completed.
+        assert!(
+            matches!(outcome, ChatOutcome::Completed),
+            "delta가 emit된 후 disconnect는 Completed여야 (got {outcome:?})"
+        );
+        let events = events.lock().unwrap();
+        let delta_count = events
+            .iter()
+            .filter(|e| matches!(e, ChatEvent::Delta { .. }))
+            .count();
+        let completed_count = events
+            .iter()
+            .filter(|e| matches!(e, ChatEvent::Completed { .. }))
+            .count();
+        let failed_count = events
+            .iter()
+            .filter(|e| matches!(e, ChatEvent::Failed { .. }))
+            .count();
+        assert!(delta_count >= 1, "1건 이상 Delta가 emit돼야");
+        assert_eq!(completed_count, 1, "정확히 1건의 Completed");
+        assert_eq!(failed_count, 0, "Failed는 emit되면 안 돼");
+    }
+
+    /// delta 0건 + transport 에러 → Failed (실 에러).
+    #[tokio::test]
+    async fn chat_stream_failed_when_disconnect_before_any_delta() {
+        // 빈 body → delta 0건 emit + transport error.
+        let addr = spawn_partial_ndjson_server(String::new()).await;
+        let endpoint = format!("http://{}", addr);
+        let a = OllamaAdapter::with_endpoint(endpoint);
+
+        let events: TestArc<TestMutex<Vec<ChatEvent>>> = TestArc::new(TestMutex::new(Vec::new()));
+        let events_for_cb = events.clone();
+        let on_event = move |e: ChatEvent| {
+            events_for_cb.lock().unwrap().push(e);
+        };
+
+        let cancel = CancellationToken::new();
+        let messages = vec![ChatMessage {
+            role: "user".into(),
+            content: "ping".into(),
+            images: None,
+        }];
+        let outcome = a.chat_stream("test", &messages, on_event, &cancel).await;
+
+        assert!(
+            matches!(outcome, ChatOutcome::Failed(_)),
+            "delta 0건 + disconnect → Failed (got {outcome:?})"
+        );
+        let events = events.lock().unwrap();
+        let failed_count = events
+            .iter()
+            .filter(|e| matches!(e, ChatEvent::Failed { .. }))
+            .count();
+        assert_eq!(failed_count, 1);
+    }
 }
