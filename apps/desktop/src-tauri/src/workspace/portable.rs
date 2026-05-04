@@ -8,7 +8,7 @@
 //! - 한국어 해요체 에러 메시지.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use portable_workspace::{
@@ -40,6 +40,9 @@ pub enum PortableApiError {
     VerifyFailed { message: String },
     #[error("workspace 디스크 오류: {message}")]
     Disk { message: String },
+    /// Phase R-A (ADR-0052) — path boundary 위반 (workspace 외부 또는 traversal).
+    #[error("workspace 밖 경로에는 가져올 수 없어요: {reason}")]
+    PathDenied { reason: String },
 }
 
 impl From<ExportError> for PortableApiError {
@@ -171,8 +174,68 @@ pub struct StartImportRequest {
     pub expected_sha256: Option<String>,
 }
 
+/// Phase R-A (ADR-0052) — Overwrite default는 디렉터리 trash 위험.
+/// import는 기본 Rename(자동 conflict 회피)으로. 사용자가 Overwrite 명시 시에만 적용.
 fn default_conflict_policy() -> ConflictPolicy {
-    ConflictPolicy::Overwrite
+    ConflictPolicy::Rename
+}
+
+/// Phase R-A (ADR-0052) — IPC raw path를 workspace boundary 안으로 강제.
+/// 실패 시 PathDenied 반환 — frontend에서 한국어 에러 노출.
+///
+/// 검증 규칙:
+/// 1. workspace_base 는 canonicalize 가능해야 함 (디렉터리 존재 X면 Disk 에러).
+/// 2. requested 경로가 *절대 경로*면 workspace_base prefix 검증.
+/// 3. requested 가 None / 빈 문자열이면 workspace_base 그대로 (active workspace 복원).
+/// 4. requested 가 *상대 경로*면 workspace_base + requested join 후 prefix 재검증.
+/// 5. `..` segment 는 join 후 canonicalize 결과로 차단.
+pub(crate) fn resolve_import_target(
+    workspace_base: &Path,
+    requested: Option<&str>,
+) -> Result<PathBuf, PortableApiError> {
+    let base_canon = workspace_base
+        .canonicalize()
+        .map_err(|e| PortableApiError::Disk {
+            message: format!("workspace 루트 정규화 실패: {e}"),
+        })?;
+
+    let candidate = match requested {
+        None => return Ok(base_canon),
+        Some(s) if s.trim().is_empty() => return Ok(base_canon),
+        Some(s) => s,
+    };
+
+    // 제어 문자 / null byte 거부.
+    if candidate.chars().any(|c| c == '\0' || c.is_control()) {
+        return Err(PortableApiError::PathDenied {
+            reason: "경로에 사용할 수 없는 문자가 들어 있어요".into(),
+        });
+    }
+
+    let joined = base_canon.join(candidate);
+    // 디렉터리가 아직 존재하지 않을 수 있으므로 부모를 canonicalize 후 마지막 segment join.
+    let parent = joined.parent().unwrap_or(&base_canon);
+    let parent_canon = parent.canonicalize().or_else(|_| {
+        // 부모도 없으면 base 까지 거슬러 올라감.
+        base_canon
+            .canonicalize()
+            .map_err(|e| PortableApiError::Disk {
+                message: format!("부모 경로 정규화 실패: {e}"),
+            })
+    })?;
+
+    let final_path = match joined.file_name() {
+        Some(name) => parent_canon.join(name),
+        None => parent_canon.clone(),
+    };
+
+    if !final_path.starts_with(&base_canon) {
+        return Err(PortableApiError::PathDenied {
+            reason: "workspace 디렉터리 밖으로 나가는 경로예요".into(),
+        });
+    }
+
+    Ok(final_path)
 }
 
 /// 응답 — invoke().resolve로 frontend가 받는 메타. Done 이벤트와 redundant.
@@ -256,14 +319,13 @@ pub async fn start_workspace_import(
         id: import_id.clone(),
     };
 
-    let target = match req.target_workspace_root.as_deref() {
-        Some(p) if !p.is_empty() => PathBuf::from(p),
-        _ => workspace_root
-            .get_or_init(&app)
-            .map_err(|e| PortableApiError::Disk {
-                message: format!("{e}"),
-            })?,
-    };
+    // Phase R-A (ADR-0052) — workspace boundary 강제. raw target_workspace_root 직접 사용 금지.
+    let workspace_base = workspace_root
+        .get_or_init(&app)
+        .map_err(|e| PortableApiError::Disk {
+            message: format!("{e}"),
+        })?;
+    let target = resolve_import_target(&workspace_base, req.target_workspace_root.as_deref())?;
     let opts = ImportOptions {
         source_path: PathBuf::from(req.source_path),
         target_workspace_root: target,
@@ -343,5 +405,81 @@ mod tests {
         }
         // After drop, registry should be empty.
         assert!(!r.cancel(&id));
+    }
+
+    // ── Phase R-A (ADR-0052) — path boundary invariants ────────────────
+
+    #[test]
+    fn default_conflict_policy_is_rename() {
+        // Overwrite default는 디렉터리 trash 위험 — Rename으로 안전 default.
+        assert!(matches!(default_conflict_policy(), ConflictPolicy::Rename));
+    }
+
+    #[test]
+    fn resolve_import_target_none_returns_workspace_base() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let resolved = resolve_import_target(tmp.path(), None).expect("None ok");
+        assert_eq!(resolved, tmp.path().canonicalize().unwrap());
+    }
+
+    #[test]
+    fn resolve_import_target_empty_string_returns_workspace_base() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let resolved = resolve_import_target(tmp.path(), Some("   ")).expect("empty ok");
+        assert_eq!(resolved, tmp.path().canonicalize().unwrap());
+    }
+
+    #[test]
+    fn resolve_import_target_accepts_subdir() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let sub = tmp.path().join("sub");
+        std::fs::create_dir(&sub).unwrap();
+        let resolved = resolve_import_target(tmp.path(), Some("sub")).expect("subdir ok");
+        let canon_base = tmp.path().canonicalize().unwrap();
+        assert!(resolved.starts_with(&canon_base));
+        assert!(resolved.ends_with("sub"));
+    }
+
+    #[test]
+    fn resolve_import_target_rejects_parent_traversal() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        // base 안에 sub 만들고 sub 기준으로 ../.. 시도.
+        let sub = tmp.path().join("sub");
+        std::fs::create_dir(&sub).unwrap();
+        // resolve_import_target는 sub를 base로 쓰면 .. 가 base 위로 새는 케이스를 잡아야 함.
+        let err =
+            resolve_import_target(&sub, Some("../../etc/passwd")).expect_err("traversal must fail");
+        assert!(matches!(err, PortableApiError::PathDenied { .. }));
+    }
+
+    #[test]
+    fn resolve_import_target_rejects_absolute_outside() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let outside = tempfile::tempdir().expect("tempdir2");
+        // 절대 경로는 PathBuf::join 시 RHS가 그대로 대체 → boundary 검증에서 거부돼야 함.
+        let err = resolve_import_target(tmp.path(), Some(outside.path().to_str().unwrap()))
+            .expect_err("outside must fail");
+        assert!(matches!(err, PortableApiError::PathDenied { .. }));
+    }
+
+    #[test]
+    fn resolve_import_target_rejects_control_chars() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let err =
+            resolve_import_target(tmp.path(), Some("sub\0null")).expect_err("null byte must fail");
+        assert!(matches!(err, PortableApiError::PathDenied { .. }));
+        let err = resolve_import_target(tmp.path(), Some("sub\nline"))
+            .expect_err("control char must fail");
+        assert!(matches!(err, PortableApiError::PathDenied { .. }));
+    }
+
+    #[test]
+    fn portable_api_error_path_denied_kebab_serialization() {
+        let e = PortableApiError::PathDenied {
+            reason: "test".into(),
+        };
+        let v = serde_json::to_value(&e).unwrap();
+        assert_eq!(v["kind"], "path-denied");
+        assert!(e.to_string().contains("workspace 밖 경로"));
     }
 }

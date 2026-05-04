@@ -183,7 +183,8 @@ export function ToastUpdate({
   const handleViewUpdate = () => {
     if (!release.url) return;
     // Phase 8'.b.2 — Tauri 2 plugin-shell `open`. capability `shell:allow-open` + URL scope 필요.
-    // capabilities/main.json이 https://** 스코프를 부여하므로 GitHub release URL은 통과.
+    // Phase R-A (ADR-0052) — capabilities/main.json은 4 도메인(github.com/huggingface.co/jsdelivr/lmstudio.ai)
+    // 화이트리스트. release URL은 https://github.com/freessunky-bit/lmmaster/releases/... 라 통과.
     void openExternal(release.url).catch((e) => {
       console.warn("update url open failed:", e);
     });

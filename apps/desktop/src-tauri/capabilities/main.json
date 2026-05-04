@@ -92,8 +92,10 @@
     {
       "identifier": "shell:allow-open",
       "allow": [
-        { "url": "https://**" },
-        { "url": "http://**" }
+        { "url": "https://github.com/**" },
+        { "url": "https://huggingface.co/**" },
+        { "url": "https://cdn.jsdelivr.net/**" },
+        { "url": "https://lmstudio.ai/**" }
       ]
     }
   ]

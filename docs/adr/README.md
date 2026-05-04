@@ -8,7 +8,7 @@
 - Section: Status / Context / Decision / Consequences / Alternatives considered / References.
 - 새 ADR 작성 시 본 README 인덱스 표를 갱신한다.
 
-## 인덱스 (50건, 2026-04-30 현재)
+## 인덱스 (51건, 2026-05-03 현재)
 
 ### Foundation (Phase α)
 
@@ -136,6 +136,12 @@
 | 0049 | HuggingFace 하이브리드 검색·바인딩 (큐레이션 1급 + 지원 외 별도 진입점) | Accepted (Phase 11'.c 머지 2026-04-30) |
 | 0050 | Workbench 3단 사다리 (프롬프트→RAG→LoRA) + 비전 IPC | 부분 채택 (12'.a + 12'.b + 13'.h.1 Ollama + 13'.h.2.a LM Studio 머지, llama.cpp server 자동 spawn은 13'.h.2.b/c) |
 | 0051 | llama.cpp llama-server 자동 spawn + mmproj 페어링 (ADR-0050 잔여분, runner-llama-cpp crate 신설) | Proposed (Phase 13'.h.2.b/c) |
+
+### Phase R-A — Security Boundary (2026-05-03)
+
+| 번호 | 제목 | Status |
+|---|---|---|
+| 0052 | Tauri IPC 경로 경계(workspace boundary) + CSP 강화 (S1+R1+S2+T4 일괄 해소, ConflictPolicy default Rename, PathDenied variant) | Accepted (Phase R-A 머지 2026-05-03) |
 
 ## Supersede / Modify 그래프
 
