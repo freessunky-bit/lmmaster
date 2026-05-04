@@ -6,6 +6,20 @@
 
 ---
 
+## 🎉 v0.0.1 ship 가능 — GPT Pro 30-issue 검수 종결 (2026-05-04)
+
+R-A/B/C/D/E 5 페이즈 + 분리 #31/#38 + 통합 audit 모두 머지 완료. ADR-0052~0057 신규.
+
+**다음 standby**:
+- ⏳ **v0.0.1 release tag push** (사용자 결정): `git tag v0.0.1 && git push origin v0.0.1`
+
+**v2.x 잠재** (POST v0.0.1 release):
+- R-E v2.x: KnowledgeStorePool RwLock / WorkspaceCancellationScope chat·bench register / proper LRU / wiremock chunked disconnect 헬퍼 / RuntimeAdapter trait true split
+- #31 후속: selected_path_token registry (Tauri dialog plugin 도입 후)
+- catalog 외 manifest signature 확장 / proxy 명시 opt-in / typed-i18n-keys
+
+---
+
 ## 우선순위 1 — 다음 진입 후보 (세션 즉시 시작 가능)
 
 ### ~~Phase 13'.h.2.a — LM Studio chat + vision 어댑터~~ — **2026-05-01 머지 완료**

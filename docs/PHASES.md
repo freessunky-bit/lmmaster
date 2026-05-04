@@ -5,6 +5,7 @@
 >
 > **2026-04-26 v1 포지셔닝 pivot 반영**: `docs/PIVOT.md` + ADR-0016/0017/0018.
 > **2026-04-27 초격차 강화 보강**: 글로벌 경쟁 리서치(LM Studio·Ollama·Jan·Msty·AnythingLLM·Cherry·Open WebUI·GPT4All·Pinokio·Foundry Local·LLaMA-Factory·HF AutoTrain·Tailscale·JetBrains Toolbox 등) 결과를 7-점 thesis + 8 갭(G1~G8)으로 합산해 Phase 2'~6'에 반영. 자세한 종합은 `docs/PRODUCT.md`.
+> **2026-05-04 v0.0.1 ship 가능**: Phase α/0/1'/1A/2'/3'/4/4.5'/5'/6'/7' v1 코드 + Phase 8'~14' 보강/디자인 + GPT Pro 30-issue 검수(R-A/B/C/D/E + 분리 #31/#38) + 통합 audit 모두 머지. ADR-0001~0057 (53건). 다음 standby = release tag push 사용자 결정.
 
 ## 페이즈 운영 원칙
 
