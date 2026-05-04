@@ -10,6 +10,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  XCircle,
+} from "lucide-react";
 
 import { StatusPill } from "@lmmaster/design-system/react";
 import { listRecentBenchReports, type BenchReport } from "../ipc/bench";
@@ -348,6 +354,7 @@ function SignatureSection({ status }: SignatureSectionProps) {
 
   const tone = signatureTone(status.kind);
   const message = signatureMessage(status, t);
+  const Icon = signatureIcon(tone);
 
   return (
     <section
@@ -365,7 +372,8 @@ function SignatureSection({ status }: SignatureSectionProps) {
         data-testid="diagnostics-signature-message"
         role={status.kind === "failed" ? "alert" : undefined}
       >
-        {message}
+        <Icon size={14} aria-hidden="true" className="diag-signature-icon" />
+        <span>{message}</span>
       </p>
       <p className="diag-signature-meta num">
         {t("diagnostics.signature.checkedAt", "검증 시각")}:{" "}
@@ -373,6 +381,22 @@ function SignatureSection({ status }: SignatureSectionProps) {
       </p>
     </section>
   );
+}
+
+/// Phase R-D — 컬러 이모지(✅❌⚠) 인라인 거부, lucide-react로 대체 (CLAUDE.md §4.3).
+function signatureIcon(
+  tone: "ok" | "warn" | "error" | "neutral",
+): typeof CheckCircle2 {
+  switch (tone) {
+    case "ok":
+      return CheckCircle2;
+    case "warn":
+      return AlertTriangle;
+    case "error":
+      return XCircle;
+    case "neutral":
+      return Info;
+  }
 }
 
 function signatureTone(
@@ -406,12 +430,12 @@ function signatureMessage(
     case "failed":
       return t("diagnostics.signature.failed", {
         reason: status.reason,
-        defaultValue: `❌ 서명 검증 실패: ${status.reason}. 안전을 위해 기본 목록을 사용하고 있어요.`,
+        defaultValue: `서명 검증 실패: ${status.reason}. 안전을 위해 기본 목록을 사용하고 있어요.`,
       });
     case "missing-signature":
       return t(
         "diagnostics.signature.missing",
-        "⚠ 서명 파일을 받지 못했어요. CI 서명 파이프라인을 확인해 주세요.",
+        "서명 파일을 받지 못했어요. CI 서명 파이프라인을 확인해 주세요.",
       );
     case "bundled-fallback":
       return t(

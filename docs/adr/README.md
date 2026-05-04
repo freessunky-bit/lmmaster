@@ -8,7 +8,7 @@
 - Section: Status / Context / Decision / Consequences / Alternatives considered / References.
 - 새 ADR 작성 시 본 README 인덱스 표를 갱신한다.
 
-## 인덱스 (54건, 2026-05-03 현재)
+## 인덱스 (55건, 2026-05-03 현재)
 
 ### Foundation (Phase α)
 
@@ -155,6 +155,12 @@
 | 번호 | 제목 | Status |
 |---|---|---|
 | 0055 | Network 정책 강화 — no_proxy 강제 + Client::new() 폴백 제거 + chat_stream graceful disconnect + URL filename validation (S7+C1+R3+C3) | Accepted (Phase R-C 머지 2026-05-03) |
+
+### Phase R-D — Frontend Polish (2026-05-03)
+
+| 번호 | 제목 | Status |
+|---|---|---|
+| 0056 | i18n 일관성 + thiserror 프런트엔드 노출 정책 — 이모지 거부 + lucide-react + errors namespace + kind 기반 i18n switch (K1+K2+K3+K4) | Accepted (Phase R-D 머지 2026-05-03) |
 
 ## Supersede / Modify 그래프
 

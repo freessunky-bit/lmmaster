@@ -281,8 +281,11 @@ export function CatalogPage() {
               data-testid="catalog-last-refresh"
             >
               {lastRefresh
-                ? `마지막 갱신: ${formatRelative(lastRefresh.at_ms)}`
-                : "아직 갱신 전이에요"}
+                ? t("catalog.refresh.lastAt", {
+                    when: formatRelative(lastRefresh.at_ms),
+                    defaultValue: `마지막 갱신: ${formatRelative(lastRefresh.at_ms)}`,
+                  })
+                : t("catalog.refresh.never", "아직 갱신 전이에요")}
             </span>
             <button
               type="button"
@@ -290,9 +293,14 @@ export function CatalogPage() {
               onClick={handleManualRefresh}
               disabled={refreshBusy}
               data-testid="catalog-refresh-btn"
-              title="모델 카탈로그 + Ollama / LM Studio 버전 정보를 한 번에 받아와요. 6시간마다 자동 갱신, 수동 트리거도 OK."
+              title={t(
+                "catalog.refresh.title",
+                "모델 카탈로그 + Ollama / LM Studio 버전 정보를 한 번에 받아와요. 6시간마다 자동 갱신, 수동 트리거도 OK.",
+              )}
             >
-              {refreshBusy ? "갱신하고 있어요…" : "다시 불러오기"}
+              {refreshBusy
+                ? t("catalog.refresh.busy", "갱신하고 있어요…")
+                : t("catalog.refresh.action", "다시 불러오기")}
             </button>
             <button
               type="button"
@@ -303,7 +311,7 @@ export function CatalogPage() {
               data-testid="catalog-adult-toggle"
               title={t(
                 "catalog.adultContent.toggleTitle",
-                "성인 콘텐츠 모델을 카탈로그에 노출할지 선택해요. 기본 OFF — 켜면 NSFW 라벨 모델이 ⚠ chip과 함께 표시돼요.",
+                "성인 콘텐츠 모델을 카탈로그에 노출할지 선택해요. 기본 OFF — 켜면 NSFW 라벨 모델이 경고 아이콘과 함께 표시돼요.",
               )}
             >
               {adultAllowed ? (
