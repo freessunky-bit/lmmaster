@@ -154,6 +154,7 @@ impl RegistryFetcherService {
         let mut catalog_body: Option<Vec<u8>> = None;
         let mut catalog_source: Option<registry_fetcher::SourceTier> = None;
         let mut catalog_from_cache = false;
+        let mut catalog_signature_verified_marker = false;
         for (id, r) in &results {
             match r {
                 Ok(fm) => {
@@ -161,6 +162,7 @@ impl RegistryFetcherService {
                         manifest = %id,
                         from_cache = fm.from_cache,
                         stale = fm.stale,
+                        signature_verified = fm.signature_verified,
                         "manifest 갱신 완료"
                     );
                     fetched += 1;
@@ -168,6 +170,7 @@ impl RegistryFetcherService {
                         catalog_body = Some(fm.body.clone());
                         catalog_source = Some(fm.source);
                         catalog_from_cache = fm.from_cache;
+                        catalog_signature_verified_marker = fm.signature_verified;
                     }
                 }
                 Err(e) => {
@@ -178,24 +181,33 @@ impl RegistryFetcherService {
         }
 
         // Phase 13'.g.2.c — catalog body 받았을 때 서명 검증 시도.
+        // Phase R-B (ADR-0054) — cache 적중분이 marker=false면 verify_catalog_signature 내부에서
+        // unverified로 인지 + Failed 강등 (cache poisoning 방어).
         // verify 실패 시 catalog_body=None으로 강등 (bundled fallback).
-        let signature_status = if let (Some(body), Some(source)) =
-            (catalog_body.as_ref(), catalog_source)
-        {
-            match verify_catalog_signature(&self.fetcher, body, source, catalog_from_cache).await {
-                Ok(status) => {
-                    if matches!(status, CatalogSignatureStatus::Failed { .. }) {
-                        // 변조 의심 → catalog_body 제거, bundled fallback.
-                        tracing::warn!("catalog 서명 검증 실패 — bundled fallback로 강등");
-                        catalog_body = None;
+        let signature_status =
+            if let (Some(body), Some(source)) = (catalog_body.as_ref(), catalog_source) {
+                match verify_catalog_signature(
+                    &self.fetcher,
+                    body,
+                    source,
+                    catalog_from_cache,
+                    catalog_signature_verified_marker,
+                )
+                .await
+                {
+                    Ok(status) => {
+                        if matches!(status, CatalogSignatureStatus::Failed { .. }) {
+                            // 변조 의심 → catalog_body 제거, bundled fallback.
+                            tracing::warn!("catalog 서명 검증 실패 — bundled fallback로 강등");
+                            catalog_body = None;
+                        }
+                        Some(status)
                     }
-                    Some(status)
+                    Err(()) => None,
                 }
-                Err(()) => None,
-            }
-        } else {
-            None
-        };
+            } else {
+                None
+            };
         if let Some(status) = signature_status.clone() {
             *self.last_signature_status.lock().await = Some(status);
         }
@@ -315,34 +327,35 @@ impl RegistryFetcherService {
     }
 }
 
-/// catalog body + source tier를 받아 minisign 서명 검증. Phase 13'.g.2.c (ADR-0047).
+/// catalog body + source tier를 받아 minisign 서명 검증. Phase 13'.g.2.c (ADR-0047) + R-B (ADR-0054).
 ///
 /// 정책:
-/// - cache hit → `BundledFallback`-equivalent 처리 (이전 검증 통과 가정, verify skip).
-///   네트워크 fresh fetch만 verify 강제.
 /// - Bundled tier → `BundledFallback` (빌드 시점 신뢰).
+/// - cache 적중 *AND* row가 signature_verified=true → 즉시 `Verified` (이전 검증 통과 명시 기록).
+/// - cache 적중 *AND* signature_verified=false → 네트워크 verify 진행 (cache poisoning 방어).
 /// - 빌드 시점 pubkey 미설정(`from_embedded`=None) → `Disabled`.
 /// - .minisig 404 → `MissingSignature`.
 /// - verify 실패 → `Failed { reason }`.
-/// - Ok(()) → `Verified { source }`.
+/// - Ok(()) → `Verified { source }` + cache mark_verified.
 async fn verify_catalog_signature(
     fetcher: &RegistryFetcher,
     body: &[u8],
     source: registry_fetcher::SourceTier,
     from_cache: bool,
+    signature_verified_marker: bool,
 ) -> Result<CatalogSignatureStatus, ()> {
     let now = epoch_ms();
 
-    if from_cache {
-        // cache 적중 — 이전에 검증된 가정. Verified로 간주하되 reason 명시.
-        return Ok(CatalogSignatureStatus::Verified {
-            at_ms: now,
-            source: format!("{source:?} (cache)"),
-        });
-    }
-
     if !source.is_network() {
         return Ok(CatalogSignatureStatus::BundledFallback { at_ms: now });
+    }
+
+    if from_cache && signature_verified_marker {
+        // cache 적중 *AND* 이전 verify 통과 marker 존재 → Verified.
+        return Ok(CatalogSignatureStatus::Verified {
+            at_ms: now,
+            source: format!("{source:?} (cache+verified)"),
+        });
     }
 
     let verifier = match SignatureVerifier::from_embedded() {
@@ -381,10 +394,15 @@ async fn verify_catalog_signature(
     };
 
     match verifier.verify(body, &sig_text) {
-        Ok(()) => Ok(CatalogSignatureStatus::Verified {
-            at_ms: now,
-            source: format!("{source:?}"),
-        }),
+        Ok(()) => {
+            // Phase R-B (ADR-0054) — verify 통과 → cache row를 verified로 마킹.
+            // 다음 fetch에서 cache 적중 시 marker를 보고 즉시 Verified로 분류.
+            let _ = fetcher.mark_signature_verified(source, "catalog").await;
+            Ok(CatalogSignatureStatus::Verified {
+                at_ms: now,
+                source: format!("{source:?}"),
+            })
+        }
         Err(e) => Ok(CatalogSignatureStatus::Failed {
             at_ms: now,
             reason: e.to_string(),

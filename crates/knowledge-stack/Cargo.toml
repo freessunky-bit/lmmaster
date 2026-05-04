@@ -39,3 +39,7 @@ default = []
 # 이 feature가 꺼져 있으면 OnnxEmbedder는 빌드되지 않고 `default_embedder` helper는 자동으로
 # MockEmbedder를 fallback 사용해요 (RAG 자체는 동작, ranking 품질만 deterministic-mock).
 embed-onnx = ["dep:ort", "dep:tokenizers", "dep:ndarray"]
+# Phase R-B (ADR-0053) — knowledge-stack SQLCipher 활성. key-manager와 동일 패턴 (ADR-0035 §자료 보안).
+# Default: SQLCipher OFF — 테스트/dev 빌드 호환. 프로덕션 빌드 자동화에서 `--features sqlcipher` 주입.
+# 사용자 RAG 컬렉션(파일 인덱스 + 임베딩)은 SQLCipher 적용 시 디스크 평문 노출 0.
+sqlcipher = ["rusqlite/bundled-sqlcipher-vendored-openssl"]
