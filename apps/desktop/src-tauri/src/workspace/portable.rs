@@ -128,27 +128,36 @@ impl Drop for PortableGuard {
 }
 
 /// Channel<ExportEvent> 어댑터.
+///
+/// Phase R-E.6 (ADR-0058) — Channel send 실패 = 사용자 화면 닫음 → CancellationToken 트리거.
+/// export_workspace 흐름이 다음 chunk 처리 전에 cancel 인지 → 자원 즉시 drop.
 struct ChannelExportSink {
     channel: Channel<ExportEvent>,
+    cancel: CancellationToken,
 }
 
 impl ExportSink for ChannelExportSink {
     fn emit(&self, event: ExportEvent) {
         if let Err(e) = self.channel.send(event) {
-            tracing::debug!(error = %e, "export channel send failed (window closed?)");
+            tracing::debug!(error = %e, "export channel send failed (window closed?) — cancelling");
+            self.cancel.cancel();
         }
     }
 }
 
 /// Channel<ImportEvent> 어댑터.
+///
+/// Phase R-E.6 (ADR-0058) — Channel send 실패 → CancellationToken cascade.
 struct ChannelImportSink {
     channel: Channel<ImportEvent>,
+    cancel: CancellationToken,
 }
 
 impl ImportSink for ChannelImportSink {
     fn emit(&self, event: ImportEvent) {
         if let Err(e) = self.channel.send(event) {
-            tracing::debug!(error = %e, "import channel send failed (window closed?)");
+            tracing::debug!(error = %e, "import channel send failed (window closed?) — cancelling");
+            self.cancel.cancel();
         }
     }
 }
@@ -284,7 +293,10 @@ pub async fn start_workspace_export(
         key_passphrase: req.key_passphrase,
         target_path: PathBuf::from(req.target_path),
     };
-    let sink = Arc::new(ChannelExportSink { channel: on_event });
+    let sink = Arc::new(ChannelExportSink {
+        channel: on_event,
+        cancel: cancel.clone(),
+    });
     let summary = export_workspace(&root, opts, sink, cancel).await?;
     Ok(StartExportResponse { export_id, summary })
 }
@@ -333,7 +345,10 @@ pub async fn start_workspace_import(
         conflict_policy: req.conflict_policy,
         expected_sha256: req.expected_sha256,
     };
-    let sink = Arc::new(ChannelImportSink { channel: on_event });
+    let sink = Arc::new(ChannelImportSink {
+        channel: on_event,
+        cancel: cancel.clone(),
+    });
     let summary = import_workspace(opts, sink, cancel).await?;
     Ok(StartImportResponse { import_id, summary })
 }
