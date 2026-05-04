@@ -40,7 +40,7 @@ use chat::registry::ChatRegistry;
 use commands::{CatalogState, LastScanCache};
 use hf_meta::HfMetaCache;
 use install::registry::InstallRegistry;
-use knowledge::{EmbeddingState, KnowledgeRegistry};
+use knowledge::{EmbeddingState, KnowledgeRegistry, KnowledgeStorePool};
 use model_pull::registry::ModelPullRegistry;
 use presets::commands::PresetCache;
 use updater::{PollerState, UpdaterRegistry};
@@ -329,6 +329,10 @@ pub fn run() {
             // 10. KnowledgeRegistry — Phase 4.5'.b. workspace 단위 직렬화 (workspace_id 키).
             let knowledge_registry: Arc<KnowledgeRegistry> = Arc::new(KnowledgeRegistry::new());
             app.manage(knowledge_registry);
+
+            // 10.0. KnowledgeStorePool — Phase R-E.5 (ADR-0058). IPC 호출당 SQLite open 반복 → cache 재사용.
+            let knowledge_store_pool: Arc<KnowledgeStorePool> = Arc::new(KnowledgeStorePool::new());
+            app.manage(knowledge_store_pool);
 
             // 10.a. EmbeddingState — Phase 9'.a. 사용자 향 임베딩 모델 카탈로그 + 활성 모델 영속.
             //       app_data_dir/embed/active.json에 active kind를 영속, models/ 하위에 ONNX 파일 저장.
