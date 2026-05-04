@@ -10,7 +10,8 @@ pub mod registry;
 use std::sync::Arc;
 
 use adapter_lmstudio::LmStudioAdapter;
-use adapter_ollama::{ChatEvent, ChatMessage, ChatOutcome, OllamaAdapter};
+use adapter_ollama::OllamaAdapter;
+use chat_protocol::{ChatEvent, ChatMessage, ChatOutcome};
 use serde::Serialize;
 use shared_types::RuntimeKind;
 use tauri::ipc::Channel;
