@@ -8,6 +8,8 @@ license.workspace = true
 shared-types.workspace = true
 runtime-manager.workspace = true
 bench-harness.workspace = true
+# Phase R-E.3 (ADR-0058) — chat 타입 공통화. 외부에서는 ollama::ChatMessage 그대로 import 가능 (re-export).
+chat-protocol.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 tokio-stream.workspace = true
