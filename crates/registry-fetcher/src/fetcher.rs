@@ -28,6 +28,12 @@ pub struct FetchedManifest {
     pub fetched_at: SystemTime,
     pub etag: Option<String>,
     pub body: Vec<u8>,
+    /// Phase R-B (ADR-0054) — 본 row의 minisign 서명이 검증된 상태인지.
+    /// caller는 verifier 활성 정책에서 false 시 invalidate + 재페치 또는 사용 거부.
+    /// `fetch_one`은 verify를 수행하지 않으므로 *cache 적재 시점의 marker* 그대로 노출.
+    /// `fetch_one_with_signature`는 verify 통과 시 본 필드를 true로 채워 반환.
+    #[serde(default)]
+    pub signature_verified: bool,
 }
 
 impl FetchedManifest {
@@ -40,6 +46,7 @@ impl FetchedManifest {
             fetched_at: row.fetched_at,
             etag: row.etag.clone(),
             body: row.body.clone(),
+            signature_verified: row.signature_verified,
         }
     }
 }
@@ -54,12 +61,14 @@ pub struct FetcherCore {
 }
 
 impl FetcherCore {
-    /// id에 대해 4-tier fallback 시도 + minisign 서명 검증. (Phase 13'.g.2.c, ADR-0047)
+    /// id에 대해 4-tier fallback 시도 + minisign 서명 검증. (Phase 13'.g.2.c, ADR-0047 + R-B / ADR-0054)
     ///
     /// 정책:
-    /// - 네트워크 fresh fetch면 `.minisig` 추가 fetch + `verifier.verify` 강제.
-    /// - cache 적중(`from_cache=true`)이면 verify skip — 첫 적재 시 이미 검증됨 가정.
-    /// - Bundled tier(`is_network()=false`)는 verify skip — 빌드 시점 신뢰.
+    /// - 네트워크 fresh fetch면 `.minisig` 추가 fetch + `verifier.verify` 강제. 통과 시 cache row를
+    ///   `signature_verified=true`로 마킹.
+    /// - cache 적중(`from_cache=true`)이면 row의 `signature_verified` 검사 — false면 invalidate +
+    ///   네트워크 재페치 (Phase R-B 기존 v1 캐시 또는 verifier 비활성 상태에서 적재된 row 거부).
+    /// - Bundled tier(`is_network()=false`)는 verify skip — 빌드 시점 신뢰 (signature_verified=true).
     /// - verify 실패 → `FetcherError::SignatureFailed` (caller가 bundled fallback로 강등).
     /// - `.minisig` 파일 미존재(404) → `FetcherError::SignatureMissing` (CI 서명 파이프라인 미작동).
     pub async fn fetch_one_with_signature(
@@ -69,9 +78,26 @@ impl FetcherCore {
     ) -> Result<FetchedManifest, FetcherError> {
         let manifest = self.fetch_one(id).await?;
 
-        // cache hit / Bundled — verify skip.
-        if manifest.from_cache || !manifest.source.is_network() {
+        // Bundled — verify skip (신뢰 경로).
+        if !manifest.source.is_network() {
             return Ok(manifest);
+        }
+
+        // cache 적중 시 signature_verified 검사 (Phase R-B / ADR-0054).
+        if manifest.from_cache {
+            let row = self.cache.get(manifest.source, id).await?;
+            if matches!(row, Some(ref r) if r.signature_verified) {
+                return Ok(manifest);
+            }
+            // 미검증 cache row — invalidate + 네트워크 재페치 강제.
+            tracing::warn!(
+                tier = manifest.source.as_db_str(),
+                manifest_id = %id,
+                "캐시 row가 signature_verified=false — invalidate 후 재페치"
+            );
+            let _ = self.cache.invalidate(Some(id)).await;
+            // 재귀 1회 — 재귀 후에는 from_cache=false 또는 Bundled로 빠짐.
+            return Box::pin(self.fetch_one_with_signature(id, verifier)).await;
         }
 
         // 네트워크 fresh — 같은 tier에서 .minisig fetch + verify.
@@ -111,7 +137,11 @@ impl FetcherCore {
             .verify(&manifest.body, &sig_text)
             .map_err(|e| FetcherError::SignatureFailed(e.to_string()))?;
 
-        Ok(manifest)
+        // Phase R-B (ADR-0054) — verify 통과 → cache row를 verified로 마킹 + 반환 시그널 true.
+        let _ = self.cache.mark_verified(manifest.source, id).await;
+        let mut verified = manifest;
+        verified.signature_verified = true;
+        Ok(verified)
     }
 
     /// id에 대해 4-tier fallback 시도.
@@ -209,6 +239,7 @@ impl FetcherCore {
                     fetched_at: now,
                     etag: row.etag.clone(),
                     body: row.body.clone(),
+                    signature_verified: row.signature_verified,
                 });
             }
             // 304인데 캐시 없음 — 비정상. 다음 tier로.
@@ -250,6 +281,8 @@ impl FetcherCore {
         }
 
         let fetched_at = SystemTime::now();
+        // Phase R-B (ADR-0054) — 본 적재는 *서명 검증 전*. fetch_one_with_signature가
+        // verify 통과 시 mark_verified로 별도 표시. fetch_one 단독 caller는 unverified.
         let _ = self
             .cache
             .put(CachePutInput {
@@ -261,6 +294,7 @@ impl FetcherCore {
                 etag: etag.clone(),
                 last_modified,
                 fetched_at,
+                signature_verified: false,
             })
             .await;
 
@@ -272,6 +306,8 @@ impl FetcherCore {
             fetched_at,
             etag,
             body,
+            // 네트워크 fresh — caller(`fetch_one_with_signature`)가 verify 후 mark_verified로 갱신.
+            signature_verified: false,
         })
     }
 
@@ -293,6 +329,8 @@ impl FetcherCore {
         }
 
         let fetched_at = SystemTime::now();
+        // Phase R-B (ADR-0054) — Bundled tier는 빌드 시점에 큐레이터가 선별 + 코드 서명한 경로라
+        // 신뢰 가능. signature_verified=true로 표시.
         let put = CachePutInput {
             source: SourceTier::Bundled,
             manifest_id: id.to_owned(),
@@ -302,6 +340,7 @@ impl FetcherCore {
             etag: None,
             last_modified: None,
             fetched_at,
+            signature_verified: true,
         };
         let _ = self.cache.put(put).await;
 
@@ -313,6 +352,8 @@ impl FetcherCore {
             fetched_at,
             etag: None,
             body,
+            // Bundled tier — 빌드 시점 큐레이터 검증 + 코드 서명. 신뢰 가능.
+            signature_verified: true,
         })
     }
 

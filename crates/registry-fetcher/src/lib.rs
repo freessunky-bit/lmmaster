@@ -173,6 +173,16 @@ impl RegistryFetcher {
             .map(|s| s.timeout)
     }
 
+    /// Phase R-B (ADR-0054) — 외부에서 검증한 row를 verified로 마킹.
+    /// desktop의 `verify_catalog_signature`가 verifier.verify 통과 후 호출.
+    pub async fn mark_signature_verified(
+        &self,
+        source: source::SourceTier,
+        manifest_id: &str,
+    ) -> Result<(), FetcherError> {
+        self.core.cache.mark_verified(source, manifest_id).await
+    }
+
     /// FetchedManifest body를 임의 타입으로 파싱.
     pub fn parse<T: serde::de::DeserializeOwned>(
         &self,

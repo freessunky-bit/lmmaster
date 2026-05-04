@@ -47,18 +47,20 @@ pub struct SignatureVerifier {
 }
 
 impl SignatureVerifier {
-    /// minisign 표준 base64-block 형식 pubkey 문자열 (예: `RWQ...` 또는 multi-line) 파싱.
+    /// minisign 표준 형식 pubkey 문자열 파싱.
+    ///
+    /// 두 입력 형식 모두 지원 (Phase R-B):
+    /// - **bare base64** — `RWQf6LRC...` 한 줄. CI env var 친화 (`\n` escape 불필요).
+    /// - **multi-line** — `untrusted comment: ...\nRWQf...` 두 줄. `rsign generate` 출력 그대로.
+    ///
+    /// 우선 multi-line으로 시도 → 실패 시 bare base64로 fallback. 둘 다 실패면 InvalidPublicKey.
     pub fn from_minisign_strings(
         primary: &str,
         secondary: Option<&str>,
     ) -> Result<Self, SignatureError> {
-        let primary = PublicKey::decode(primary)
-            .map_err(|e| SignatureError::InvalidPublicKey(e.to_string()))?;
+        let primary = parse_pubkey(primary)?;
         let secondary = match secondary {
-            Some(s) => Some(
-                PublicKey::decode(s)
-                    .map_err(|e| SignatureError::InvalidPublicKey(e.to_string()))?,
-            ),
+            Some(s) => Some(parse_pubkey(s)?),
             None => None,
         };
         Ok(Self { primary, secondary })
@@ -81,6 +83,8 @@ impl SignatureVerifier {
     }
 
     /// `body`가 `sig_text`(minisign signature 파일 내용)에 의해 서명되었는지 검증.
+    ///
+    /// 본 wrapper는 항상 `allow_legacy=false` — *prehashed 서명만* 통과. CI는 `rsign sign -H`로 발행.
     /// primary 시도 → 실패 시 secondary 시도. 둘 다 실패면 `VerifyFailed`.
     pub fn verify(&self, body: &[u8], sig_text: &str) -> Result<(), SignatureError> {
         let sig = Signature::decode(sig_text)
@@ -96,6 +100,16 @@ impl SignatureVerifier {
         }
         Err(SignatureError::VerifyFailed)
     }
+}
+
+/// 두 형식(multi-line / bare base64) 모두 지원하는 pubkey parser. 본 모듈 private helper.
+fn parse_pubkey(s: &str) -> Result<PublicKey, SignatureError> {
+    // multi-line 우선 — `untrusted comment:` 시작이면 decode().
+    if s.lines().count() >= 2 {
+        return PublicKey::decode(s).map_err(|e| SignatureError::InvalidPublicKey(e.to_string()));
+    }
+    // bare base64 fallback.
+    PublicKey::from_base64(s.trim()).map_err(|e| SignatureError::InvalidPublicKey(e.to_string()))
 }
 
 #[cfg(test)]
@@ -138,14 +152,52 @@ mod tests {
         // env 미설정이면 Ok(None) — 명시 단언 X (CI/dev 양쪽 통과).
     }
 
-    /// `Signature::decode`가 거부하는 명백한 garbage signature text.
-    /// Pubkey가 valid 형식이어야 verify 분기로 들어가는데, 본 테스트는
-    /// 실 키페어 없이 *형식 단계 거부*만 검증하기 어려워 #[ignore]로 둠.
-    /// 실 키페어 fixture는 v1.x integration test (CI에서 `rsign generate` 후 임베드)에서.
+    /// Phase R-B (T2) — minisign-verify 0.2.5의 prehashed 모드 자체 테스트 fixture를 그대로 빌려
+    /// `SignatureVerifier::verify` round-trip을 검증. 본 wrapper는 항상 `allow_legacy=false` 호출이라
+    /// prehashed 서명만 통과해야 하고, 정상 round-trip + body 변조 거부 + 잘못된 키 거부 3-경로 검증.
+    ///
+    /// fixture 출처: `~/.cargo/registry/src/.../minisign-verify-0.2.5/src/lib.rs::verify_prehashed`.
+    /// minisign 공식 keypair `RWQf6LRC...` + body `b"test"` + 1556193335 timestamp.
+    const FIXTURE_PUBKEY: &str = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
+    const FIXTURE_SIG: &str = "untrusted comment: signature from minisign secret key
+RUQf6LRCGA9i559r3g7V1qNyJDApGip8MfqcadIgT9CuhV3EMhHoN1mGTkUidF/z7SrlQgXdy8ofjb7bNJJylDOocrCo8KLzZwo=
+trusted comment: timestamp:1556193335\tfile:test
+y/rUw2y8/hOUYjZU71eHp/Wo1KZ40fGy2VJEDl34XMJM+TX48Ss/17u3IvIfbVR1FkZZSNCisQbuQY+bHwhEBg==";
+    const FIXTURE_BODY: &[u8] = b"test";
+
     #[test]
-    #[ignore = "round-trip은 v1.x integration test에서 실 keypair로 검증 (CI 자동화 필요)"]
-    fn round_trip_with_real_keypair_placeholder() {
-        // 자리표시 — 실 keypair fixture가 들어오면 본 test를 활성화.
+    fn round_trip_with_real_keypair_verifies() {
+        let v = SignatureVerifier::from_minisign_strings(FIXTURE_PUBKEY, None)
+            .expect("fixture pubkey must parse");
+        v.verify(FIXTURE_BODY, FIXTURE_SIG)
+            .expect("정상 body는 verify OK");
+    }
+
+    #[test]
+    fn round_trip_rejects_tampered_body() {
+        let v = SignatureVerifier::from_minisign_strings(FIXTURE_PUBKEY, None).unwrap();
+        let tampered = b"test\0";
+        let r = v.verify(tampered, FIXTURE_SIG);
+        assert!(matches!(r, Err(SignatureError::VerifyFailed)));
+    }
+
+    #[test]
+    fn round_trip_rejects_wrong_primary_with_correct_secondary() {
+        // primary가 다른 키 (Tauri Updater 예시 키 — fixture와 무관). secondary가 fixture 키.
+        // 두 키 중 하나만 통과해도 OK라는 dual-key 정책 검증.
+        let other_pubkey = "RWRPxJle1jZcv/ACk1MiqHcC02oMBaS35vJF8q36s9rFkut28yDGvgqe";
+        let v = SignatureVerifier::from_minisign_strings(other_pubkey, Some(FIXTURE_PUBKEY))
+            .expect("두 키 모두 형식은 valid");
+        v.verify(FIXTURE_BODY, FIXTURE_SIG)
+            .expect("secondary로 통과해야 함");
+    }
+
+    #[test]
+    fn round_trip_rejects_when_no_key_matches() {
+        let other_pubkey = "RWRPxJle1jZcv/ACk1MiqHcC02oMBaS35vJF8q36s9rFkut28yDGvgqe";
+        let v = SignatureVerifier::from_minisign_strings(other_pubkey, None).unwrap();
+        let r = v.verify(FIXTURE_BODY, FIXTURE_SIG);
+        assert!(matches!(r, Err(SignatureError::VerifyFailed)));
     }
 
     /// SignatureError 한국어 메시지가 사용자에게 그대로 노출 가능 형태.

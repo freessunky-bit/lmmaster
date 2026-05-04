@@ -59,9 +59,11 @@ pub struct KnowledgeStore {
 }
 
 impl KnowledgeStore {
-    /// 파일 경로에서 store를 연다 (parent dir 자동 생성).
+    /// 파일 경로에서 store를 연다 (parent dir 자동 생성). 평문 모드.
     ///
     /// Phase 8'.0.b: WAL + busy_timeout(5s) + synchronous=NORMAL 안정성 PRAGMA.
+    /// Phase R-B (ADR-0053) — SQLCipher 빌드에서도 평문 모드는 유지 (테스트 / dev / Linux headless).
+    /// 암호화 모드는 `open_with_passphrase`.
     pub fn open(path: &Path) -> Result<Self, KnowledgeError> {
         if let Some(parent) = path.parent() {
             // best effort — 권한 부족이면 open 시 오류로 표면화.
@@ -71,6 +73,30 @@ impl KnowledgeStore {
             path: path.to_path_buf(),
             source: e,
         })?;
+        apply_stability_pragmas(&conn)?;
+        let mut store = Self { conn };
+        store.init_schema()?;
+        Ok(store)
+    }
+
+    /// SQLCipher passphrase를 적용해 store를 연다 (parent dir 자동 생성).
+    ///
+    /// Phase R-B (ADR-0053) — knowledge-stack도 SQLCipher 적용. key-manager 패턴(ADR-0035) 차용.
+    ///
+    /// 정책:
+    /// - `sqlcipher` feature OFF 빌드(stock SQLite)에서는 `PRAGMA key`가 unknown pragma로 무시됨.
+    ///   즉 평문 DB / 빈 DB는 정상 작동, 잘못된 키 검증은 OFF 모드에서 스킵 (production은 항상 ON).
+    /// - 호출 순서: PRAGMA key 먼저 (모든 read/write 전), 그 다음 stability PRAGMA, 마지막에 schema init.
+    /// - SQL injection 방지 — passphrase 내 `'`는 escape (`''`).
+    pub fn open_with_passphrase(path: &Path, passphrase: &str) -> Result<Self, KnowledgeError> {
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let conn = Connection::open(path).map_err(|e| KnowledgeError::DbOpen {
+            path: path.to_path_buf(),
+            source: e,
+        })?;
+        apply_passphrase(&conn, passphrase)?;
         apply_stability_pragmas(&conn)?;
         let mut store = Self { conn };
         store.init_schema()?;
@@ -397,6 +423,17 @@ fn apply_stability_pragmas(conn: &Connection) -> Result<(), KnowledgeError> {
     Ok(())
 }
 
+/// Phase R-B (ADR-0053) — SQLCipher PRAGMA key 적용. 모든 read/write보다 먼저 호출.
+///
+/// `sqlcipher` feature OFF 빌드(stock SQLite)에서는 unknown pragma로 무시. 키가 맞는지는
+/// 직후 sqlite_master 조회로 검증 (잘못된 키면 NotADatabase 에러).
+fn apply_passphrase(conn: &Connection, passphrase: &str) -> Result<(), KnowledgeError> {
+    let escaped = passphrase.replace('\'', "''");
+    conn.execute_batch(&format!("PRAGMA key = '{escaped}'"))?;
+    let _: i64 = conn.query_row("SELECT count(*) FROM sqlite_master", [], |r| r.get(0))?;
+    Ok(())
+}
+
 fn encode_embedding(v: &[f32]) -> Vec<u8> {
     let mut out = Vec::with_capacity(v.len() * 4);
     for &x in v {
@@ -612,6 +649,37 @@ mod tests {
         let store = KnowledgeStore::open(&path).unwrap();
         let mode = store.journal_mode().unwrap();
         assert_eq!(mode.to_lowercase(), "wal");
+    }
+
+    // ── Phase R-B (ADR-0053) — SQLCipher path ──────────────────────────
+
+    #[test]
+    fn open_with_passphrase_creates_db_when_feature_gated() {
+        // sqlcipher feature ON: 새 암호화 DB 생성 + schema 초기화.
+        // sqlcipher feature OFF (stock SQLite): PRAGMA key 무시, 평문 DB 생성. 둘 다 OK.
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("kdb.db");
+        let store = KnowledgeStore::open_with_passphrase(&path, "passphrase-aaaaaaaaaaaaaaaaa")
+            .expect("open_with_passphrase should create new DB");
+        let mode = store.journal_mode().unwrap();
+        assert_eq!(mode.to_lowercase(), "wal");
+    }
+
+    /// SQLCipher 활성 빌드에서만 — stock SQLite는 PRAGMA key를 무시해 잘못된 passphrase여도 통과.
+    #[cfg(feature = "sqlcipher")]
+    #[test]
+    fn open_wrong_passphrase_fails_on_existing_encrypted_db() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("kdb.db");
+        // 1) 첫 open — passphrase A로 schema + workspace 1건.
+        {
+            let mut s = KnowledgeStore::open_with_passphrase(&path, "passphrase-aaaaaaaaaaaaaaaaa")
+                .unwrap();
+            s.add_workspace("ws-encrypted").unwrap();
+        }
+        // 2) 잘못된 passphrase로 open 시도 — 에러여야.
+        let wrong = KnowledgeStore::open_with_passphrase(&path, "passphrase-bbbbbbbbbbbbbbbbb");
+        assert!(wrong.is_err(), "wrong passphrase는 NotADatabase로 실패해야");
     }
 
     // ── Phase 8'.a.1 — get_document_path ────────────────────────────

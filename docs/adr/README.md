@@ -8,7 +8,7 @@
 - Section: Status / Context / Decision / Consequences / Alternatives considered / References.
 - 새 ADR 작성 시 본 README 인덱스 표를 갱신한다.
 
-## 인덱스 (51건, 2026-05-03 현재)
+## 인덱스 (53건, 2026-05-03 현재)
 
 ### Foundation (Phase α)
 
@@ -142,6 +142,13 @@
 | 번호 | 제목 | Status |
 |---|---|---|
 | 0052 | Tauri IPC 경로 경계(workspace boundary) + CSP 강화 (S1+R1+S2+T4 일괄 해소, ConflictPolicy default Rename, PathDenied variant) | Accepted (Phase R-A 머지 2026-05-03) |
+
+### Phase R-B — Catalog Trust Pipeline (2026-05-03)
+
+| 번호 | 제목 | Status |
+|---|---|---|
+| 0053 | knowledge-stack SQLCipher feature gate + open_with_passphrase (S3 해소, caller wiring은 #38 분리) | Accepted (Phase R-B 머지 2026-05-03) |
+| 0054 | manifest_cache schema v2 — signature_verified marker (S4 cache poisoning 방어 + S5 signed fetch wiring) | Accepted (Phase R-B 머지 2026-05-03) |
 
 ## Supersede / Modify 그래프
 
