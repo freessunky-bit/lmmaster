@@ -90,12 +90,16 @@ impl RegistryFetcher {
             }
         }
         let cache = Cache::open(&opts.cache_db).await?;
+        // Phase R-C (ADR-0055) — .no_proxy() 강제 (시스템 HTTP_PROXY/HTTPS_PROXY 무시).
+        // ADR-0026 §1 외부 통신 화이트리스트(GitHub/jsDelivr) 정책 + rogue proxy MITM 방어.
+        // build() 실패는 TLS init 이슈 (희귀) — fail-fast로 표면화 (기존 Client::new() 폴백은 정책 우회).
         let http = opts.http.unwrap_or_else(|| {
             reqwest::Client::builder()
+                .no_proxy()
                 .user_agent(format!("LMmaster/{}", env!("CARGO_PKG_VERSION")))
                 .pool_idle_timeout(Duration::from_secs(30))
                 .build()
-                .unwrap_or_else(|_| reqwest::Client::new())
+                .expect("reqwest Client builder must succeed (TLS init)")
         });
         let core = FetcherCore {
             http,

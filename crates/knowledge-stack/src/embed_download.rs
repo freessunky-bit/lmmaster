@@ -215,8 +215,11 @@ pub struct ModelDownloader {
 impl ModelDownloader {
     /// 새 downloader. target_dir는 `<app_data_dir>/models/embed/`.
     /// reqwest::Client는 자체 생성 — installer/downloader.rs와 동일 user-agent 컨벤션.
+    ///
+    /// Phase R-C (ADR-0055) — .no_proxy() 강제. HF 다운로드는 화이트리스트 호스트만 허용.
     pub fn new(target_dir: PathBuf) -> Result<Self, KnowledgeError> {
         let client = reqwest::Client::builder()
+            .no_proxy()
             .user_agent(format!("LMmaster-embedder/{}", env!("CARGO_PKG_VERSION")))
             .timeout(Duration::from_secs(60 * 30))
             .connect_timeout(Duration::from_secs(15))

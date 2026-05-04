@@ -42,13 +42,14 @@ impl LlamaCppAdapter {
     }
 
     pub fn with_endpoint(endpoint: impl Into<String>) -> Self {
+        // Phase R-C (ADR-0055) — 폴백 제거. fail-fast on TLS init issue.
         let http = reqwest::Client::builder()
             .connect_timeout(Duration::from_millis(500))
             .timeout(Duration::from_secs(60))
             .pool_idle_timeout(Duration::from_secs(30))
             .no_proxy()
             .build()
-            .unwrap_or_else(|_| reqwest::Client::new());
+            .expect("reqwest Client builder must succeed (TLS init)");
         Self {
             endpoint: endpoint.into(),
             http,
@@ -319,6 +320,8 @@ impl LlamaCppAdapter {
 
         let mut stream = resp.bytes_stream();
         let mut buffer: Vec<u8> = Vec::new();
+        // Phase R-C (ADR-0055) — adapter-ollama / adapter-lmstudio와 동일 정책.
+        let mut delta_emitted = false;
 
         loop {
             tokio::select! {
@@ -359,6 +362,7 @@ impl LlamaCppAdapter {
                                 if let Some(choice) = chunk.choices.first() {
                                     if let Some(text) = choice.delta.content.as_deref() {
                                         if !text.is_empty() {
+                                            delta_emitted = true;
                                             on_event(ChatEvent::Delta { text: text.to_string() });
                                         }
                                     }
@@ -372,6 +376,14 @@ impl LlamaCppAdapter {
                             }
                         }
                         Some(Err(e)) => {
+                            // Phase R-C — delta 1건 이상 emit됐으면 graceful early disconnect.
+                            if delta_emitted {
+                                tracing::warn!(error = %e, "llama-server 스트림 중단 — 부분 응답으로 마감");
+                                on_event(ChatEvent::Completed {
+                                    took_ms: started.elapsed().as_millis() as u64,
+                                });
+                                return ChatOutcome::Completed;
+                            }
                             let msg = format!("llama-server 응답 읽기 실패: {e}");
                             on_event(ChatEvent::Failed { message: msg.clone() });
                             return ChatOutcome::Failed(msg);

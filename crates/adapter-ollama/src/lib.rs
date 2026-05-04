@@ -93,13 +93,14 @@ impl OllamaAdapter {
     }
 
     pub fn with_endpoint(endpoint: impl Into<String>) -> Self {
+        // Phase R-C (ADR-0055) — 폴백 제거. .no_proxy()는 이미 적용 — build 실패는 fail-fast.
         let http = reqwest::Client::builder()
             .connect_timeout(Duration::from_millis(500))
             .timeout(Duration::from_secs(60))
             .pool_idle_timeout(Duration::from_secs(30))
             .no_proxy()
             .build()
-            .unwrap_or_else(|_| reqwest::Client::new());
+            .expect("reqwest Client builder must succeed (TLS init)");
         Self {
             endpoint: endpoint.into(),
             http,
@@ -513,6 +514,10 @@ impl OllamaAdapter {
 
         let mut stream = resp.bytes_stream();
         let mut buffer: Vec<u8> = Vec::new();
+        // Phase R-C (ADR-0055) — delta 발행 여부 추적. transport 에러 발생 시:
+        //   - delta 1건 이상 emit됨 → 부분 응답 정상 표시 (graceful early disconnect 가능성).
+        //   - delta 0건 → Failed 유지 (실 에러).
+        let mut delta_emitted = false;
 
         loop {
             tokio::select! {
@@ -544,6 +549,7 @@ impl OllamaAdapter {
                                 }
                                 if let Some(m) = chunk.message {
                                     if !m.content.is_empty() {
+                                        delta_emitted = true;
                                         on_event(ChatEvent::Delta { text: m.content });
                                     }
                                 }
@@ -556,12 +562,20 @@ impl OllamaAdapter {
                             }
                         }
                         Some(Err(e)) => {
+                            // Phase R-C — delta 1건 이상 emit됐으면 graceful early disconnect로 간주.
+                            if delta_emitted {
+                                tracing::warn!(error = %e, "ollama 스트림 중단 — 부분 응답으로 마감");
+                                on_event(ChatEvent::Completed {
+                                    took_ms: started.elapsed().as_millis() as u64,
+                                });
+                                return ChatOutcome::Completed;
+                            }
                             let msg = format!("Ollama 응답 읽기 실패: {e}");
                             on_event(ChatEvent::Failed { message: msg.clone() });
                             return ChatOutcome::Failed(msg);
                         }
                         None => {
-                            // stream 정상 종료 후 done 못 받았으면 abnormal.
+                            // stream EOF — done 마커 못 받아도 부분 응답으로 마감 (graceful).
                             on_event(ChatEvent::Completed {
                                 took_ms: started.elapsed().as_millis() as u64,
                             });

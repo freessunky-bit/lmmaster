@@ -121,11 +121,13 @@ pub async fn search_models(
 /// 한국어 graceful 에러 (HfSearchError 한국어 메시지). 외부 통신 0 정책 예외 — ADR-0026 §1.
 #[tauri::command]
 pub async fn search_hf_models(query: String) -> Result<Vec<HfSearchHit>, HfSearchError> {
+    // Phase R-C (ADR-0055) — .no_proxy() 강제 + 폴백 제거. HF Search API는 huggingface.co 화이트리스트만.
     let http = reqwest::Client::builder()
+        .no_proxy()
         .user_agent("LMmaster-desktop")
         .timeout(Duration::from_secs(SEARCH_TIMEOUT_SEC))
         .build()
-        .unwrap_or_else(|_| reqwest::Client::new());
+        .expect("reqwest Client builder must succeed (TLS init)");
     search_models(&http, &query).await
 }
 
