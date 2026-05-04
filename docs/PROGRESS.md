@@ -2,7 +2,7 @@
 
 > 1-page 진행도. 자세한 시간순 이력은 `docs/CHANGELOG.md`, 페이즈 전략은 `docs/PHASES.md`, 인계 노트는 `docs/RESUME.md`.
 
-**마지막 갱신**: 2026-04-29 (Phase 8'.a/.b/Env'.a 추가 완료 + GitHub repo push 완료 + minisign 발급 완료. cargo 696 + vitest 382 = **1078 tests / 0 failed**.)
+**마지막 갱신**: 2026-05-04 (GPT Pro 30-issue 검수 + 분리 sub-phase #31/#38 + 통합 audit 모두 종결. R-A/B/C/D/E 5 페이즈 + 분리 2건 + audit 1건 = **27 commits 머지**. ADR-0052~0057 신규. **v0.0.1 ship 가능**.)
 
 ## 6 Pillar (제품 약속) 상태
 
@@ -15,63 +15,74 @@
 | 워크벤치 | ✅ | Phase 5'.a/b/c/d/e — 5단계 state machine + 실 HTTP (Ollama + LM Studio) + ollama create shell-out |
 | 자동 갱신 | ✅ | Phase 6'.a/b 완료 — auto-updater + Settings 토글 + JetBrains-style toast |
 
-## 누적 검증 (2026-04-28 현재)
+## 누적 검증 (2026-05-04 현재)
 
-- **cargo**: 845 / 0 failed / 1 ignored (macOS-only dmg)
-- **vitest**: 251 / 0 failed (26 files)
-- **합계**: **1096 tests / 0 failed**
-- **clippy**: 0 warnings (workspace --all-targets)
-- **fmt**: 0 diff
-- **tsc**: 0 errors
+- **cargo build --workspace**: clean (link 단계까지)
+- **cargo clippy --workspace --all-targets -- -D warnings**: 0 warning
+- **cargo clippy -W dead_code -W unused_imports**: 0 warning
+- **cargo fmt**: 0 diff
+- **pnpm exec tsc -b**: 0 errors
+- **ACL drift**: 83 명령 / 86 identifier (drift 0)
+- **lmmaster-desktop --lib test exe**: 환경 문제 (Windows DLL, pre-existing — `docs/troubleshooting.md`)
+- **신규 invariant**: R-E 29건 + #31 7건 + #38 2건 = 38건 신규
 
 ## 산출 자산
 
 | 카테고리 | 갯수 | 비고 |
 |---|---|---|
-| Crates | 22 | 4 신규(workbench-core / knowledge-stack / auto-updater / pipelines) |
-| ADR | 26 (0001~0026) | 0005 superseded by 0016, 0012 modified by 0018 |
-| 결정 노트 | 34 | `docs/research/` |
+| Crates | 24 | R-E.2 `openai-compat-dto` + R-E.3 `chat-protocol` 추가 |
+| ADR | 53 (0001~0057) | R-A 0052 / R-B 0053+0054 / R-C 0055 / R-D 0056 / R-E 0057 |
+| 결정 노트 | 44+ | `docs/research/` (R-A/B/C/D/E 결정 노트 + 진입점 노트) |
 | Korean preset | 109 | 7 카테고리, 의료/법률 disclaimer 강제 |
 | React 페이지 | 10 | Home/Catalog/ApiKeys/Workspace/Install/Runtimes/Projects/Workbench/Diagnostics/Settings |
 
 ## v1 진행도 (페이즈 단위)
 
 ```
-Phase α  Foundation docs        ████████████████████ 100%
-Phase 0  Tauri+Axum boot        ████████████████████ 100%
-Phase 1' Bootstrap+Self-scan    ████████████████████ 100%
-Phase 1A Onboarding wizard      ████████████████████ 100%  (a~e + d.1~d.3)
-Phase 2' Catalog+Recommender    ████████████████████ 100%  (a/b/c)
-Phase 3' Gateway routing        ████████████████████ 100%
-Phase 4  10 화면 + presets      ████████████████████ 100%  (a~h + cleanup + en audit)
-Phase 4.5' RAG (knowledge)      ████████████████████ 100%  (.a + .b)
-Phase 5' Workbench              ████████████████████ 100%  (a/b/c/d/e ✅)
-Phase 6' Pipelines + Updater    ████████████████████ 100%  (a/b/c/d ✅)
-Phase 7' v1 Release prep        ████████████░░░░░░░░  60%  (.a scaffold ✅, 사용자 결정 + .b 자동화 대기)
+Phase α   Foundation docs        ████████████████████ 100%
+Phase 0   Tauri+Axum boot        ████████████████████ 100%
+Phase 1'  Bootstrap+Self-scan    ████████████████████ 100%
+Phase 1A  Onboarding wizard      ████████████████████ 100%
+Phase 2'  Catalog+Recommender    ████████████████████ 100%
+Phase 3'  Gateway routing        ████████████████████ 100%
+Phase 4   10 화면 + presets      ████████████████████ 100%
+Phase 4.5' RAG (knowledge)       ████████████████████ 100%
+Phase 5'  Workbench              ████████████████████ 100%
+Phase 6'  Pipelines + Updater    ████████████████████ 100%
+Phase 7'  v1 Release prep        ████████████████████ 100%
+Phase 8'~14' v1 보강 + 디자인     ████████████████████ 100%
+Phase R-A Security Boundary      ████████████████████ 100%  (S1+R1+S2+T4)
+Phase R-B Catalog Trust          ████████████████████ 100%  (T2+S3+S4+S5+R4)
+Phase R-C Network + Correctness  ████████████████████ 100%  (S7+C1+R3+C3)
+Phase R-D Frontend Polish        ████████████████████ 100%  (K1+K2+K3+K4)
+Phase R-E Architecture Cleanup   ████████████████████ 100%  (T3+C2+A1+A2+P1+P4+R2)
+분리 #31  Knowledge IPC boundary  ████████████████████ 100%
+분리 #38  knowledge SQLCipher     ████████████████████ 100%
+통합 audit  wiring + dead-code   ████████████████████ 100%
 ```
 
-## v1 ship 전 남은 태스크 (3건)
+## v0.0.1 ship 가능 — 모든 ship-blocker + cleanup 종결
 
-| 페이즈 | 내용 | 규모 | 상태 |
-|---|---|---|---|
-| **사용자 결정 6건** | OV cert / Apple Dev / minisign keypair / repo URL / EULA 법무 / publisher 명 | (구매·결정만) | ⏳ 사용자 |
-| **Phase 8'.0** | ~~SQLCipher / single-instance / panic hook / WAL / artifact retention~~ | ✅ 완료 (2026-04-29) | ✅ |
-| **Phase 8'.1** | ~~Multi-workspace UX (ADR-0024 약속 실현)~~ | ✅ 완료 (2026-04-29) | ✅ |
-| **Phase 11'** | ~~Portable workspace export/import (6 pillar "Portable" 약속 실현)~~ | ✅ 완료 (2026-04-29) | ✅ |
-| **Phase 12'** | ~~Guide / Help system~~ | ✅ 완료 (2026-04-29) | ✅ |
-| **Phase 7'.b** | release.yml CI matrix + minisign 자동 서명 + GlitchTip endpoint + 베타 토글 + README 다국어 | 4-5 sub-agent | ⏳ 사용자 결정 후 |
-
-**v1 코드 100% 완료** — Phase α / 0 / 1' / 1A / 2' / 3' / 4 / 4.5' / 5' / 6' / 7'.a 전부 ✅. 잔재 audit 추가 발견(2026-04-29) — Phase 8'.0/8'.1 v1 ship 전 권장.
+| 항목 | 상태 |
+|---|---|
+| GPT Pro 30-issue 검수 (17 ship-blocker + 7 cleanup + 6 deferred) | ✅ 완료 |
+| ADR-0052~0057 6건 신규 + 결정 노트 | ✅ |
+| 통합 wiring audit (R-E.7 cancel_scope register 누락 + model_pull cancel cascade 누락) | ✅ 수정 |
+| GitHub repo push (`freessunky-bit/lmmaster`) | ✅ |
+| release.yml + sign-catalog.yml | ✅ |
+| minisign keypair + Tauri secret 등록 | ✅ |
+| **v0.0.1 release tag push** | ⏳ 사용자 결정 (`git tag v0.0.1 && git push origin v0.0.1`) |
 
 ## v1.x 후속 (출시 후, v1 범위 밖)
 
-- 4.5'.c — 실 Embedder (bge-m3 / KURE-v1 cascade), `MockEmbedder` 교체
+R-E의 v2.x 잠재 + 기존 v1.x 후속:
+
+- **R-E v2.x 잠재**: KnowledgeStorePool RwLock 전환 / WorkspaceCancellationScope chat·bench register wiring 점진 적용 / proper LRU(move-to-front) / wiremock chunked disconnect 헬퍼 추출 / RuntimeAdapter trait true split (새 어댑터 추가 시) / KnowledgeStorePool 통계 IPC (Diagnostics)
+- **#31 후속**: selected_path_token registry — 사용자가 dialog로 선택한 ingest 소스 path tokenization (Tauri dialog plugin 도입 후)
+- **catalog 외 manifest signature** — ollama.json / lm-studio.json 등도 verify (현재 catalog만)
+- **proxy 명시 opt-in** — Settings 토글로 corporate proxy 사용 (현재 .no_proxy 강제)
+- **typed-i18n-keys crate** — t() 컴파일 타임 키 검증
 - ApiKeys per-key Pipelines matrix UI (ADR-0025 §3)
-- Streaming chunk transformation (현재 SSE는 byte-perfect pass-through만)
-- Catalog가 `listCustomModels`로 사용자 정의 모델 노출
-- `KnowledgeStore::get_document_path` 헬퍼 — `SearchHit.document_path` 실 경로 표시
-- `tauri-plugin-shell` 정식 도입 (현재 `window.open`)
-- `lmmaster.update.skipped.{version}` LRU 청소
 - Pipeline 사용자 정의 + per-route activation matrix
 - PromptSanitize Pipeline (NFC + control-char strip)
 

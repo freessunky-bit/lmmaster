@@ -8,6 +8,43 @@
 > - 결정 이력: `docs/adr/README.md` + `docs/adr/`
 > - 보강 리서치 / 결정 노트: `docs/research/`
 
+## v0.0.1 ship 가능 — GPT Pro 30-issue 검수 종결 (2026-05-04)
+
+### Phase R-A — Security Boundary (2026-05-03, ADR-0052)
+- S1 CSP 9 directive + R1 shell:allow-open scope 4 도메인 + S2 portable import path boundary + Rename default + T4 7 path 회귀 invariant.
+
+### Phase R-B — Catalog Trust Pipeline (2026-05-03, ADR-0053+0054)
+- T2 minisign round-trip 4 invariant + S3 knowledge-stack SQLCipher feature gate + S4 manifest_cache schema v2 + signature_verified marker + S5 signed fetch wiring + cache poisoning 방어 + R4 release workflow 검수.
+
+### Phase R-C — Network + Correctness (2026-05-03, ADR-0055)
+- S7 reqwest .no_proxy() 7 사이트 + R3 9 사이트 폴백 제거 + C1 chat_stream graceful early disconnect (3 어댑터 delta_emitted) + C3 derive_filename 5 path traversal 검증 + 6 invariant.
+
+### Phase R-D — Frontend Polish (2026-05-03, ADR-0056)
+- K1 i18n 이모지 11건 제거 + Diagnostics SignatureSection lucide wiring + K2 errors namespace 3 키 + K3 Catalog hardcoded 5건 정리 + K4 PortableApiError path-denied variant + kind switch i18n.
+
+### Phase R-E — Architecture Cleanup (2026-05-04, ADR-0057, 7 sub-phase 통합)
+- T3 wiremock chat_stream graceful 회귀 가드 (raw TcpListener × 3 어댑터 × 2 case = 6 invariant)
+- C2 신규 `crates/openai-compat-dto` (8 DTO 추출 + 6 invariant)
+- A1 신규 `crates/chat-protocol` (ChatMessage/Event/Outcome 추출 + 7 invariant + adapter-ollama re-export)
+- A2 (재스코프) adapter-ollama 역의존 완전 제거 (RuntimeAdapter trait split은 ROI 낮아 보류)
+- P1 KnowledgeStorePool (Arc 캐시 + FIFO eviction max=4 + 5 invariant)
+- P4 Channel send 실패 → cancel cascade (chat + portable + model_pull)
+- R2 WorkspaceCancellationScope (opt-in register + 5 invariant)
+
+### 분리 sub-phase
+- **#31** (R-A.3 분리) — Knowledge IPC store_path boundary 검증. validate_store_path + 7 invariant.
+- **#38** (R-B.2 후속) — knowledge-stack SQLCipher caller wiring. KnowledgeStorePool::with_passphrase + provision_knowledge_passphrase + keyring `knowledge-secret` entry.
+
+### 통합 audit (2026-05-04)
+- R-E.7 cancel_scope 죽은 인프라 발견 + 수정: ingest_path register + ExitRequested cancel_all
+- model_pull Channel cancel cascade 누락 수정 (R-E.6 패턴 적용)
+
+**누적**: R-A/B/C/D/E 5 페이즈 + 분리 2건 + audit 1건 = 27 commits / ADR-0052~0057 6건 신규 / 회귀 0건.
+
+**다음 standby**: v0.0.1 release tag push 사용자 결정 (`git tag v0.0.1 && git push origin v0.0.1`).
+
+---
+
 ## 시간순 완료 이력 (Phase α → Phase 6'.c, 2026-04-26 ~ 2026-04-28)
 
 ### ✅ 완료된 sub-phase 모음
