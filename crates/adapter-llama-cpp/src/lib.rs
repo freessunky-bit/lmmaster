@@ -13,7 +13,11 @@ use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use futures::StreamExt;
-use serde::{Deserialize, Serialize};
+use openai_compat_dto::{
+    ChatChunk as OpenAIChatChunk, ChatRequest as OpenAIChatRequest, ChatTurn as OpenAIChatTurn,
+    Content as OpenAIContent, ContentPart as OpenAIContentPart, ImageUrl as OpenAIImageUrl,
+};
+use serde::Deserialize;
 use tokio_util::sync::CancellationToken;
 
 use runtime_manager::{
@@ -431,59 +435,8 @@ fn convert_message_to_openai(m: &adapter_ollama::ChatMessage) -> OpenAIChatTurn 
     }
 }
 
-// ── OpenAI compat DTO (chat_stream 전용) ─────────────────────────────
-
-#[derive(Debug, Serialize)]
-struct OpenAIChatRequest<'a> {
-    model: &'a str,
-    messages: Vec<OpenAIChatTurn>,
-    stream: bool,
-}
-
-#[derive(Debug, Serialize)]
-struct OpenAIChatTurn {
-    role: String,
-    content: OpenAIContent,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(untagged)]
-enum OpenAIContent {
-    Text(String),
-    Array(Vec<OpenAIContentPart>),
-}
-
-#[derive(Debug, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-enum OpenAIContentPart {
-    Text { text: String },
-    ImageUrl { image_url: OpenAIImageUrl },
-}
-
-#[derive(Debug, Serialize)]
-struct OpenAIImageUrl {
-    url: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct OpenAIChatChunk {
-    #[serde(default)]
-    choices: Vec<OpenAIChatChoice>,
-}
-
-#[derive(Debug, Deserialize)]
-struct OpenAIChatChoice {
-    #[serde(default)]
-    delta: OpenAIChatDelta,
-    #[serde(default)]
-    finish_reason: Option<String>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct OpenAIChatDelta {
-    #[serde(default)]
-    content: Option<String>,
-}
+// Phase R-E.2 (ADR-0057) — OpenAI compat DTO는 `openai-compat-dto` crate로 추출.
+// adapter-lmstudio와 같은 DTO 공유.
 
 #[cfg(test)]
 mod tests {
