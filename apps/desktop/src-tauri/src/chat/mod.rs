@@ -64,13 +64,17 @@ pub async fn start_chat(
         RuntimeKind::Ollama => {
             let adapter = OllamaAdapter::new();
             let channel_tx = channel.clone();
+            // Phase R-E.6 (ADR-0058) — Channel send 실패 = 사용자 화면 닫음 → 즉시 cancel cascade.
+            // backend stream 자원(reqwest connection / GPU 추론)을 다음 chunk 대기 없이 drop.
+            let cancel_for_emit = cancel.clone();
             let outcome = adapter
                 .chat_stream(
                     &model_id,
                     &messages,
                     move |event| {
-                        if let Err(e) = channel_tx.send(event) {
-                            tracing::debug!(error = %e, "chat channel send failed");
+                        if channel_tx.send(event).is_err() {
+                            tracing::debug!("chat channel closed — cancelling backend stream");
+                            cancel_for_emit.cancel();
                         }
                     },
                     &cancel,
@@ -83,13 +87,16 @@ pub async fn start_chat(
             // adapter-lmstudio::chat_stream가 ChatMessage(images 포함) 그대로 받아 vision content array로 변환.
             let adapter = LmStudioAdapter::new();
             let channel_tx = channel.clone();
+            // Phase R-E.6 (ADR-0058) — Channel close → cancel cascade (Ollama branch와 동일).
+            let cancel_for_emit = cancel.clone();
             let outcome = adapter
                 .chat_stream(
                     &model_id,
                     &messages,
                     move |event| {
-                        if let Err(e) = channel_tx.send(event) {
-                            tracing::debug!(error = %e, "lm-studio chat channel send failed");
+                        if channel_tx.send(event).is_err() {
+                            tracing::debug!("lm-studio chat channel closed — cancelling backend stream");
+                            cancel_for_emit.cancel();
                         }
                     },
                     &cancel,
