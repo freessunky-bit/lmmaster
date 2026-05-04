@@ -392,46 +392,11 @@ enum PullAttemptOutcome {
 }
 
 // ── Chat streaming (사용자 in-app 채팅 체험) ─────────────────────────────
+//
+// Phase R-E.3 (ADR-0058) — ChatMessage / ChatEvent / ChatOutcome은 `chat-protocol`
+// crate로 추출. 외부 사용처는 그대로 `adapter_ollama::ChatMessage` import 가능 (re-export).
 
-/// 한 chat turn 메시지 — Ollama `/api/chat`의 messages 필드 미러.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChatMessage {
-    /// "system" / "user" / "assistant".
-    pub role: String,
-    pub content: String,
-    /// Phase 13'.h (ADR-0050) — 멀티모달 이미지. base64 인코딩된 string 배열.
-    /// `None` 또는 빈 vec이면 텍스트 전용 (기존 호환). Ollama API: messages[i].images.
-    /// `vision_support: true` 모델만 의미 있음 — 그 외 모델은 Ollama가 무시 또는 에러.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub images: Option<Vec<String>>,
-}
-
-/// Chat 스트림 이벤트 — UI에 실시간 token chunk 전달.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "kind", rename_all = "kebab-case")]
-pub enum ChatEvent {
-    /// 토큰 단위 추가 텍스트 (delta). UI는 누적 표시.
-    Delta {
-        text: String,
-    },
-    /// 정상 종료. 마지막 chunk 후 emit.
-    Completed {
-        /// 총 응답 ms — 호출 측 elapsed 측정용 hint.
-        took_ms: u64,
-    },
-    Cancelled,
-    Failed {
-        message: String,
-    },
-}
-
-/// Chat 호출 결과 — IPC outcome.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ChatOutcome {
-    Completed,
-    Cancelled,
-    Failed(String),
-}
+pub use chat_protocol::{ChatEvent, ChatMessage, ChatOutcome};
 
 /// Ollama `/api/chat` request DTO.
 #[derive(Debug, Serialize)]

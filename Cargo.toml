@@ -17,6 +17,7 @@ members = [
   "crates/adapter-vllm",
   "crates/runner-llama-cpp",
   "crates/openai-compat-dto",
+  "crates/chat-protocol",
   "crates/hardware-probe",
   "crates/model-registry",
   "crates/portable-workspace",
@@ -145,6 +146,7 @@ adapter-ollama = { path = "crates/adapter-ollama" }
 adapter-lmstudio = { path = "crates/adapter-lmstudio" }
 runner-llama-cpp = { path = "crates/runner-llama-cpp" }
 openai-compat-dto = { path = "crates/openai-compat-dto" }
+chat-protocol = { path = "crates/chat-protocol" }
 hardware-probe = { path = "crates/hardware-probe" }
 model-registry = { path = "crates/model-registry" }
 portable-workspace = { path = "crates/portable-workspace" }
