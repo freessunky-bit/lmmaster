@@ -189,4 +189,6 @@ export type PortableApiError =
   | { kind: "export-failed"; message: string }
   | { kind: "import-failed"; message: string }
   | { kind: "verify-failed"; message: string }
-  | { kind: "disk"; message: string };
+  | { kind: "disk"; message: string }
+  /** Phase R-A (ADR-0052) — workspace 외부 또는 traversal 시도 거부. */
+  | { kind: "path-denied"; reason: string };

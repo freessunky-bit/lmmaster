@@ -61,6 +61,11 @@
     "install": "Install",
     "open": "Open"
   },
+  "errors": {
+    "path-denied": "Can't import a path outside the workspace. Please choose a folder inside the workspace.",
+    "path-traversal": "Download blocked: the link contains an unsafe path. Please use a different URL.",
+    "generic": "Something went wrong. Please try again in a moment."
+  },
   "dialogs": {
     "crash": {
       "title": "An unexpected error occurred",
@@ -786,11 +791,11 @@
         "title": "Catalog signature",
         "empty": "No verification result yet — refresh the catalog.",
         "checkedAt": "Checked at",
-        "verified": "✅ Verified ({{source}})",
-        "failed": "❌ Signature verification failed: {{reason}}. Using bundled catalog for safety.",
-        "missing": "⚠ Signature file missing. Check the CI signing pipeline.",
-        "bundled": "ℹ Using bundled catalog — verification not applied (trusted at build time).",
-        "disabled": "ℹ Signature verification disabled (dev build)."
+        "verified": "Verified ({{source}})",
+        "failed": "Signature verification failed: {{reason}}. Using bundled catalog for safety.",
+        "missing": "Signature file missing. Check the CI signing pipeline.",
+        "bundled": "Using bundled catalog — verification not applied (trusted at build time).",
+        "disabled": "Signature verification disabled (dev build)."
       },
       "title": "Diagnostics",
       "subtitle": "Check this machine's health at a glance.",
@@ -937,6 +942,13 @@
     "title": "Model Catalog",
     "subtitle": "Pick a model that fits your machine.",
     "search": { "placeholder": "Search by model name" },
+    "refresh": {
+      "lastAt": "Last refresh: {{when}}",
+      "never": "Not refreshed yet",
+      "title": "Pulls the model catalog + Ollama / LM Studio version info in one shot. Auto-refresh every 6 hours; manual trigger also works.",
+      "busy": "Refreshing…",
+      "action": "Refresh now"
+    },
     "card": {
       "startWorkbench": "Start with this model →",
       "startWorkbenchTitle": "Start in Workbench with this model? Intent and model context travel together."
@@ -944,12 +956,12 @@
     "adultContent": {
       "on": "Adult models shown",
       "off": "Adult models hidden",
-      "toggleTitle": "Choose whether to show adult-content models in the catalog. Default OFF — turning it on reveals NSFW-labeled models with a ⚠ chip.",
+      "toggleTitle": "Choose whether to show adult-content models in the catalog. Default OFF — turning it on reveals NSFW-labeled models with a warning chip.",
       "chip": "Adult",
       "chipTitle": "Adult content — visible because the filter is on"
     },
     "commercial": {
-      "chip": "⚠ Non-commercial",
+      "chip": "Non-commercial",
       "chipTitle": "Non-commercial license — commercial use not allowed"
     },
     "category": {
@@ -982,7 +994,7 @@
     },
     "hfSearch": {
       "triggerLabel": "Search HuggingFace",
-      "triggerTitle": "Search HuggingFace directly. Unsupported models are flagged with ⚠.",
+      "triggerTitle": "Search HuggingFace directly. Unsupported models are flagged with a warning icon.",
       "title": "Found on HuggingFace",
       "close": "Close",
       "banner": "Unsupported models are not verified for compatibility or Korean strength. Domain scores are not shown.",

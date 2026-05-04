@@ -172,10 +172,22 @@ export function PortableImportPanel() {
       setPhase("done");
     } catch (e) {
       console.warn("startWorkspaceImport failed:", e);
-      const msg =
-        e && typeof e === "object" && "message" in e
-          ? `screens.settings.portable.import.errors.runner::${(e as { message: string }).message}`
-          : "screens.settings.portable.import.errors.start";
+      // Phase R-D (ADR-0056) — kind-based i18n switch.
+      // PathDenied → 전용 i18n 키 (한국어/영어 토글 시 자동 전환).
+      // 기타 → thiserror Display(이미 한국어)을 runner:: prefix로 raw 노출.
+      let msg: string;
+      if (
+        e &&
+        typeof e === "object" &&
+        "kind" in e &&
+        (e as { kind: string }).kind === "path-denied"
+      ) {
+        msg = "errors.path-denied";
+      } else if (e && typeof e === "object" && "message" in e) {
+        msg = `screens.settings.portable.import.errors.runner::${(e as { message: string }).message}`;
+      } else {
+        msg = "screens.settings.portable.import.errors.start";
+      }
       setError(msg);
       setPhase("failed");
     }
