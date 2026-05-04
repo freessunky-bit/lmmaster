@@ -172,6 +172,10 @@ pub enum KnowledgeApiError {
     #[error("워크스페이스를 찾지 못했어요: {workspace_id}")]
     WorkspaceNotFound { workspace_id: String },
 
+    /// Phase #31 (ADR-0058) — store_path가 app_data_dir sandbox 밖이거나 traversal 시도.
+    #[error("data 디렉터리 밖 경로에는 접근할 수 없어요: {reason}")]
+    PathDenied { reason: String },
+
     #[error("지식 저장소를 열지 못했어요: {message}")]
     StoreOpen { message: String },
 
@@ -629,14 +633,21 @@ fn progress_to_event(ingest_id: &str, p: &IngestProgress) -> IngestEvent {
 /// 진행 이벤트는 `on_event` Channel로 흘려보낸다.
 ///
 /// 동일 workspace에 대해 이미 ingest가 진행 중이면 `AlreadyIngesting` 반환 — 한국어 해요체 메시지.
+///
+/// Phase #31 (ADR-0058) — config.store_path는 app_data_dir sandbox 안인지 검증.
+/// frontend가 임의 경로로 데이터 작성 시도 시 PathDenied 거부.
 #[tauri::command]
 pub async fn ingest_path(
+    app: AppHandle,
     config: IngestConfig,
     on_event: Channel<IngestEvent>,
     registry: State<'_, Arc<KnowledgeRegistry>>,
     embedding_state: State<'_, Arc<EmbeddingState>>,
     store_pool: State<'_, Arc<KnowledgeStorePool>>,
 ) -> Result<String, KnowledgeApiError> {
+    // store_path 검증 — sandbox 밖 거부.
+    let mut config = config;
+    config.store_path = validate_against_app_data_dir(&app, &config.store_path)?;
     let workspace_id = config.workspace_id.clone();
     let (ingest_id, cancel, atomic_cancel) = registry.register(&workspace_id).await?;
     let registry_arc: Arc<KnowledgeRegistry> = registry.inner().clone();
@@ -697,8 +708,12 @@ pub async fn list_ingests(
 
 /// 동기 검색 RPC. 임베더는 active OnnxModelKind 기반으로 on-demand 생성 (Phase 9'.a).
 /// k는 max 50으로 cap (DoS 회피 + cosine brute-force 비용 제한).
+///
+/// Phase #31 (ADR-0058) — store_path는 app_data_dir sandbox 안인지 검증.
+/// frontend가 임의 경로로 검색 시도 시 PathDenied 거부.
 #[tauri::command]
 pub async fn search_knowledge(
+    app: AppHandle,
     workspace_id: String,
     query: String,
     k: usize,
@@ -706,9 +721,30 @@ pub async fn search_knowledge(
     embedding_state: State<'_, Arc<EmbeddingState>>,
     store_pool: State<'_, Arc<KnowledgeStorePool>>,
 ) -> Result<Vec<SearchHit>, KnowledgeApiError> {
+    let validated_path = validate_against_app_data_dir(&app, &store_path)?;
     let embedder = resolve_active_embedder(embedding_state.inner()).await;
     let pool = store_pool.inner().clone();
-    search_knowledge_with_embedder(workspace_id, query, k, store_path, embedder, pool).await
+    search_knowledge_with_embedder(workspace_id, query, k, validated_path, embedder, pool).await
+}
+
+/// IPC 진입점에서 사용하는 헬퍼 — AppHandle에서 app_data_dir를 추출 후 validate_store_path 호출.
+fn validate_against_app_data_dir(
+    app: &AppHandle,
+    requested: &str,
+) -> Result<String, KnowledgeApiError> {
+    let data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| KnowledgeApiError::PathDenied {
+            reason: format!("app_data_dir 접근 실패: {e}"),
+        })?;
+    // app_data_dir는 첫 부팅 시 미존재 가능 — 생성 시도.
+    if !data_dir.exists() {
+        std::fs::create_dir_all(&data_dir).map_err(|e| KnowledgeApiError::PathDenied {
+            reason: format!("app_data_dir 생성 실패: {e}"),
+        })?;
+    }
+    validate_store_path(&data_dir, requested)
 }
 
 /// `search_knowledge`의 embedder-injectable 버전 — 단위 테스트가 직접 호출 가능.
@@ -805,14 +841,18 @@ pub async fn search_knowledge_with_embedder(
 }
 
 /// Workspace 통계 — banner / header 노출.
+///
+/// Phase #31 (ADR-0058) — store_path는 app_data_dir sandbox 안인지 검증.
 #[tauri::command]
 pub async fn knowledge_workspace_stats(
+    app: AppHandle,
     workspace_id: String,
     store_path: String,
     store_pool: State<'_, Arc<KnowledgeStorePool>>,
 ) -> Result<WorkspaceStats, KnowledgeApiError> {
+    let validated_path = validate_against_app_data_dir(&app, &store_path)?;
     let pool = store_pool.inner().clone();
-    knowledge_workspace_stats_with_pool(workspace_id, store_path, pool).await
+    knowledge_workspace_stats_with_pool(workspace_id, validated_path, pool).await
 }
 
 /// `knowledge_workspace_stats`의 pool-injectable 버전 — 단위 테스트가 직접 호출 가능.
@@ -1118,6 +1158,75 @@ pub async fn cancel_embedding_download(
         state.cancel_download(parsed).await;
     }
     Ok(())
+}
+
+// ───────────────────────────────────────────────────────────────────
+// Phase #31 (ADR-0058) — Knowledge IPC store_path boundary validation
+// ───────────────────────────────────────────────────────────────────
+
+/// frontend가 보낸 store_path가 `app_data_dir` sandbox 안인지 검증.
+///
+/// 정책 (R-A.2 portable boundary 패턴 차용):
+/// - 빈 문자열 → 그대로 (in-memory store, 테스트/dev)
+/// - `..` segment 거부 (경로 traversal)
+/// - 제어 문자 / null byte 거부
+/// - 절대 경로면 canonicalize 후 `app_data_dir.canonicalize()` prefix 검증
+/// - 상대 경로면 app_data_dir.join → canonicalize → prefix 재검증
+/// - 적절하면 정규화된 PathBuf 반환, 아니면 KnowledgeApiError::PathDenied
+///
+/// XSS / 손상 frontend로부터 임의 디렉터리 작성/삭제 방어 (Tauri IPC frontend trust X).
+pub fn validate_store_path(
+    data_dir_root: &Path,
+    requested: &str,
+) -> Result<String, KnowledgeApiError> {
+    // 빈 문자열은 in-memory — 통과.
+    if requested.is_empty() {
+        return Ok(String::new());
+    }
+    // 제어 문자 / null byte 거부.
+    if requested.chars().any(|c| c == '\0' || c.is_control()) {
+        return Err(KnowledgeApiError::PathDenied {
+            reason: "경로에 사용할 수 없는 문자가 들어 있어요".into(),
+        });
+    }
+    // .. 또는 backslash 노출 거부 (간단 검사 — canonicalize가 추가 방어).
+    if requested.contains("..") {
+        return Err(KnowledgeApiError::PathDenied {
+            reason: "상위 디렉터리(..) 참조는 허용되지 않아요".into(),
+        });
+    }
+
+    let canonical_root =
+        data_dir_root
+            .canonicalize()
+            .map_err(|e| KnowledgeApiError::PathDenied {
+                reason: format!("data_dir 정규화 실패: {e}"),
+            })?;
+
+    let requested_path = Path::new(requested);
+    let candidate = if requested_path.is_absolute() {
+        requested_path.to_path_buf()
+    } else {
+        canonical_root.join(requested_path)
+    };
+
+    // 부모 canonicalize (대상 파일이 아직 미존재 가능 — 새 store).
+    let parent = candidate.parent().unwrap_or(&canonical_root);
+    let parent_canon = match parent.canonicalize() {
+        Ok(p) => p,
+        Err(_) => canonical_root.clone(),
+    };
+    let final_path = match candidate.file_name() {
+        Some(name) => parent_canon.join(name),
+        None => parent_canon.clone(),
+    };
+
+    if !final_path.starts_with(&canonical_root) {
+        return Err(KnowledgeApiError::PathDenied {
+            reason: "data 디렉터리 밖으로 나가는 경로예요".into(),
+        });
+    }
+    Ok(final_path.to_string_lossy().to_string())
 }
 
 // ───────────────────────────────────────────────────────────────────
@@ -1731,6 +1840,65 @@ mod tests {
         .unwrap();
         assert_eq!(hits_b.len(), 1);
         assert_eq!(hits_b[0].content, "beta-only");
+    }
+
+    // ── Phase #31 (ADR-0058) — validate_store_path 회귀 가드 ──────
+
+    #[test]
+    fn validate_store_path_empty_returns_empty() {
+        let dir = TempDir::new().unwrap();
+        let r = validate_store_path(dir.path(), "").unwrap();
+        assert_eq!(r, "");
+    }
+
+    #[test]
+    fn validate_store_path_relative_under_root_ok() {
+        let dir = TempDir::new().unwrap();
+        let r = validate_store_path(dir.path(), "ws-1.db").unwrap();
+        let canon_root = dir.path().canonicalize().unwrap();
+        assert!(r.starts_with(canon_root.to_str().unwrap()));
+    }
+
+    #[test]
+    fn validate_store_path_rejects_parent_traversal() {
+        let dir = TempDir::new().unwrap();
+        let r = validate_store_path(dir.path(), "../escape.db");
+        assert!(matches!(r, Err(KnowledgeApiError::PathDenied { .. })));
+    }
+
+    #[test]
+    fn validate_store_path_rejects_control_char() {
+        let dir = TempDir::new().unwrap();
+        let r = validate_store_path(dir.path(), "ws\0null.db");
+        assert!(matches!(r, Err(KnowledgeApiError::PathDenied { .. })));
+        let r = validate_store_path(dir.path(), "ws\nnewline.db");
+        assert!(matches!(r, Err(KnowledgeApiError::PathDenied { .. })));
+    }
+
+    #[test]
+    fn validate_store_path_rejects_absolute_outside() {
+        let dir = TempDir::new().unwrap();
+        let outside = TempDir::new().unwrap();
+        let path = outside.path().join("evil.db").to_string_lossy().to_string();
+        let r = validate_store_path(dir.path(), &path);
+        assert!(matches!(r, Err(KnowledgeApiError::PathDenied { .. })));
+    }
+
+    #[test]
+    fn validate_store_path_rejects_dot_dot_segment() {
+        let dir = TempDir::new().unwrap();
+        let r = validate_store_path(dir.path(), "subdir/../../escape.db");
+        assert!(matches!(r, Err(KnowledgeApiError::PathDenied { .. })));
+    }
+
+    #[test]
+    fn knowledge_api_error_path_denied_kebab_serialization() {
+        let e = KnowledgeApiError::PathDenied {
+            reason: "test".to_string(),
+        };
+        let v = serde_json::to_value(&e).unwrap();
+        assert_eq!(v["kind"], "path-denied");
+        assert!(e.to_string().contains("data 디렉터리"));
     }
 
     // ── Phase R-E.5 (P1, ADR-0058) — KnowledgeStorePool ──────────
