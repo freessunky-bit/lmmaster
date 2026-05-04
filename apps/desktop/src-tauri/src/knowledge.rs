@@ -636,6 +636,9 @@ fn progress_to_event(ingest_id: &str, p: &IngestProgress) -> IngestEvent {
 ///
 /// Phase #31 (ADR-0058) — config.store_path는 app_data_dir sandbox 안인지 검증.
 /// frontend가 임의 경로로 데이터 작성 시도 시 PathDenied 거부.
+///
+/// Phase R-E.7 (ADR-0058) — cancel 토큰을 WorkspaceCancellationScope에 등록.
+/// 사용자가 다른 workspace로 전환하면 이 ingest가 자동 cancel cascade.
 #[tauri::command]
 pub async fn ingest_path(
     app: AppHandle,
@@ -644,12 +647,15 @@ pub async fn ingest_path(
     registry: State<'_, Arc<KnowledgeRegistry>>,
     embedding_state: State<'_, Arc<EmbeddingState>>,
     store_pool: State<'_, Arc<KnowledgeStorePool>>,
+    cancel_scope: State<'_, Arc<crate::workspace::WorkspaceCancellationScope>>,
 ) -> Result<String, KnowledgeApiError> {
     // store_path 검증 — sandbox 밖 거부.
     let mut config = config;
     config.store_path = validate_against_app_data_dir(&app, &config.store_path)?;
     let workspace_id = config.workspace_id.clone();
     let (ingest_id, cancel, atomic_cancel) = registry.register(&workspace_id).await?;
+    // Phase R-E.7 — workspace 전환 시 자동 cascade.
+    cancel_scope.register(&workspace_id, cancel.clone());
     let registry_arc: Arc<KnowledgeRegistry> = registry.inner().clone();
     let pool_arc: Arc<KnowledgeStorePool> = store_pool.inner().clone();
     let id_for_return = ingest_id.clone();

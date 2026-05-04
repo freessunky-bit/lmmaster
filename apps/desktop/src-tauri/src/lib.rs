@@ -569,6 +569,14 @@ pub fn run() {
                 tracing::info!("ExitRequested received, cancelling all in-flight portable jobs");
                 registry.cancel_all_blocking();
             }
+            // Workspace cancel scope drain — Phase R-E.7 (ADR-0058).
+            // 등록된 모든 op token cancel. 각 op는 자체 registry로도 cancel되므로 중복 안전.
+            if let Some(scope) =
+                app_handle.try_state::<Arc<workspace::WorkspaceCancellationScope>>()
+            {
+                tracing::info!("ExitRequested received, cancelling workspace scope tokens");
+                scope.cancel_all();
+            }
             // In-flight update check + auto-update poller — Phase 6'.b.
             if let Some(registry) = app_handle.try_state::<Arc<UpdaterRegistry>>() {
                 tracing::info!("ExitRequested received, cancelling all in-flight update checks");

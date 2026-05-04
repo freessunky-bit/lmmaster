@@ -79,13 +79,18 @@ pub async fn start_model_pull(
             let _ = app; // AppHandle은 v1에선 미사용 — 향후 cache_dir / window emit 확장.
             let adapter = OllamaAdapter::new();
             let channel_tx = channel.clone();
+            // Phase R-E.6 (ADR-0058) — Channel close → cancel cascade.
+            // 큰 모델 다운로드 도중 사용자 페이지 이탈 시 네트워크 + 디스크 자원 즉시 회수.
+            let cancel_for_emit = cancel.clone();
             let outcome = adapter
                 .pull_model_stream(
                     &model_id,
                     move |event| {
-                        // Channel close는 invoker(window)가 사라진 경우. cancel 트리거 + best-effort.
-                        if let Err(e) = channel_tx.send(event) {
-                            tracing::debug!(error = %e, "model_pull channel send failed");
+                        if channel_tx.send(event).is_err() {
+                            tracing::debug!(
+                                "model_pull channel closed — cancelling backend stream"
+                            );
+                            cancel_for_emit.cancel();
                         }
                     },
                     &cancel,
