@@ -669,4 +669,95 @@ mod tests {
             .await;
         assert!(matches!(outcome, ChatOutcome::Cancelled));
     }
+
+    // ── Phase R-E.1 (T3, ADR-0058) — chat_stream graceful early disconnect ──
+    //
+    // adapter-ollama / adapter-lmstudio 패턴을 llama-server SSE에 적용.
+
+    use std::sync::{Arc as TestArc, Mutex as TestMutex};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    async fn spawn_partial_sse_server(payload: String) -> std::net::SocketAddr {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            if let Ok((mut socket, _)) = listener.accept().await {
+                let mut buf = [0u8; 4096];
+                let _ = socket.read(&mut buf).await;
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: 99999\r\n\r\n{}",
+                    payload
+                );
+                let _ = socket.write_all(response.as_bytes()).await;
+                drop(socket);
+            }
+        });
+        addr
+    }
+
+    #[tokio::test]
+    async fn chat_stream_graceful_completed_after_delta_when_disconnect() {
+        let body = format!(
+            "data: {}\n\n",
+            serde_json::to_string(&serde_json::json!({
+                "choices": [{"delta": {"content": "hi"}, "finish_reason": null}]
+            }))
+            .unwrap()
+        );
+        let addr = spawn_partial_sse_server(body).await;
+        let endpoint = format!("http://{}", addr);
+        let a = LlamaCppAdapter::with_endpoint(endpoint);
+
+        let events: TestArc<TestMutex<Vec<ChatEvent>>> = TestArc::new(TestMutex::new(Vec::new()));
+        let events_for_cb = events.clone();
+        let on_event = move |e: ChatEvent| {
+            events_for_cb.lock().unwrap().push(e);
+        };
+
+        let cancel = CancellationToken::new();
+        let messages = vec![ChatMessage {
+            role: "user".into(),
+            content: "ping".into(),
+            images: None,
+        }];
+        let outcome = a.chat_stream("test", &messages, on_event, &cancel).await;
+
+        assert!(
+            matches!(outcome, ChatOutcome::Completed),
+            "delta 1건 이상 emit + disconnect → Completed (got {outcome:?})"
+        );
+        let events = events.lock().unwrap();
+        let delta_count = events
+            .iter()
+            .filter(|e| matches!(e, ChatEvent::Delta { .. }))
+            .count();
+        assert!(delta_count >= 1);
+    }
+
+    #[tokio::test]
+    async fn chat_stream_failed_when_disconnect_before_any_delta() {
+        let addr = spawn_partial_sse_server(String::new()).await;
+        let endpoint = format!("http://{}", addr);
+        let a = LlamaCppAdapter::with_endpoint(endpoint);
+
+        let events: TestArc<TestMutex<Vec<ChatEvent>>> = TestArc::new(TestMutex::new(Vec::new()));
+        let events_for_cb = events.clone();
+        let on_event = move |e: ChatEvent| {
+            events_for_cb.lock().unwrap().push(e);
+        };
+
+        let cancel = CancellationToken::new();
+        let messages = vec![ChatMessage {
+            role: "user".into(),
+            content: "ping".into(),
+            images: None,
+        }];
+        let outcome = a.chat_stream("test", &messages, on_event, &cancel).await;
+
+        assert!(
+            matches!(outcome, ChatOutcome::Failed(_)),
+            "delta 0건 + disconnect → Failed (got {outcome:?})"
+        );
+    }
 }
