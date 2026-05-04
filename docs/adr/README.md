@@ -8,7 +8,7 @@
 - Section: Status / Context / Decision / Consequences / Alternatives considered / References.
 - 새 ADR 작성 시 본 README 인덱스 표를 갱신한다.
 
-## 인덱스 (55건, 2026-05-03 현재)
+## 인덱스 (56건, 2026-05-04 현재)
 
 ### Foundation (Phase α)
 
@@ -161,6 +161,12 @@
 | 번호 | 제목 | Status |
 |---|---|---|
 | 0056 | i18n 일관성 + thiserror 프런트엔드 노출 정책 — 이모지 거부 + lucide-react + errors namespace + kind 기반 i18n switch (K1+K2+K3+K4) | Accepted (Phase R-D 머지 2026-05-03) |
+
+### Phase R-E — Architecture Cleanup (2026-05-04)
+
+| 번호 | 제목 | Status |
+|---|---|---|
+| 0057 | Architecture cleanup + protocol decoupling — wiremock graceful 회귀 가드 + OpenAI compat DTO + chat-protocol crate + adapter-ollama 역의존 제거 + KnowledgeStorePool + Channel cancel cascade + WorkspaceCancellationScope (R-E 7 sub-phase 통합, T3+C2+A1+A2+P1+P4+R2) | Accepted (Phase R-E 머지 2026-05-04) |
 
 ## Supersede / Modify 그래프
 
