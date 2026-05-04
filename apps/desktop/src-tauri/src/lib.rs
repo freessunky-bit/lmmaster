@@ -345,6 +345,13 @@ pub fn run() {
             let workspaces_state: Arc<WorkspacesState> = workspaces::provision_state(app.handle());
             app.manage(Arc::clone(&workspaces_state));
 
+            // 10.c. WorkspaceCancellationScope — Phase R-E.7 (ADR-0058).
+            //       workspace 전환 시 이전 workspace의 in-flight op 모두 cancel cascade.
+            //       opt-in 등록 — operation이 명시 register. 미등록 op는 영향 없음.
+            let workspace_cancel_scope: Arc<workspace::WorkspaceCancellationScope> =
+                Arc::new(workspace::WorkspaceCancellationScope::new());
+            app.manage(Arc::clone(&workspace_cancel_scope));
+
             // 11. UpdaterRegistry + PollerState — Phase 6'.b.
             //     UpdaterRegistry: 단발 check 다중 허용 (check_id uuid 키).
             //     PollerState: 자동 폴러 single-slot — 동시에 1개만 실행.

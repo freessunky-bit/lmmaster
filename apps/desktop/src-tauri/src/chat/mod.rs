@@ -95,7 +95,9 @@ pub async fn start_chat(
                     &messages,
                     move |event| {
                         if channel_tx.send(event).is_err() {
-                            tracing::debug!("lm-studio chat channel closed — cancelling backend stream");
+                            tracing::debug!(
+                                "lm-studio chat channel closed — cancelling backend stream"
+                            );
                             cancel_for_emit.cancel();
                         }
                     },

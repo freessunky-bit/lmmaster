@@ -411,16 +411,21 @@ pub async fn delete_workspace(
 }
 
 /// active 전환. last_used 갱신 + 이벤트 emit.
+///
+/// Phase R-E.7 (ADR-0058) — 전환 시 이전 workspace의 in-flight op cascade cancel.
+/// opt-in 등록한 op만 영향 (chat / ingest 등). install / catalog refresh 같은 global op는 영향 없음.
 #[tauri::command]
 pub async fn set_active_workspace(
     id: String,
     app: AppHandle,
     state: State<'_, Arc<WorkspacesState>>,
+    cancel_scope: State<'_, Arc<crate::workspace::WorkspaceCancellationScope>>,
 ) -> Result<(), WorkspacesApiError> {
     let mut g = state.inner.lock().await;
     if !g.workspaces.iter().any(|w| w.id == id) {
         return Err(WorkspacesApiError::NotFound { id: id.clone() });
     }
+    let prev_active_id = g.active_id.clone();
     g.active_id = id.clone();
     if let Some(entry) = g.workspaces.iter_mut().find(|w| w.id == id) {
         entry.last_used_iso = Some(now_rfc3339());
@@ -429,6 +434,12 @@ pub async fn set_active_workspace(
     let workspaces_snapshot = g.workspaces.clone();
     let active_id = g.active_id.clone();
     drop(g);
+
+    // Phase R-E.7 — 이전 workspace의 op cancel cascade. 같은 workspace 재선택은 noop.
+    if !prev_active_id.is_empty() && prev_active_id != active_id {
+        cancel_scope.cancel_workspace(&prev_active_id);
+    }
+
     emit_changed(&app, &workspaces_snapshot, &active_id);
     Ok(())
 }

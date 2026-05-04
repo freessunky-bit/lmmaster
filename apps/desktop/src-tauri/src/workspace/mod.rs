@@ -1,9 +1,12 @@
 //! Workspace fingerprint repair IPC — Phase 3'.c.
 //! Workspace export/import IPC — Phase 11'.
+//! Workspace cancellation scope — Phase R-E.7.
 
+pub mod cancel_scope;
 pub mod commands;
 pub mod portable;
 
+pub use cancel_scope::WorkspaceCancellationScope;
 pub use commands::{
     check_workspace_repair, get_repair_history, get_workspace_fingerprint, RepairHistoryEntry,
 };
