@@ -331,7 +331,9 @@ pub fn run() {
             app.manage(knowledge_registry);
 
             // 10.0. KnowledgeStorePool — Phase R-E.5 (ADR-0058). IPC 호출당 SQLite open 반복 → cache 재사용.
-            let knowledge_store_pool: Arc<KnowledgeStorePool> = Arc::new(KnowledgeStorePool::new());
+            //       Phase #38 — keyring secret을 적용한 SQLCipher passphrase 모드. keyring 미접근 시 평문 폴백.
+            //       sqlcipher feature OFF 빌드(stock SQLite)에서는 passphrase 무해 (PRAGMA key 무시).
+            let knowledge_store_pool: Arc<KnowledgeStorePool> = knowledge::provision_knowledge_store_pool();
             app.manage(knowledge_store_pool);
 
             // 10.a. EmbeddingState — Phase 9'.a. 사용자 향 임베딩 모델 카탈로그 + 활성 모델 영속.
