@@ -349,10 +349,12 @@ fn emit_or_cancel(
 ///
 /// `embedder` 인자: caller가 active OnnxModelKind 기반으로 미리 해결 (setup phase). None이면
 /// MockEmbedder default — 테스트/dev fallback.
+#[allow(clippy::too_many_arguments)]
 pub async fn run_ingest(
     config: IngestConfig,
     ingest_id: String,
     registry: Arc<KnowledgeRegistry>,
+    pool: Arc<KnowledgeStorePool>,
     cancel: CancellationToken,
     atomic_cancel: Arc<AtomicBool>,
     channel: Channel<IngestEvent>,
@@ -374,8 +376,8 @@ pub async fn run_ingest(
         },
     );
 
-    // 2. Store open.
-    let store = match open_store(&config.store_path) {
+    // 2. Store open (pool 캐시 hit 시 재사용).
+    let store = match pool.get_or_open(&config.store_path) {
         Ok(s) => s,
         Err(e) => {
             emit_or_cancel(
@@ -478,18 +480,98 @@ pub async fn run_ingest(
     registry.finish(&workspace_id).await;
 }
 
-/// Store 열기 helper — store_path가 비어있으면 in-memory.
-fn open_store(store_path: &str) -> Result<Arc<StdMutex<KnowledgeStore>>, KnowledgeApiError> {
-    let store = if store_path.is_empty() {
-        KnowledgeStore::open_memory().map_err(|e| KnowledgeApiError::StoreOpen {
+/// Phase R-E.5 (P1, ADR-0058) — KnowledgeStore reuse pool.
+///
+/// IPC 호출당 매번 SQLite open/close 반복하던 패턴을 Arc<Mutex<Store>> 캐시로 대체.
+/// 같은 store_path의 다음 호출은 동일 Arc 재사용 → file handle 유지 + schema query skip.
+///
+/// LRU 정책: pool size > max_size 시 oldest entry FIFO eviction. 사용자 PC에서 활성
+/// workspace 4개를 동시에 다룰 케이스는 거의 없으므로 max=4면 충분.
+pub struct KnowledgeStorePool {
+    inner: StdMutex<HashMap<String, Arc<StdMutex<KnowledgeStore>>>>,
+    /// FIFO eviction을 위한 insertion order 추적.
+    order: StdMutex<Vec<String>>,
+    max_size: usize,
+}
+
+impl KnowledgeStorePool {
+    pub fn new() -> Self {
+        Self::with_capacity(4)
+    }
+
+    pub fn with_capacity(max_size: usize) -> Self {
+        Self {
+            inner: StdMutex::new(HashMap::new()),
+            order: StdMutex::new(Vec::new()),
+            max_size,
+        }
+    }
+
+    /// store_path에 해당하는 KnowledgeStore Arc를 반환. 캐시 hit이면 즉시 clone, miss면 open + 적재.
+    /// 빈 문자열 path는 in-memory store.
+    pub fn get_or_open(
+        &self,
+        store_path: &str,
+    ) -> Result<Arc<StdMutex<KnowledgeStore>>, KnowledgeApiError> {
+        let key = store_path.to_string();
+        let mut inner = self
+            .inner
+            .lock()
+            .expect("KnowledgeStorePool inner poisoned");
+
+        if let Some(existing) = inner.get(&key) {
+            return Ok(existing.clone());
+        }
+
+        // FIFO eviction.
+        if inner.len() >= self.max_size {
+            let mut order = self
+                .order
+                .lock()
+                .expect("KnowledgeStorePool order poisoned");
+            if let Some(oldest) = order.first().cloned() {
+                inner.remove(&oldest);
+                order.remove(0);
+            }
+        }
+
+        let store = if store_path.is_empty() {
+            KnowledgeStore::open_memory()
+        } else {
+            KnowledgeStore::open(Path::new(store_path))
+        }
+        .map_err(|e| KnowledgeApiError::StoreOpen {
             message: format!("{e}"),
-        })?
-    } else {
-        KnowledgeStore::open(Path::new(store_path)).map_err(|e| KnowledgeApiError::StoreOpen {
-            message: format!("{e}"),
-        })?
-    };
-    Ok(Arc::new(StdMutex::new(store)))
+        })?;
+
+        let arc = Arc::new(StdMutex::new(store));
+        inner.insert(key.clone(), arc.clone());
+        self.order
+            .lock()
+            .expect("KnowledgeStorePool order poisoned")
+            .push(key);
+        Ok(arc)
+    }
+
+    /// 테스트 / 진단용 — 현재 캐시된 entry 수.
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.inner
+            .lock()
+            .expect("KnowledgeStorePool inner poisoned")
+            .len()
+    }
+
+    #[cfg(test)]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl Default for KnowledgeStorePool {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// IngestProgress → IngestEvent. stage별 enum variant 분기.
@@ -536,10 +618,12 @@ pub async fn ingest_path(
     on_event: Channel<IngestEvent>,
     registry: State<'_, Arc<KnowledgeRegistry>>,
     embedding_state: State<'_, Arc<EmbeddingState>>,
+    store_pool: State<'_, Arc<KnowledgeStorePool>>,
 ) -> Result<String, KnowledgeApiError> {
     let workspace_id = config.workspace_id.clone();
     let (ingest_id, cancel, atomic_cancel) = registry.register(&workspace_id).await?;
     let registry_arc: Arc<KnowledgeRegistry> = registry.inner().clone();
+    let pool_arc: Arc<KnowledgeStorePool> = store_pool.inner().clone();
     let id_for_return = ingest_id.clone();
 
     // Phase 9'.a — active 모델로 embedder를 해결. 미설정 / 미다운로드 / ONNX feature off →
@@ -552,6 +636,7 @@ pub async fn ingest_path(
             config,
             ingest_id,
             registry_arc,
+            pool_arc,
             cancel,
             atomic_cancel,
             on_event,
@@ -602,9 +687,11 @@ pub async fn search_knowledge(
     k: usize,
     store_path: String,
     embedding_state: State<'_, Arc<EmbeddingState>>,
+    store_pool: State<'_, Arc<KnowledgeStorePool>>,
 ) -> Result<Vec<SearchHit>, KnowledgeApiError> {
     let embedder = resolve_active_embedder(embedding_state.inner()).await;
-    search_knowledge_with_embedder(workspace_id, query, k, store_path, embedder).await
+    let pool = store_pool.inner().clone();
+    search_knowledge_with_embedder(workspace_id, query, k, store_path, embedder, pool).await
 }
 
 /// `search_knowledge`의 embedder-injectable 버전 — 단위 테스트가 직접 호출 가능.
@@ -614,14 +701,15 @@ pub async fn search_knowledge_with_embedder(
     k: usize,
     store_path: String,
     embedder: Arc<dyn Embedder>,
+    pool: Arc<KnowledgeStorePool>,
 ) -> Result<Vec<SearchHit>, KnowledgeApiError> {
     let k = k.min(50);
     if query.trim().is_empty() || k == 0 {
         return Ok(Vec::new());
     }
 
-    // store 열기.
-    let store_arc = open_store(&store_path)?;
+    // store 열기 (pool 캐시 hit 시 재사용).
+    let store_arc = pool.get_or_open(&store_path)?;
 
     // workspace 존재 검증.
     {
@@ -704,8 +792,19 @@ pub async fn search_knowledge_with_embedder(
 pub async fn knowledge_workspace_stats(
     workspace_id: String,
     store_path: String,
+    store_pool: State<'_, Arc<KnowledgeStorePool>>,
 ) -> Result<WorkspaceStats, KnowledgeApiError> {
-    let store_arc = open_store(&store_path)?;
+    let pool = store_pool.inner().clone();
+    knowledge_workspace_stats_with_pool(workspace_id, store_path, pool).await
+}
+
+/// `knowledge_workspace_stats`의 pool-injectable 버전 — 단위 테스트가 직접 호출 가능.
+pub async fn knowledge_workspace_stats_with_pool(
+    workspace_id: String,
+    store_path: String,
+    pool: Arc<KnowledgeStorePool>,
+) -> Result<WorkspaceStats, KnowledgeApiError> {
+    let store_arc = pool.get_or_open(&store_path)?;
     let store = store_arc.lock().map_err(|_| KnowledgeApiError::Internal {
         message: "store mutex poisoned".to_string(),
     })?;
@@ -1343,10 +1442,12 @@ mod tests {
         };
 
         let embedder: Arc<dyn Embedder> = Arc::new(MockEmbedder::default());
+        let pool = Arc::new(KnowledgeStorePool::new());
         run_ingest(
             config,
             ingest_id,
             registry.clone(),
+            pool,
             cancel,
             atomic,
             ch,
@@ -1430,6 +1531,7 @@ mod tests {
             3,
             store_file.to_string_lossy().to_string(),
             Arc::new(MockEmbedder::default()),
+            Arc::new(KnowledgeStorePool::new()),
         )
         .await
         .unwrap();
@@ -1462,6 +1564,7 @@ mod tests {
             5,
             store_file.to_string_lossy().to_string(),
             Arc::new(MockEmbedder::default()),
+            Arc::new(KnowledgeStorePool::new()),
         )
         .await
         .unwrap();
@@ -1479,6 +1582,7 @@ mod tests {
             3,
             store_file.to_string_lossy().to_string(),
             Arc::new(MockEmbedder::default()),
+            Arc::new(KnowledgeStorePool::new()),
         )
         .await
         .unwrap_err();
@@ -1524,6 +1628,7 @@ mod tests {
             5,
             store_file.to_string_lossy().to_string(),
             Arc::new(MockEmbedder::default()),
+            Arc::new(KnowledgeStorePool::new()),
         )
         .await
         .unwrap();
@@ -1535,11 +1640,80 @@ mod tests {
             5,
             store_file.to_string_lossy().to_string(),
             Arc::new(MockEmbedder::default()),
+            Arc::new(KnowledgeStorePool::new()),
         )
         .await
         .unwrap();
         assert_eq!(hits_b.len(), 1);
         assert_eq!(hits_b[0].content, "beta-only");
+    }
+
+    // ── Phase R-E.5 (P1, ADR-0058) — KnowledgeStorePool ──────────
+
+    #[tokio::test]
+    async fn pool_caches_same_path() {
+        let dir = TempDir::new().unwrap();
+        let store_file = dir.path().join("p.db").to_string_lossy().to_string();
+        let pool = KnowledgeStorePool::new();
+        let arc1 = pool.get_or_open(&store_file).unwrap();
+        let arc2 = pool.get_or_open(&store_file).unwrap();
+        assert!(
+            Arc::ptr_eq(&arc1, &arc2),
+            "같은 path는 같은 Arc를 반환해야 해요"
+        );
+        assert_eq!(pool.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn pool_separate_arcs_for_different_paths() {
+        let dir = TempDir::new().unwrap();
+        let path_a = dir.path().join("a.db").to_string_lossy().to_string();
+        let path_b = dir.path().join("b.db").to_string_lossy().to_string();
+        let pool = KnowledgeStorePool::new();
+        let arc_a = pool.get_or_open(&path_a).unwrap();
+        let arc_b = pool.get_or_open(&path_b).unwrap();
+        assert!(
+            !Arc::ptr_eq(&arc_a, &arc_b),
+            "다른 path는 다른 Arc를 반환해야 해요"
+        );
+        assert_eq!(pool.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn pool_evicts_oldest_when_capacity_reached() {
+        let dir = TempDir::new().unwrap();
+        let pool = KnowledgeStorePool::with_capacity(2);
+        let p1 = dir.path().join("1.db").to_string_lossy().to_string();
+        let p2 = dir.path().join("2.db").to_string_lossy().to_string();
+        let p3 = dir.path().join("3.db").to_string_lossy().to_string();
+        let _ = pool.get_or_open(&p1).unwrap();
+        let _ = pool.get_or_open(&p2).unwrap();
+        // 3번째 삽입 → 1번째(oldest) FIFO eviction.
+        let _ = pool.get_or_open(&p3).unwrap();
+        assert_eq!(pool.len(), 2);
+        // p1는 evict됨 → 다시 호출하면 새 Arc.
+        let arc1_v2 = pool.get_or_open(&p1).unwrap();
+        // 다시 evict — 이번엔 p2 (oldest 후보).
+        assert_eq!(pool.len(), 2);
+        // 다음 호출 시 p3가 여전히 캐시 hit이어야.
+        let arc3_v1 = pool.get_or_open(&p3).unwrap();
+        let arc3_v2 = pool.get_or_open(&p3).unwrap();
+        assert!(Arc::ptr_eq(&arc3_v1, &arc3_v2));
+        let _ = arc1_v2;
+    }
+
+    #[tokio::test]
+    async fn pool_empty_path_uses_in_memory_cache() {
+        let pool = KnowledgeStorePool::new();
+        let arc1 = pool.get_or_open("").unwrap();
+        let arc2 = pool.get_or_open("").unwrap();
+        assert!(Arc::ptr_eq(&arc1, &arc2));
+    }
+
+    #[tokio::test]
+    async fn pool_default_returns_default_capacity() {
+        let pool = KnowledgeStorePool::default();
+        assert_eq!(pool.len(), 0);
     }
 
     // ── knowledge_workspace_stats ────────────────────────────────
@@ -1549,9 +1723,10 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let store_file = dir.path().join("k.db");
         let _ = KnowledgeStore::open(&store_file).unwrap();
-        let stats = knowledge_workspace_stats(
+        let stats = knowledge_workspace_stats_with_pool(
             "missing-ws".to_string(),
             store_file.to_string_lossy().to_string(),
+            Arc::new(KnowledgeStorePool::new()),
         )
         .await
         .unwrap();
@@ -1589,10 +1764,13 @@ mod tests {
             s.add_chunks(&doc.id, &ws.id, &chunks, &embeds).unwrap();
             ws.id
         };
-        let stats =
-            knowledge_workspace_stats(ws_id.clone(), store_file.to_string_lossy().to_string())
-                .await
-                .unwrap();
+        let stats = knowledge_workspace_stats_with_pool(
+            ws_id.clone(),
+            store_file.to_string_lossy().to_string(),
+            Arc::new(KnowledgeStorePool::new()),
+        )
+        .await
+        .unwrap();
         assert_eq!(stats.documents, 1);
         assert_eq!(stats.chunks, 2);
     }
