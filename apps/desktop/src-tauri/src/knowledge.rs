@@ -492,6 +492,10 @@ pub struct KnowledgeStorePool {
     /// FIFO eviction을 위한 insertion order 추적.
     order: StdMutex<Vec<String>>,
     max_size: usize,
+    /// Phase #38 (ADR-0058) — SQLCipher passphrase. None이면 평문 모드 (Linux headless / keyring 미접근).
+    /// `sqlcipher` feature OFF 빌드(stock SQLite)에선 어떤 값이든 PRAGMA key가 무시되어 평문 동작.
+    /// passphrase는 process lifetime 동안 유지 — keyring 재읽기 비용 0.
+    passphrase: Option<String>,
 }
 
 impl KnowledgeStorePool {
@@ -504,7 +508,16 @@ impl KnowledgeStorePool {
             inner: StdMutex::new(HashMap::new()),
             order: StdMutex::new(Vec::new()),
             max_size,
+            passphrase: None,
         }
+    }
+
+    /// Phase #38 (ADR-0058) — passphrase를 적용한 pool 생성.
+    /// caller(`provision_knowledge_passphrase`)가 keyring에서 읽은 secret을 주입.
+    pub fn with_passphrase(passphrase: String) -> Self {
+        let mut pool = Self::new();
+        pool.passphrase = Some(passphrase);
+        pool
     }
 
     /// store_path에 해당하는 KnowledgeStore Arc를 반환. 캐시 hit이면 즉시 clone, miss면 open + 적재.
@@ -535,8 +548,12 @@ impl KnowledgeStorePool {
             }
         }
 
+        // Phase #38 (ADR-0058) — passphrase 있으면 SQLCipher open_with_passphrase, 없으면 평문 open.
+        // 빈 path는 in-memory (passphrase 무관 — 메모리 전용).
         let store = if store_path.is_empty() {
             KnowledgeStore::open_memory()
+        } else if let Some(pass) = self.passphrase.as_deref() {
+            KnowledgeStore::open_with_passphrase(Path::new(store_path), pass)
         } else {
             KnowledgeStore::open(Path::new(store_path))
         }
@@ -1114,6 +1131,74 @@ pub fn provision_embedding_state(app: &AppHandle) -> Arc<EmbeddingState> {
         .app_data_dir()
         .unwrap_or_else(|_| std::env::temp_dir().join("lmmaster"));
     Arc::new(EmbeddingState::new(dir))
+}
+
+// ───────────────────────────────────────────────────────────────────
+// Phase #38 (ADR-0058) — Knowledge SQLCipher passphrase provision
+// ───────────────────────────────────────────────────────────────────
+
+/// keyring service / username — knowledge 전용 secret entry.
+/// key-manager는 `keymanager-secret` — 별개 entry로 분리해 RAG 데이터와 API 키 secret 격리.
+const KEYRING_SERVICE: &str = "lmmaster";
+const KEYRING_USERNAME: &str = "knowledge-secret";
+
+/// keyring에서 knowledge passphrase를 읽거나 새로 생성. 실패 시 None 반환 (평문 폴백).
+///
+/// 정책:
+/// - keyring entry가 있으면 그대로 사용.
+/// - 없으면 32 byte random 생성 → hex 인코딩 → keyring 저장.
+/// - keyring 자체 접근 실패 (Linux headless 등) → None — 평문 폴백 (Pool은 평문 open).
+/// - secret은 process lifetime 동안 유지 (Pool에 잡혀 있음).
+///
+/// `sqlcipher` feature OFF 빌드(stock SQLite)에서도 무해 — passphrase가 PRAGMA key로 적용되지만
+/// stock SQLite는 unknown pragma로 무시. v1.x에서 feature ON 시 자동 활성화.
+pub fn provision_knowledge_passphrase() -> Option<String> {
+    use keyring::Entry;
+    use rand::RngCore;
+
+    let entry = match Entry::new(KEYRING_SERVICE, KEYRING_USERNAME) {
+        Ok(e) => e,
+        Err(e) => {
+            tracing::warn!(error = %e, "knowledge keyring entry 생성 실패 — 평문 폴백");
+            return None;
+        }
+    };
+    match entry.get_password() {
+        Ok(p) if !p.is_empty() => Some(p),
+        Ok(_) | Err(keyring::Error::NoEntry) => {
+            // 새 secret 생성.
+            let mut buf = [0u8; 32];
+            rand::thread_rng().fill_bytes(&mut buf);
+            let hex_secret = hex::encode(buf);
+            if let Err(e) = entry.set_password(&hex_secret) {
+                tracing::warn!(error = %e, "knowledge keyring secret 저장 실패 — 평문 폴백");
+                return None;
+            }
+            tracing::info!("knowledge keyring secret 생성 완료");
+            Some(hex_secret)
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "knowledge keyring secret 읽기 실패 — 평문 폴백");
+            None
+        }
+    }
+}
+
+/// 부팅 시 호출 — keyring secret을 읽어 KnowledgeStorePool 생성.
+/// `app.manage(provision_knowledge_store_pool())`.
+pub fn provision_knowledge_store_pool() -> Arc<KnowledgeStorePool> {
+    match provision_knowledge_passphrase() {
+        Some(pass) => {
+            tracing::info!("knowledge SQLCipher passphrase 적용 (sqlcipher feature 빌드만 활성)");
+            Arc::new(KnowledgeStorePool::with_passphrase(pass))
+        }
+        None => {
+            tracing::warn!(
+                "knowledge passphrase 없음 — 평문 모드 (Linux headless / keyring 미접근)"
+            );
+            Arc::new(KnowledgeStorePool::new())
+        }
+    }
 }
 
 // ───────────────────────────────────────────────────────────────────
@@ -1714,6 +1799,34 @@ mod tests {
     async fn pool_default_returns_default_capacity() {
         let pool = KnowledgeStorePool::default();
         assert_eq!(pool.len(), 0);
+    }
+
+    // ── Phase #38 (ADR-0058) — passphrase wiring ─────────────────
+
+    #[tokio::test]
+    async fn pool_with_passphrase_opens_db() {
+        // sqlcipher feature OFF 빌드에서도 PRAGMA key가 unknown pragma로 무시되어 정상 동작.
+        // ON 빌드에선 실 SQLCipher 적용.
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("kp.db").to_string_lossy().to_string();
+        let pool = KnowledgeStorePool::with_passphrase("passphrase-aaaaaaaaaaaaaaaa".to_string());
+        let arc = pool.get_or_open(&path).unwrap();
+        // 정상 open + 캐시 적재 확인.
+        assert_eq!(pool.len(), 1);
+        let _ = arc;
+    }
+
+    #[tokio::test]
+    async fn pool_with_passphrase_reuses_cached_arc() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("kp.db").to_string_lossy().to_string();
+        let pool = KnowledgeStorePool::with_passphrase("passphrase-bbbbbbbbbbbbbbbb".to_string());
+        let arc1 = pool.get_or_open(&path).unwrap();
+        let arc2 = pool.get_or_open(&path).unwrap();
+        assert!(
+            Arc::ptr_eq(&arc1, &arc2),
+            "passphrase 모드에서도 같은 path → 같은 Arc"
+        );
     }
 
     // ── knowledge_workspace_stats ────────────────────────────────
