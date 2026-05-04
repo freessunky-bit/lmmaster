@@ -272,11 +272,11 @@ impl LlamaCppAdapter {
     pub async fn chat_stream(
         &self,
         model_id: &str,
-        messages: &[adapter_ollama::ChatMessage],
-        on_event: impl Fn(adapter_ollama::ChatEvent),
+        messages: &[chat_protocol::ChatMessage],
+        on_event: impl Fn(chat_protocol::ChatEvent),
         cancel: &CancellationToken,
-    ) -> adapter_ollama::ChatOutcome {
-        use adapter_ollama::{ChatEvent, ChatOutcome};
+    ) -> chat_protocol::ChatOutcome {
+        use chat_protocol::{ChatEvent, ChatOutcome};
 
         let started = Instant::now();
         let openai_messages: Vec<OpenAIChatTurn> =
@@ -405,9 +405,9 @@ impl LlamaCppAdapter {
     }
 }
 
-/// adapter_ollama::ChatMessage → OpenAI compat turn 변환.
+/// chat_protocol::ChatMessage → OpenAI compat turn 변환.
 /// images 비어있으면 plain text content. 있으면 content array (text + image_url parts).
-fn convert_message_to_openai(m: &adapter_ollama::ChatMessage) -> OpenAIChatTurn {
+fn convert_message_to_openai(m: &chat_protocol::ChatMessage) -> OpenAIChatTurn {
     if let Some(images) = m.images.as_ref() {
         if !images.is_empty() {
             let mut parts: Vec<OpenAIContentPart> = Vec::with_capacity(images.len() + 1);
@@ -441,7 +441,7 @@ fn convert_message_to_openai(m: &adapter_ollama::ChatMessage) -> OpenAIChatTurn 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use adapter_ollama::{ChatEvent, ChatMessage, ChatOutcome};
+    use chat_protocol::{ChatEvent, ChatMessage, ChatOutcome};
     use std::sync::{Arc, Mutex};
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};

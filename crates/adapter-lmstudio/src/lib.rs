@@ -459,11 +459,11 @@ impl LmStudioAdapter {
     pub async fn chat_stream(
         &self,
         model_id: &str,
-        messages: &[adapter_ollama::ChatMessage],
-        on_event: impl Fn(adapter_ollama::ChatEvent),
+        messages: &[chat_protocol::ChatMessage],
+        on_event: impl Fn(chat_protocol::ChatEvent),
         cancel: &CancellationToken,
-    ) -> adapter_ollama::ChatOutcome {
-        use adapter_ollama::{ChatEvent, ChatOutcome};
+    ) -> chat_protocol::ChatOutcome {
+        use chat_protocol::{ChatEvent, ChatOutcome};
 
         let started = Instant::now();
         let openai_messages: Vec<OpenAIChatTurn> =
@@ -593,9 +593,9 @@ impl LmStudioAdapter {
     }
 }
 
-/// adapter_ollama::ChatMessage → OpenAI compat turn 변환.
+/// chat_protocol::ChatMessage → OpenAI compat turn 변환.
 /// images 필드가 비어있으면 plain text content. 있으면 content array (text + image_url parts).
-fn convert_message_to_openai(m: &adapter_ollama::ChatMessage) -> OpenAIChatTurn {
+fn convert_message_to_openai(m: &chat_protocol::ChatMessage) -> OpenAIChatTurn {
     if let Some(images) = m.images.as_ref() {
         if !images.is_empty() {
             let mut parts: Vec<OpenAIContentPart> = Vec::with_capacity(images.len() + 1);
@@ -878,7 +878,9 @@ mod tests {
     //
     // adapter-ollama의 R-E.1 패턴을 LM Studio SSE wire 형식에 맞춰 적용.
 
-    use adapter_ollama::{ChatEvent as OllamaChatEvent, ChatMessage, ChatOutcome as OllamaChatOutcome};
+    use chat_protocol::{
+        ChatEvent as OllamaChatEvent, ChatMessage, ChatOutcome as OllamaChatOutcome,
+    };
     use std::sync::{Arc as TestArc, Mutex as TestMutex};
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;

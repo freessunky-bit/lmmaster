@@ -46,6 +46,7 @@ scanner.workspace = true
 bench-harness.workspace = true
 adapter-ollama.workspace = true
 adapter-lmstudio.workspace = true
+chat-protocol.workspace = true
 hardware-probe.workspace = true
 model-registry.workspace = true
 portable-workspace.workspace = true
