@@ -170,8 +170,8 @@ impl WorkbenchResponder {
     }
 }
 
-/// 모듈 기본 client — timeout 60s + connect 5s + no_proxy. build 실패는 reqwest::Client::new()
-/// fallback (테스트 환경에서 시스템 기본 인증서 미존재 등 극히 드문 케이스 대비).
+/// 모듈 기본 client — timeout 60s + connect 5s + no_proxy.
+/// Phase R-C (ADR-0055) — 폴백 제거. fail-fast on TLS init issue (rogue proxy 우회 방지).
 fn default_client() -> reqwest::Client {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(60))
@@ -179,7 +179,7 @@ fn default_client() -> reqwest::Client {
         .no_proxy()
         .pool_idle_timeout(Duration::from_secs(60))
         .build()
-        .unwrap_or_else(|_| reqwest::Client::new())
+        .expect("reqwest Client builder must succeed (TLS init)")
 }
 
 // ── HTTP DTOs ────────────────────────────────────────────────────────

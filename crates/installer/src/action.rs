@@ -121,12 +121,13 @@ impl ActionExecutor {
     }
 
     pub fn with_downloader(downloader: Downloader, cache_dir: PathBuf) -> Self {
+        // Phase R-C (ADR-0055) — 폴백 제거. fail-fast on TLS init issue.
         let post_check_http = reqwest::Client::builder()
             .timeout(Duration::from_secs(2))
             .connect_timeout(Duration::from_millis(500))
             .no_proxy()
             .build()
-            .unwrap_or_else(|_| reqwest::Client::new());
+            .expect("reqwest Client builder must succeed (TLS init)");
         Self {
             downloader,
             cache_dir,
@@ -459,6 +460,13 @@ pub(crate) async fn spawn_and_wait(
 }
 
 /// URL의 마지막 path segment에서 파일 이름 추출. `?query` 제거.
+///
+/// Phase R-C (ADR-0055) — path traversal 방어:
+/// - `..` / `.` 단독 segment 거부.
+/// - 경로 분리자 (`/`, `\`) 포함 거부 (cache_dir.join 시 escape).
+/// - 제어 문자(`\0`, `\n`, `\r` 등) 거부.
+/// - Windows 드라이브 letter prefix(`C:`) 거부.
+/// - 빈 결과 거부.
 pub(crate) fn derive_filename(url: &str) -> Result<String, ActionError> {
     // 매우 단순한 파서 — "://" 뒤의 마지막 '/' 이후 부분.
     let after_scheme = url.find("://").map(|i| &url[i + 3..]).unwrap_or(url);
@@ -467,6 +475,27 @@ pub(crate) fn derive_filename(url: &str) -> Result<String, ActionError> {
     if last.is_empty() {
         return Err(ActionError::InvalidSpec(format!(
             "cannot derive filename from url {url}"
+        )));
+    }
+    if last == "." || last == ".." {
+        return Err(ActionError::InvalidSpec(format!(
+            "filename '{last}' from url is not allowed (path traversal): {url}"
+        )));
+    }
+    if last.chars().any(|c| c == '/' || c == '\\') {
+        return Err(ActionError::InvalidSpec(format!(
+            "filename contains path separator: {last}"
+        )));
+    }
+    if last.chars().any(|c| c == '\0' || c.is_control()) {
+        return Err(ActionError::InvalidSpec(format!(
+            "filename contains control char: {last:?}"
+        )));
+    }
+    // Windows drive letter 거부 (`C:`, `D:foo.exe` 같은 케이스).
+    if last.len() >= 2 && last.as_bytes()[1] == b':' && last.as_bytes()[0].is_ascii_alphabetic() {
+        return Err(ActionError::InvalidSpec(format!(
+            "filename looks like Windows drive letter: {last}"
         )));
     }
     Ok(last.to_string())
@@ -537,6 +566,51 @@ mod tests {
             "foo.dmg"
         );
         assert!(derive_filename("https://example.com/").is_err());
+    }
+
+    // ── Phase R-C (ADR-0055) — path traversal hardening ────────────────
+
+    #[test]
+    fn derive_filename_rejects_dot_segment() {
+        let r = derive_filename("https://example.com/foo/.");
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn derive_filename_rejects_parent_dir_segment() {
+        let r = derive_filename("https://example.com/foo/..");
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn derive_filename_rejects_backslash_in_filename() {
+        // 일부 URL 변종에서 \ 가 path에 섞임 — 윈도우에서 path separator로 해석되어 join escape 가능.
+        let r = derive_filename("https://example.com/foo\\bar.exe");
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn derive_filename_rejects_control_chars() {
+        let r = derive_filename("https://example.com/foo\nbar.exe");
+        assert!(r.is_err());
+        let r = derive_filename("https://example.com/foo\0bar.exe");
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn derive_filename_rejects_windows_drive_letter() {
+        let r = derive_filename("https://example.com/C:foo.exe");
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn derive_filename_accepts_legitimate_traversal_in_path() {
+        // path 중간의 .. 는 *마지막 segment*가 정상 파일이면 통과.
+        // (..가 마지막 segment일 때만 거부 — 본 테스트는 last segment가 normal한 케이스.)
+        assert_eq!(
+            derive_filename("https://example.com/foo/../bar.exe").unwrap(),
+            "bar.exe"
+        );
     }
 
     #[test]

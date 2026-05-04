@@ -218,11 +218,13 @@ pub fn run() {
             let catalog_for_hf = Arc::clone(&catalog_state);
             let cache_for_hf = Arc::clone(&hf_meta_cache);
             tauri::async_runtime::spawn(async move {
+                // Phase R-C (ADR-0055) — .no_proxy() 강제 + 폴백 제거. HF metadata cron.
                 let http = reqwest::Client::builder()
+                    .no_proxy()
                     .user_agent("LMmaster-desktop")
                     .timeout(std::time::Duration::from_secs(10))
                     .build()
-                    .unwrap_or_else(|_| reqwest::Client::new());
+                    .expect("reqwest Client builder must succeed (TLS init)");
                 // 첫 실행 — 앱 시작 직후 (3초 grace).
                 tokio::time::sleep(std::time::Duration::from_secs(3)).await;
                 loop {

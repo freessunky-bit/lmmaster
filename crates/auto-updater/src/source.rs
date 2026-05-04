@@ -57,12 +57,15 @@ impl GitHubReleasesSource {
 
     /// base URL을 사용자가 지정 (테스트용). 마지막 슬래시 없이 입력.
     pub fn with_base(base_url: impl Into<String>, repo: impl Into<String>) -> Self {
+        // Phase R-C (ADR-0055) — .no_proxy() 강제 + 폴백 제거 (rogue proxy MITM 방어).
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(8))
+            .build()
+            .expect("reqwest Client builder must succeed (TLS init)");
         Self {
             repo: repo.into(),
-            client: reqwest::Client::builder()
-                .timeout(Duration::from_secs(8))
-                .build()
-                .unwrap_or_else(|_| reqwest::Client::new()),
+            client,
             base_url: base_url.into(),
             timeout: Duration::from_secs(8),
         }

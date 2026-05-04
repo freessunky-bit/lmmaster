@@ -51,8 +51,12 @@ pub struct Downloader {
 
 impl Downloader {
     /// 자체 reqwest::Client 생성. 기본 user-agent + connection pool.
+    ///
+    /// Phase R-C (ADR-0055) — .no_proxy() 강제 (시스템 HTTP_PROXY/HTTPS_PROXY 무시).
+    /// 모델 다운로드는 화이트리스트 호스트(HuggingFace 등)로만 허용 + rogue proxy MITM 방어.
     pub fn new() -> Result<Self, DownloadError> {
         let client = reqwest::Client::builder()
+            .no_proxy()
             .user_agent(format!("LMmaster-installer/{}", env!("CARGO_PKG_VERSION")))
             .timeout(Duration::from_secs(60 * 30)) // 큰 모델 대비 30분.
             .connect_timeout(Duration::from_secs(15))

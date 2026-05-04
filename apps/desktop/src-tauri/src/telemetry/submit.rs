@@ -205,7 +205,9 @@ async fn try_post(dsn: &str, event: &TelemetryEvent) -> Result<(), String> {
     let parsed = parse_dsn(dsn).map_err(|e| format!("DSN 파싱 실패: {e}"))?;
     let body = serde_json::to_vec(event).map_err(|e| format!("이벤트 직렬화 실패: {e}"))?;
 
+    // Phase R-C (ADR-0055) — .no_proxy() 강제. GlitchTip 외부 통신은 self-hosted 도메인만.
     let client = reqwest::Client::builder()
+        .no_proxy()
         .timeout(std::time::Duration::from_secs(5))
         .build()
         .map_err(|e| format!("HTTP 클라이언트 생성 실패: {e}"))?;
