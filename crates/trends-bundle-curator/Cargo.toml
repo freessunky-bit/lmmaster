@@ -1,0 +1,22 @@
+[package]
+name = "trends-bundle-curator"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "LMmaster trends-bundle 큐레이터 — RSS + arXiv + HF Daily Papers fetch + review queue (Phase 22'.b, ADR-0060)"
+
+[[bin]]
+name = "trends-bundle-curator"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { workspace = true }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = "0.3"

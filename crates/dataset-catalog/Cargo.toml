@@ -1,0 +1,14 @@
+[package]
+name = "dataset-catalog"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "LMmaster dataset catalog — DatasetCategory + minor_safety + manifest validator (ADR-0061 + ADR-0062)"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+shared-types = { workspace = true }

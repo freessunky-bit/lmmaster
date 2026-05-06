@@ -28,6 +28,8 @@ members = [
   "crates/knowledge-stack",
   "crates/pipelines",
   "crates/trending-watcher",
+  "crates/dataset-catalog",
+  "crates/trends-bundle-curator",
 ]
 
 [workspace.package]
