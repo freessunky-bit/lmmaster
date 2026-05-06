@@ -1,0 +1,4 @@
+# windows-msvc 타깃 정적 CRT — VC++ Redistributable 미설치 PC에서 VCRUNTIME140.dll missing 영구 차단.
+# 근거: Tauri 이슈 #719 (auto-magical 미지원), Rust users forum "windows-binaries-vcruntime140-dll-not-found".
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]

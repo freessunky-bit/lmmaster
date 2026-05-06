@@ -46,6 +46,5 @@ When this agreement changes, we will notify you and ask you to accept it again.
 
 ## 7. Contact
 
-- Official email: TODO — fill in.
-- GitHub Issues: TODO — fill in.
+- Official email: wind@joycity.com
 - If you do not agree with this agreement, click "I do not agree" to exit the app.

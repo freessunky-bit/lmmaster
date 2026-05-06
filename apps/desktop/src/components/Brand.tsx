@@ -1,12 +1,21 @@
-// LMmaster 공식 픽토그램 v4 — Phase 14' v6 (2026-05-04, 권장안 채택).
+// LMmaster 공식 픽토그램 v6 — Phase 14'.x (2026-05-05, 사용자 line-art diamond 요청).
 //
-// 디자인 컨셉: chunky filled M letterform + 깊이감 gradient + 위쪽 작은 status dot.
-// - Anthropic Claude / Notion / Linear 스타일 (단순 + 직관 + 작은 사이즈 가독성).
-// - Triangulated Network Mark (v3)가 작은 사이즈에서 X로 보이던 문제 해결.
-// - 톤다운된 sage green gradient (#5eddae 권장 컬러 채택, "전문 AI 테크놀로지" 느낌).
-// - 상단 작은 dot — Local AI status / signal 메타.
-
-import { useId } from "react";
+// 디자인: 네온 그린 line-art brilliant-cut 다이아몬드 (geometric, fill 없음).
+// - v5.x fluid wing(녹색 구름/curl) 완전 폐기 → v6 geometric line-art.
+// - CLAUDE.md design_system_contract "네온 그린 single accent" 일관 (multi-stop gradient 제거).
+// - 6 vertex hexagonal silhouette (T·C1·C2·G1·G2·B) + crown table + girdle + 4 long facet diagonals.
+//   = 입체 brilliant-cut 다이아몬드 (table + crown + girdle + pavilion 4단 구조 visible).
+// - stroke="currentColor" → brand.css의 color: var(--primary)로 토큰 제어.
+// - drop-shadow 네온 글로우는 brand.css 그대로 (Phase 14' v6 ambient depth 정신 일관).
+// - strokeWidth 1.5 + linecap/linejoin round — 모든 사이즈 일관 가독성.
+//
+// 좌표 계산 (viewBox 32x32):
+//   T (top apex):         (16, 3)
+//   C1 (crown left):      (8, 11)
+//   C2 (crown right):     (24, 11)
+//   G1 (girdle left):     (3, 16)   ← 가장 넓은 가로
+//   G2 (girdle right):    (29, 16)
+//   B (bottom culet):     (16, 29)
 
 import "./brand.css";
 
@@ -17,8 +26,6 @@ export interface BrandMarkProps {
 }
 
 export function BrandMark({ size = 28, className, ariaLabel }: BrandMarkProps) {
-  const reactId = useId().replace(/:/g, "");
-  const gradId = `lmm-brand-bg-${reactId}`;
   const labelProps = ariaLabel
     ? { role: "img", "aria-label": ariaLabel }
     : { "aria-hidden": true };
@@ -29,32 +36,25 @@ export function BrandMark({ size = 28, className, ariaLabel }: BrandMarkProps) {
       height={size}
       viewBox="0 0 32 32"
       className={`brand-mark${className ? ` ${className}` : ""}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       {...labelProps}
     >
-      <defs>
-        {/* 3-tone gradient — cyan accent → sage green → deep green. 톤다운된 채도. */}
-        <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#7cd4cc" />
-          <stop offset="50%" stopColor="#5eddae" />
-          <stop offset="100%" stopColor="#3fb887" />
-        </linearGradient>
-      </defs>
-
-      {/* 둥근 사각 컨테이너 — gradient fill. */}
-      <rect x="0" y="0" width="32" height="32" rx="7.5" fill={`url(#${gradId})`} />
-
-      {/*
-       * Chunky M letterform — outline path.
-       * 좌측 stroke + 좌측 dip → 가운데 peak ↑ → 우측 dip → 우측 stroke.
-       * 두께 4px, 가운데 V dip 깊이 약 50%.
-       */}
-      <path
-        d="M7 22 V10 L11 14.5 L16 9 L21 14.5 L25 10 V22 H21.5 V14.8 L16.5 21 H15.5 L11 14.8 V22 Z"
-        fill="#0a1a14"
-      />
-
-      {/* 상단 status dot — Local AI signal 메타. 작고 미세. */}
-      <circle cx="16" cy="6" r="0.9" fill="#0a1a14" opacity="0.65" />
+      {/* Outer hexagonal silhouette — T → C2 → G2 → B → G1 → C1 → close */}
+      <path d="M16 3 L24 11 L29 16 L16 29 L3 16 L8 11 Z" />
+      {/* Crown table — 위쪽 평면 가로 */}
+      <path d="M8 11 L24 11" />
+      {/* Girdle — 다이아몬드 가장 넓은 가로 */}
+      <path d="M3 16 L29 16" />
+      {/* Crown long facets — top apex → girdle 양 끝 (입체 상단) */}
+      <path d="M16 3 L3 16" />
+      <path d="M16 3 L29 16" />
+      {/* Pavilion long facets — bottom culet → crown corners (입체 하단) */}
+      <path d="M16 29 L8 11" />
+      <path d="M16 29 L24 11" />
     </svg>
   );
 }

@@ -46,6 +46,5 @@ TODO — 법무 검토 후 채워 주세요. 표준 disclaimer 권장.
 
 ## 7. 문의
 
-- 공식 이메일: TODO — 채워 주세요.
-- GitHub Issues: TODO — 채워 주세요.
+- 공식 이메일: wind@joycity.com
 - 본 동의서에 동의하지 않으시면 "동의하지 않을래요"를 눌러 앱을 종료할 수 있어요.
