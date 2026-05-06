@@ -206,6 +206,49 @@ fn host_mid_picks_balanced_korean() {
 }
 
 #[test]
+fn nemotron_3_nano_4b_in_catalog_preserves_korean_first() {
+    // 회귀 가드 — Nemotron 3 Nano 4B 카탈로그 추가 후 한국어 우선 정책 보존.
+    // 정책 (phase-nemotron-personas-korea-decision.md §3 기각안):
+    //   Nemotron은 language_strength=6 (다국어 sprinkle 한국어).
+    //   EXAONE 7.8B(9) / HCX-SEED 8B(10)이 best 자리 유지해야 함.
+    //   동시에 Nemotron이 mid-host 사양에서 excluded되지도 않아야 함 (min_vram=3GB).
+    let cat = Catalog::load_from_dir(&snapshot_dir()).unwrap();
+    let r = cat.recommend(&host_mid(), ModelCategory::AgentGeneral);
+
+    // best는 한국어 전용 모델 (EXAONE 또는 HCX-SEED) — Nemotron이 가로채면 안 됨.
+    let best = r.best_choice.expect("best must exist");
+    assert!(
+        best == "exaone-3.5-7.8b-instruct" || best == "hcx-seed-8b",
+        "Nemotron 4B(다국어)가 한국어 전용 모델 자리 가로챔 — got: {}",
+        best
+    );
+
+    // Nemotron은 mid-host(12GB VRAM)에서 충분히 적합 — excluded에 들어가면 manifest 사양 오류.
+    let excluded_ids: Vec<&str> = r
+        .excluded
+        .iter()
+        .map(|e| match e {
+            ExclusionReason::InsufficientVram { id, .. }
+            | ExclusionReason::InsufficientRam { id, .. }
+            | ExclusionReason::IncompatibleRuntime { id }
+            | ExclusionReason::Deprecated { id }
+            | ExclusionReason::PurposeMismatch { id, .. } => id.as_str(),
+        })
+        .collect();
+    assert!(
+        !excluded_ids.contains(&"nemotron-3-nano-4b"),
+        "Nemotron 3 Nano 4B는 mid-host(12GB VRAM)에서 동작 가능 — 제외되면 manifest 사양 깨짐"
+    );
+
+    // 카탈로그에 등록됐는지 확인 — load_from_dir이 본 entry를 인지.
+    let ids: Vec<&str> = cat.entries().iter().map(|e| e.id.as_str()).collect();
+    assert!(
+        ids.contains(&"nemotron-3-nano-4b"),
+        "nemotron-3-nano-4b entry가 snapshot에서 로드되지 않았어요"
+    );
+}
+
+#[test]
 fn host_high_unlocks_32b_for_coding() {
     let cat = Catalog::load_from_dir(&snapshot_dir()).unwrap();
     let r = cat.recommend(&host_high(), ModelCategory::Coding);

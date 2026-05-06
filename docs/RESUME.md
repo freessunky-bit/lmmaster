@@ -107,6 +107,7 @@
 | 8'.c Pipelines extension | PromptSanitize Pipeline (NFC + control char strip) + ArcSwap hot-reload + per-key Pipelines matrix(serde default 마이그레이션 free) + SSE chunk transformation (line-aware parser + buffered emit) + ADR-0028/0029/0030 | +62 cargo / +4 vitest |
 | 9'.a Real Embedder | embed_download.rs (HuggingFace + sha256 + atomic rename) + embed_onnx.rs (feature-gated ort 2.0.0-rc.10) + EmbeddingModelPanel (3-card UI) + ADR-0042. KnowledgeApiError `kind` 필드 충돌 fix(`model_kind`) | +18 cargo / +10 vitest |
 | 9'.b Real Workbench | LlamaQuantizer (llama-quantize binary subprocess + kill_on_drop + 30분 timeout + stderr 한국어 매핑) + LlamaFactoryTrainer (Python venv 자동 부트스트랩 + LLaMA-Factory CLI) + WorkbenchConfig.use_real_* 토글 + 사전 동의 dialog + ADR-0043 | +23 cargo / +5 vitest 추정 |
+| 7'.x Win 부트스트랩 호환성 | 다른 PC 설치 차단 응급 픽스 — `apps/desktop/src-tauri/.cargo/config.toml`(+crt-static, VC++ Redist 의존 제거) + `tauri.conf.json` `webviewInstallMode: embedBootstrapper`(WebView2 자동 설치) + 결정 노트 `phase-7p-windows-bootstrap-decision.md` (6-section, SmartScreen 안내 카피 §2.3 보존) | 0 (conf/infra only — `cargo check` exit 0 / 2m 10s) |
 
 ## 🟡 진행 중
 
@@ -230,7 +231,33 @@ Phase 9'.c — Multi-runtime adapters expansion
 | 베타 채널 토글 Settings UI (`latest-beta.json`) | ~200 LOC |
 | README.ko.md / README.md 다국어 매트릭스 | 1 sub-agent |
 
+## 2026-05-06 — NVIDIA Korean Catalog 통합 (사용자 요청)
+
+**산출물**:
+- `manifests/snapshot/models/agents/nemotron-3-nano-4b.json` — Nemotron 3 Nano 4B (다국어 한국어 sprinkle, 262K context, NVIDIA Open Model License). tier=`new`, language_strength=6, EXAONE/HCX-SEED 한국어 우선 보존.
+- `docs/research/phase-nemotron-personas-korea-decision.md` — 6-section 결정 노트. 9건 기각안 명시 (language_strength=8 거부 / `tier=verified` 거부 / 데이터셋 model entry 거부 / 새 intent 거부 / OCR v2 거부 / Personas RagSeed 1-click 거부 / 자동 다운로드 거부 / v0.0.1 묶기 거부).
+- `docs/guides/personas-korea-survey-simulation.md` — 가상 한국인 100인 콘텐츠 설문 시뮬레이션 6-step (모델 설치 / Personas-Korea 다운로드 / stratified 100인 샘플링 / 설문지 정의 / Workbench batch / 결과 집계). Python + LMmaster Local API 호출 코드 완비.
+- `apps/desktop/src/i18n/guide-{ko,en}-v1.md` — in-app guide의 workbench 섹션에 페르소나 시뮬레이션 단락 1개 (ko/en 동시).
+- `crates/model-registry/tests/recommender_test.rs` — 회귀 가드 1건 (`nemotron_3_nano_4b_in_catalog_preserves_korean_first`).
+
+**검증**:
+- model-registry: **62 unit + 23 integration = 85 passed / 0 failed** (회귀 가드 +1).
+- 풀 verify는 본 sub-phase 종료 시 별도 실행.
+
+**기각안 핵심 (다음 세션 보호)**:
+- language_strength=6으로 고정 — 8/9는 한국어 전용 모델(EXAONE/HCX) 자리 침범.
+- 데이터셋은 `ModelCategory` 신설 거부 — 가이드 + Workbench batch만으로 같은 가치.
+- 새 intent (`synthetic-persona`) 거부 — 한 모델용 vocabulary 추가는 비용 대비 가치 낮음. `ko-rag` 재사용.
+
+---
+
 ## 🟢 다음 standby
+
+**Phase 7'.x 마무리 (2026-05-05 응급 픽스 후속)**:
+- **재빌드** — `pnpm tauri build` (Windows). NSIS installer +1.8MB (embedBootstrapper) + binary +200KB (+crt-static) 예상.
+- **다른 PC 검증** — `phase-7p-windows-bootstrap-decision.md` §5.2 invariant 3종 (WebView2 미설치 / 사내망 / 한국어 사용자 PC) 수동 확인.
+- **서명 결정** — Azure Trusted Signing($9.99/월, 사업자등록 + ID 검증 필요) vs OV($200+/년, HSM 필요) vs unsigned + 안내 분기. 사용자 결정 후 Phase 7'.b 진입.
+- **SHA256 + minisign release notes 자동 게시** — `release.yml`에 `Get-FileHash` step 1줄 추가 + tauri-action 자동 minisign.
 
 **Phase 6'.d — Gateway audit wiring** (5'.e 완료 후 자동 dispatch):
 - 결정 노트: 새 작성 또는 `phase-6p-updater-pipelines-decision.md` §4 인용.
@@ -279,6 +306,7 @@ find src -name '*.js' -not -name '*.config.js' -delete   # 중요: stale .js art
 5. **ADR 번호 사전 충돌**: 두 sub-agent가 동시에 동일 ADR 번호 클레임 가능. dispatch 전 명시적 번호 할당 + 메인이 후처리 renumber.
 6. **i18n 부모 블록 동시 편집**: 여러 sub-agent가 `screens.*`에 동시 편집 시 last-write-wins. 다른 namespace로 분리하거나 순차 dispatch.
 7. **caret + lock의 함정**: `Cargo.toml`의 caret(`"2"`)은 lock이 *없을 때만* 새 patch로 resolve. 한 번 잠긴 lock은 `cargo update` 없이 자동 갱신되지 않음. `tauri-plugin-single-instance 2.0.0` Windows null pointer 패닉(PR #2452, 2.2.2에서 fix)이 본 함정의 대표 사례 — Cargo.toml은 `"2"` 그대로인데 lock은 옛 patch에 stuck. v1.x 진입 / 새 sub-phase 진입 시 `cargo update --workspace --dry-run` 1회로 lock-stale 의존성 표면화 권장. 결정 노트: `docs/research/phase-resume-single-instance-fix-decision.md`.
+8. **Flaky timing test — `adapter-lmstudio::run_prompt_prefers_usage_completion_tokens`**: `assertion failed: sample.e2e_ms > 0` (lib.rs:838). MockServer 응답이 너무 빠르면 Windows 클럭 해상도(~15ms) 한계에서 e2e_ms가 0으로 측정되어 가끔 fail. **isolation 재실행 시 통과** — 본 sub-phase(2026-05-06 NVIDIA Korean Catalog) 변경과 인과 관계 없음. 향후 픽스: `assert!(sample.e2e_ms >= 0)` 또는 mock에 `tokio::time::sleep(Duration::from_millis(1))` 한 박자 추가. v1.x 정리 후보.
 
 ## 참고
 

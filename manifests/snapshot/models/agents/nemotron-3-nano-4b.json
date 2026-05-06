@@ -1,0 +1,98 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-05-06T00:00:00Z",
+  "entries": [
+    {
+      "id": "nemotron-3-nano-4b",
+      "display_name": "NVIDIA Nemotron 3 Nano 4B (다국어, 한국어 포함)",
+      "category": "agent-general",
+      "model_family": "nemotron",
+      "source": {
+        "type": "hugging-face",
+        "repo": "nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF",
+        "file": "NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf"
+      },
+      "tier": "new",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q4_K_M",
+          "size_mb": 2900,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 3072,
+      "rec_vram_mb": 6144,
+      "min_ram_mb": 6144,
+      "rec_ram_mb": 8192,
+      "install_size_mb": 2900,
+      "context_guidance": "Mamba-2 + Transformer 하이브리드, 262K context. 한국어 포함 15개 언어 학습 — 다국어 사용 분야에 적합해요. 한국어 단독은 EXAONE/HCX-SEED가 더 자연스러워요.",
+      "language_strength": 6,
+      "roleplay_strength": 5,
+      "coding_strength": 6,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "NVIDIA Nemotron Open Model License",
+      "maturity": "stable",
+      "portable_suitability": 9,
+      "on_device_suitability": 9,
+      "fine_tune_suitability": 7,
+      "verification": {
+        "tier": "community",
+        "verified_at": "2026-05-06",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "general-chat",
+      "commercial": true,
+      "use_case_examples": [
+        "다국어 요약 / 번역 (한·영·일·중·15개 언어)",
+        "긴 문서 분석 (262K context — 한국어 PDF/논문 통째로)",
+        "Personas-Korea 페르소나 시뮬레이션 (가상 한국인 설문 응답 생성)"
+      ],
+      "warnings": [
+        "한국어가 *주력*은 아니에요 — 학습 corpus에 한국어가 포함됐지만 모델 카드에는 영어로만 명시. 한국어 자연스러움은 EXAONE 7.8B / HCX-SEED 8B 대비 한 단계 낮아요.",
+        "Mamba-2 하이브리드는 llama.cpp 신규 지원 — 일부 양자화 변종에서 출력 깨짐 보고가 있었으니 첫 사용 시 짧은 프롬프트로 검증 권장."
+      ],
+      "intents": [
+        "agent-tool-use",
+        "translation-multi",
+        "ko-rag"
+      ],
+      "domain_scores": {
+        "agent-tool-use": 72.0,
+        "translation-multi": 76.0,
+        "ko-rag": 58.0,
+        "ko-conversation": 52.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "262K context — 동급 4B 중 가장 긴 컨텍스트, 긴 한국어 문서 통째 처리",
+          "Mamba-2 하이브리드 — 메모리 사용량 효율적이라 8GB RAM PC에서 잘 돌아요",
+          "다국어 15개 학습 — Llama 3.1 8개보다 넓고 한국어도 포함",
+          "NVIDIA Open Model License — 상업 사용 자유"
+        ],
+        "weaknesses_ko": [
+          "한국어 단독은 EXAONE 7.8B / HCX-SEED 8B에 살짝 밀려요 — 다국어 sprinkle 수준",
+          "tool calling 정확도는 Llama 3.1 8B 대비 한 단계 아래",
+          "코딩은 Qwen Coder / Codestral 전용 모델에 못 미쳐요"
+        ],
+        "use_cases_ko": [
+          "Personas-Korea 데이터셋 + 가상 한국인 설문 시뮬레이션 (4B 사이즈로 100인 배치 처리 빠름)",
+          "한·영 혼합 문서 요약 / 번역",
+          "긴 한국어 보고서 분석 (262K context 활용)"
+        ],
+        "curator_note_ko": "한국어 *전용* 작업이면 EXAONE 7.8B 또는 HCX-SEED 8B가 1순위에요. Nemotron 3 Nano 4B는 *다국어 + 긴 컨텍스트 + 작은 사이즈*가 동시에 필요할 때 — 특히 nvidia/Nemotron-Personas-Korea 데이터셋과 짝지어 한국 인구 시뮬레이션에 적합해요. 4B + Mamba-2로 8GB RAM PC에서도 100인 배치를 빠르게 돌릴 수 있어요.",
+        "sources": [
+          "huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF",
+          "huggingface.co/blog/nvidia/nemotron-3-nano-4b",
+          "huggingface.co/datasets/nvidia/Nemotron-Personas-Korea",
+          "developer.nvidia.com/nemotron"
+        ],
+        "last_reviewed_at": "2026-05-06T00:00:00Z"
+      }
+    }
+  ]
+}

@@ -188,6 +188,15 @@ The Workbench is where you craft and register models in 5 steps: Data → Quanti
 - Resumable artifacts (JSONL, LoRA weights) are kept.
 - Old temp files are pruned automatically. You can also clean them manually in Settings.
 
+## Synthetic Korean Survey Simulation (Personas-Korea)
+
+Pair NVIDIA's *Personas-Korea* dataset (7M synthetic Korean personas) with **NVIDIA Nemotron 3 Nano 4B** or **EXAONE 3.5 7.8B** to simulate content-survey answers from 100 virtual Koreans.
+
+- Install Nemotron 3 Nano 4B from **Catalog → 🔥 NEW**. The 4B Mamba-2 hybrid runs comfortably on an 8 GB RAM machine.
+- Download the dataset directly from [Personas-Korea](https://huggingface.co/datasets/nvidia/Nemotron-Personas-Korea) (CC BY 4.0, commercial use OK).
+- Step-by-step lives in the project at `docs/guides/personas-korea-survey-simulation.md`. Useful for content A/B tests, marketing copy validation, and UX persona research.
+- If Korean fluency matters more than batch speed, swap in EXAONE 3.5 7.8B — Nemotron is multilingual, so its Korean is a notch behind Korean-first models.
+
 ---
 
 <!-- section: knowledge -->
