@@ -75,3 +75,10 @@ apps/desktop/vitest*.out
 
 # Claude Code 작업 lock
 .claude/scheduled_tasks.lock
+
+# Claude Code 프로젝트 로컬 권한 (auto tracker — git 무시 정책 CLAUDE.md §0)
+.claude/settings.local.json
+
+# 외부 리뷰 산출물 zip (ultrareview 등 — 큰 바이너리, 추적 거부)
+lmmaster-review.zip
+lmmaster-review-*.zip
