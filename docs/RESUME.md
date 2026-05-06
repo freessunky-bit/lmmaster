@@ -284,14 +284,33 @@ Phase 9'.c — Multi-runtime adapters expansion
 
 ## 🟢 다음 standby
 
-**Phase 20' Connect Mode (v2.0, v1.x 안정화 후 진입 — 2026-05-06 설계 완료)**:
-- 트리거: 사용자 요청 — PC1↔PC2 LMmaster 페어링 + 채팅 라우팅 + 카탈로그 미러 + 모델 설치 위임.
-- thesis 재정의: "외부 통신 0 → Cloud-zero, user-owned mesh OK". ADR-0058 신설 (`docs/adr/0058-user-owned-mesh-connect-mode.md`).
-- 보강 리서치: `docs/research/phase-20p-connect-mode-reinforcement.md` — iroh 0.97 / magic-wormhole.rs / mdns-sd / rustls / snow / automerge 6 라이브러리 final pick (모두 Apache-2/MIT).
-- 결정 노트: `docs/research/phase-20p-connect-mode-decision.md` — 6-section + 8영역 설계 + 18건 기각안 + sub-phase 6단계 분할 + 위험 매트릭스.
-- sub-phase: **20'.a** LAN mDNS → **20'.b** PAKE 페어링 (magic-wormhole + mTLS mini-CA) → **20'.c** R1 chat-route → **20'.d** R2 catalog-read (pull+ETag) → **20'.e** R3 model-install-delegate (macaroon caveat + 호스트 동의 prompt) → **20'.f** v2.1 WAN-P2P (iroh, 사용자 relay URL 옵트인).
-- 진입 조건: v1.x 안정화 종료 + 사용자 명시 승인 + Phase 7'.b 보안 감사 후속.
-- 첫 standby: Phase 20'.a — `crates/mesh-discovery` 신설 + mdns-sd 통합 + TXT schema 정의.
+**Phase 21' Trending Watcher (v1.x, 2026-05-06 설계 완료)** — 사용자 명시 승인 옵션 1:
+- 트리거: 사용자 지적 — "수동만으로는 가치 떨어진다, 약속 이행 필요" (ADR-0019 trending 모니터링 미구현 GAP).
+- ADR-0059 (`docs/adr/0059-trending-watcher.md`) — deterministic 필터 + human review queue.
+- 보강 리서치: `docs/research/phase-21p-trending-watcher-reinforcement.md` — 9영역 (HF API rate limit 확정 / Open LLM Leaderboard 2 Parquet / Arena 미러 / KMMLU primary / Ollama GitHub 미러 / OpenRouter PASS / JasonEtco/create-an-issue dedupe / 가중치 매트릭스 / 별도 repo 호스팅).
+- 결정 노트: `docs/research/phase-21p-trending-watcher-decision.md` — 6-section + sub-phase 5단계 + 12건 기각안.
+- 호스팅: **별도 repo `lmmaster-trending-watcher` (public, MIT)** — LMmaster 본 repo 영향 0, PR 받는 측만.
+- 데이터 소스: HF Trending API + Open LLM Leaderboard 2 dataset + Arena 미러 (GitHub raw) + KMMLU 정규식.
+- 가중치: 0.35·Open_LLM + 0.20·log10(downloads) + 0.20·korean_signal + 0.15·license + 0.10·gguf_present. LLM judge 0.
+- 큐레이터 알림: GHA cron 6h + JasonEtco/create-an-issue dedupe + 라벨 `auto-curate`+`needs-review` + 큐레이터 1인 assignee.
+- sub-phase: **21'.a** repo 신설 + Cargo workspace + CI 골격 → **21'.b** HF + Open LLM fetcher → **21'.c** deterministic 필터 매트릭스 → **21'.d** GHA cron + Issue dedupe → **21'.e** 큐레이션 흐름 통합 + CURATION_GUIDE 갱신.
+- 진입 조건: 사용자 명시 승인 + 별도 repo 신설 결정 (큰 아키텍처 분기).
+- 첫 standby: Phase 21'.a — `lmmaster-trending-watcher` repo 신설.
+
+**Phase 22' Trend Report (v2.0 standby — 사용자 옵션 A 선택, 2026-05-06)**:
+- 트리거: 사용자 요청 — *AI 모델/유튜브/뉴스/거물 SNS 동향 메뉴* (특정 모델 설치 시 활성화, 메뉴 진입 시 로컬 LLM이 fresh 뉴스페이퍼 생성).
+- 채택 안: **B 안 (큐레이션 트렌드 데이터셋 + 라이브 갱신)** — 사용자 PC 직접 scrape X (외부 통신 0 보존). 큐레이터(우리)가 매일/주 RSS+SNS 인용 큐레이션 push → jsdelivr propagate → 사용자 fetch → 로컬 LLM 요약 정렬.
+- 인프라 공유: ADR-0044 라이브 갱신 + Phase 13'.g.3 minisign 확장 + Phase 21' Trending Watcher 큐레이션 운영 경험.
+- 미정 (v2.0 진입 시 결정 노트 작성): 큐레이션 빈도 / RSS 자동 모음 vs 수동 큐레이션 비율 / YouTube Data API 사용 여부 / 라이선스 (뉴스 fair use 한도 + SNS 인용 윤리).
+- 진입 조건: v0.0.1 ship + v1.x 안정화 (Phase 21' 운영 1~2개월 포함) + 사용자 명시 승인.
+- 모델 의존: 4B+ instruction-tuned 권장 (Gemma 3 4B / Nemotron 3 Nano 4B / EXAONE 3.5 7.8B). 미설치 시 안내 카피.
+- 옵션 C (사용자 RSS 추가) / E (검색 도구 호출) — v2.x 후순위.
+
+**Phase 20' Connect Mode (v2.0 진입 시점에도 — 사용자 명시 *보류*, 2026-05-06)**:
+- ⚠️ **사용자 결정**: v2.0 메이저 분기 진입하더라도 Connect Mode는 *보류*. 다음 세션에서 *재논의 없이 진행 X*.
+- 설계 문서는 negative space 보존 위해 그대로 유지: ADR-0058, `docs/research/phase-20p-connect-mode-reinforcement.md`, `docs/research/phase-20p-connect-mode-decision.md` (6 sub-phase 분할 + 18건 기각안 + iroh/magic-wormhole/mdns-sd/rustls 6 라이브러리 final pick).
+- 보류 사유: 보안 감사 비용 + 4~6주 + cloud-zero 정체성 trade-off. 사용자가 *명시적 진입 신호* 줄 때까지 standby에서도 *진행 차단*.
+- 재진입 시 사용자 결정 4건 재확인 필수 (네트워크 모델 / 권한 R1~R4 / 페어링 UX / 진입 시점).
 
 **Phase 7'.x 마무리 (2026-05-05 응급 픽스 후속)**:
 - **재빌드** — `pnpm tauri build` (Windows). NSIS installer +1.8MB (embedBootstrapper) + binary +200KB (+crt-static) 예상.
