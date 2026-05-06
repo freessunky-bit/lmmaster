@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "LMmaster",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "identifier": "com.lmmaster.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -39,7 +39,11 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "dmg", "appimage"],
+    "targets": [
+      "nsis",
+      "dmg",
+      "appimage"
+    ],
     "category": "DeveloperTool",
     "shortDescription": "LM Studio + Ollama을 묶는 한국어 기반 로컬 AI 운영 허브",
     "longDescription": "LM Studio와 Ollama를 자동 설치·관리하고, 한국어 큐레이션 모델 카탈로그·워크벤치·자가스캔·자동 갱신을 제공하는 데스크톱 동반자.",
@@ -71,10 +75,18 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["Korean", "English"],
+        "languages": [
+          "Korean",
+          "English"
+        ],
         "displayLanguageSelector": false,
         "installerIcon": "icons/icon.ico"
       },
+      "webviewInstallMode": {
+        "type": "embedBootstrapper",
+        "silent": true
+      },
+      "allowDowngrades": false,
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
       "timestampUrl": "http://timestamp.digicert.com",
@@ -97,7 +109,7 @@
         "depends": []
       }
     },
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": false
   },
   "plugins": {
     "updater": {
