@@ -413,12 +413,20 @@ pub fn run() {
                     })
                 }
             };
-            // v1 manifest IDs — 자동 갱신 대상.
+            // v1 / v0.2.0 manifest IDs — 자동 갱신 대상.
             // - "ollama" / "lm-studio": app installer manifests (registry_fetcher 기존 동작).
-            // - "catalog": 모델 카탈로그 단일 bundle (Phase 13'.a). registry_fetcher가 fetch하면
-            //   `CatalogState::swap_from_bundle_body`로 hot-swap → 새 모델이 즉시 카탈로그에 노출.
-            let manifest_ids: Vec<String> =
-                ["ollama".into(), "lm-studio".into(), "catalog".into()].to_vec();
+            // - "catalog": 모델 카탈로그 단일 bundle (Phase 13'.a).
+            // - "datasets-bundle": 데이터셋 카탈로그 단일 bundle (Phase 23'.c, ADR-0061).
+            // - "trends-bundle": AI 트렌드 큐레이션 단일 bundle (Phase 22'.c, ADR-0060).
+            //   trends-bundle은 v0.2.0 시점에 placeholder (실 큐레이션은 22'.d GHA cron 후).
+            let manifest_ids: Vec<String> = [
+                "ollama".into(),
+                "lm-studio".into(),
+                "catalog".into(),
+                "datasets-bundle".into(),
+                "trends-bundle".into(),
+            ]
+            .to_vec();
             let registry_fetcher_service: Option<Arc<registry_fetcher::RegistryFetcherService>> =
                 match tauri::async_runtime::block_on(
                     registry_fetcher::RegistryFetcherService::new(

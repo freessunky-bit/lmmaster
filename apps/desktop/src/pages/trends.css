@@ -242,6 +242,65 @@
   color: var(--primary);
 }
 
+/* ── 데이터셋 카드 메타 + chip (Phase 22'.c) ─────────────── */
+
+.trends-card-meta {
+  margin: var(--space-1) 0 0 0;
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.trends-card-meta-item {
+  display: inline-block;
+}
+
+.trends-card-meta-sep {
+  display: inline-block;
+  margin: 0 var(--space-2);
+  color: var(--text-faint, var(--text-muted));
+  opacity: 0.6;
+}
+
+.trends-card-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-10);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.trends-card-chip-nsfw {
+  background: rgba(255, 130, 80, 0.16);
+  border: 1px solid rgba(255, 130, 80, 0.55);
+  color: rgba(255, 170, 120, 1);
+}
+
+.trends-card-chip-noncommercial {
+  background: rgba(255, 130, 130, 0.08);
+  border: 1px solid rgba(255, 130, 130, 0.3);
+  color: rgba(255, 150, 150, 0.95);
+}
+
+.trends-card-nsfw {
+  border-color: rgba(255, 130, 80, 0.45);
+}
+
+.trends-empty {
+  margin: var(--space-2) 0;
+  padding: var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--surface-3);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+  text-align: center;
+}
+
 /* ── footnote ────────────────────────────────────────────── */
 
 .trends-footnote {

@@ -69,18 +69,18 @@
         "research": "리서치 중",
         "queued": "대기"
       },
-      "personas_korea": {
-        "title": "Nemotron-Personas-Korea (가상 한국인 700만)",
-        "hint": "NVIDIA 합성 데이터셋. KOSIS·대법원·건강보험공단 통계 기반. CC BY 4.0 (상업 OK + 출처 표기). docs/guides/personas-korea-survey-simulation.md 가이드 참고."
+      "category": {
+        "sft-seed": "SFT 시드",
+        "lora-seed": "LoRA 시드",
+        "rag-corpus": "RAG 자료",
+        "persona-seed": "페르소나",
+        "eval-benchmark": "평가/벤치"
       },
-      "kor_rp": {
-        "title": "한국어 RP 시드 (KREW korean-role-playing)",
-        "hint": "huggingface-KREW/korean-role-playing — Apache-2.0, 35.3K rows, 한국어 native, SFW (explicit X). LMmaster 한국어 페르소나 fine-tune 1순위 후보."
-      },
-      "deepseek_gemma_rp": {
-        "title": "다국어 RP 시드 (LimaRP / rp-opus 후보)",
-        "hint": "lemonilia/LimaRP (Apache-2.0, 1550 hand-curated, English) + taozi555/rp-opus (CC BY-NC, 다국어 한국어 포함, NSFW 바이너리 플래그). 미성년자 보호 정책 적용 후 큐레이션."
-      }
+      "empty": "데이터셋 카탈로그가 비어있어요. v0.3.0에서 registry-fetcher 자동 갱신이 합류하면 더 많은 시드가 도착해요.",
+      "licenseLabel": "라이선스",
+      "sizeLabel": "크기",
+      "rowCountLabel": "행",
+      "languagesLabel": "언어"
     },
     "footnote": "본 prototype은 v2.0 진입 전 placeholder예요. 실 큐레이션 데이터는 별도 repo lmmaster-trends-bundle (또는 v1.x 본 repo prototype)에서 매주 push되어 jsdelivr propagate 후 사용자 PC에 도착해요. 자세한 흐름은 docs/adr/0060-trend-report.md 참고."
   },

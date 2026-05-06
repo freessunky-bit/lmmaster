@@ -69,18 +69,18 @@
         "research": "In research",
         "queued": "Queued"
       },
-      "personas_korea": {
-        "title": "Nemotron-Personas-Korea (7M synthetic personas)",
-        "hint": "NVIDIA synthetic dataset. Grounded in KOSIS / Supreme Court / NHIS official statistics. CC BY 4.0 (commercial OK with attribution). See docs/guides/personas-korea-survey-simulation.md."
+      "category": {
+        "sft-seed": "SFT seed",
+        "lora-seed": "LoRA seed",
+        "rag-corpus": "RAG corpus",
+        "persona-seed": "Persona",
+        "eval-benchmark": "Eval/Bench"
       },
-      "kor_rp": {
-        "title": "Korean RP seed (KREW korean-role-playing)",
-        "hint": "huggingface-KREW/korean-role-playing — Apache-2.0, 35.3K rows, Korean-native, SFW. Top candidate for Korean persona fine-tune."
-      },
-      "deepseek_gemma_rp": {
-        "title": "Multilingual RP seed (LimaRP / rp-opus)",
-        "hint": "lemonilia/LimaRP (Apache-2.0, 1550 hand-curated, English) + taozi555/rp-opus (CC BY-NC, multilingual incl. Korean, NSFW flag). Applied after minor-protection policy review."
-      }
+      "empty": "Dataset catalog is empty. v0.3.0 will add registry-fetcher auto-refresh and more seeds.",
+      "licenseLabel": "License",
+      "sizeLabel": "Size",
+      "rowCountLabel": "Rows",
+      "languagesLabel": "Lang"
     },
     "footnote": "This prototype is a pre-v2.0 placeholder. Real curated data ships weekly from lmmaster-trends-bundle (or v1.x in-repo prototype) → jsdelivr propagate → user PC. See docs/adr/0060-trend-report.md."
   },

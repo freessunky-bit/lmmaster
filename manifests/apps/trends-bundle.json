@@ -1,0 +1,8 @@
+{
+  "$schema_hint": "trends-bundle schema_version=1 (ADR-0060). Phase 22'.b 큐레이터 GHA cron이 큐레이션 후 push 예정.",
+  "schema_version": 1,
+  "generated_at": "2026-05-07T00:00:00Z",
+  "expires_at": "2026-05-14T00:00:00Z",
+  "curator_note_ko": "v0.2.0 시점 placeholder예요. Phase 22'.b 큐레이터 GHA cron이 가동되면 매주 RSS+arXiv+HF Daily Papers 큐레이션 결과가 jsdelivr로 도착해요.",
+  "items": []
+}

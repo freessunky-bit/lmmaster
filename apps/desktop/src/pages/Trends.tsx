@@ -26,6 +26,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getCatalog, type ModelEntry } from "../ipc/catalog";
+import { listDatasets, type DatasetEntry } from "../ipc/datasets";
 
 import "./trends.css";
 
@@ -86,38 +87,7 @@ const MOCK_CARDS: readonly MockTrendCard[] = [
   },
 ];
 
-interface DatasetSeed {
-  id: string;
-  titleKey: string;
-  hintKey: string;
-  status: "available" | "research" | "queued";
-  hfPath: string;
-}
-
-/** Phase 23' 데이터셋 카탈로그 placeholder — Agent 리서치 결과 후 실 카드 합류. */
-const DATASET_SEEDS: readonly DatasetSeed[] = [
-  {
-    id: "personas-korea",
-    titleKey: "trends.datasets.personas_korea.title",
-    hintKey: "trends.datasets.personas_korea.hint",
-    status: "available",
-    hfPath: "nvidia/Nemotron-Personas-Korea",
-  },
-  {
-    id: "kor-rp-research",
-    titleKey: "trends.datasets.kor_rp.title",
-    hintKey: "trends.datasets.kor_rp.hint",
-    status: "research",
-    hfPath: "(엘리트 리서치 진행 중 — Agent dispatch)",
-  },
-  {
-    id: "deepseek-gemma-rp",
-    titleKey: "trends.datasets.deepseek_gemma_rp.title",
-    hintKey: "trends.datasets.deepseek_gemma_rp.hint",
-    status: "research",
-    hfPath: "(LimaRP / PIPPA / Norquinal claude RP 후보)",
-  },
-];
+/** Phase 23'.c 시드 4 entries (datasets-bundle.json 기반 — Vite static import). */
 
 const KIND_ICON: Record<MockTrendCard["kind"], typeof BookOpen> = {
   paper: BookOpen,
@@ -131,20 +101,23 @@ const KIND_ICON: Record<MockTrendCard["kind"], typeof BookOpen> = {
 export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => void }) {
   const { t } = useTranslation();
   const [entries, setEntries] = useState<ModelEntry[]>([]);
+  const [datasets, setDatasets] = useState<DatasetEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    getCatalog()
-      .then((cat) => {
+    Promise.all([getCatalog(), listDatasets()])
+      .then(([cat, ds]) => {
         if (!cancelled) {
           setEntries(cat.entries);
+          setDatasets(ds);
           setLoading(false);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setEntries([]);
+          setDatasets([]);
           setLoading(false);
         }
       });
@@ -279,29 +252,89 @@ export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => voi
             "한국어 페르소나 / RP fine-tune 시드 / 학습 데이터셋. ADR-0061 + ADR-0062 진입 후 실 다운로드 IPC와 RAG 시드 1-click 자동 import가 합류해요.",
           )}
         </p>
-        <ul className="trends-grid" role="list">
-          {DATASET_SEEDS.map((ds) => (
-            <li
-              key={ds.id}
-              className={`trends-card trends-card-dataset trends-card-status-${ds.status}`}
-              role="listitem"
-              data-testid={`dataset-card-${ds.id}`}
-            >
-              <div className="trends-card-head">
-                <Database size={16} aria-hidden="true" />
-                <span className="trends-card-kind">
-                  {t(`trends.datasets.status.${ds.status}`, ds.status)}
-                </span>
-              </div>
-              <h3 className="trends-card-title">{t(ds.titleKey, ds.id)}</h3>
-              <p className="trends-card-hint">{t(ds.hintKey, "")}</p>
-              <p className="trends-card-source">
-                <span className="trends-card-source-label">HF</span>{" "}
-                <code>{ds.hfPath}</code>
-              </p>
-            </li>
-          ))}
-        </ul>
+        {datasets.length === 0 ? (
+          <p className="trends-empty">
+            {t(
+              "trends.datasets.empty",
+              "데이터셋 카탈로그가 비어있어요. v0.3.0에서 registry-fetcher 자동 갱신이 합류하면 더 많은 시드가 도착해요.",
+            )}
+          </p>
+        ) : (
+          <ul className="trends-grid" role="list">
+            {datasets.map((ds) => {
+              const isNsfw = ds.content_warning === "rp-explicit";
+              const repo =
+                ds.source.repo ?? ds.source.url ?? ds.source.path ?? ds.id;
+              const sizeMb = ds.size_mb ?? 0;
+              const sizeLabel =
+                sizeMb >= 1024
+                  ? `${(sizeMb / 1024).toFixed(1)}GB`
+                  : `${sizeMb}MB`;
+              return (
+                <li
+                  key={ds.id}
+                  className={`trends-card trends-card-dataset trends-card-status-available${isNsfw ? " trends-card-nsfw" : ""}`}
+                  role="listitem"
+                  data-testid={`dataset-card-${ds.id}`}
+                >
+                  <div className="trends-card-head">
+                    <Database size={16} aria-hidden="true" />
+                    <span className="trends-card-kind">
+                      {t(`trends.datasets.category.${ds.category}`, ds.category)}
+                    </span>
+                    {isNsfw && (
+                      <span
+                        className="trends-card-chip trends-card-chip-nsfw"
+                        aria-label="NSFW"
+                      >
+                        {t("catalog.adultContent.chip", "성인")}
+                      </span>
+                    )}
+                    {!ds.commercial && (
+                      <span
+                        className="trends-card-chip trends-card-chip-noncommercial"
+                        aria-label="비상업"
+                      >
+                        {t("catalog.commercial.chip", "비상업")}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="trends-card-title">{ds.display_name}</h3>
+                  <p className="trends-card-hint">
+                    {ds.curator_note_ko ?? ""}
+                  </p>
+                  <p className="trends-card-meta">
+                    <span className="trends-card-meta-item">
+                      {t("trends.datasets.licenseLabel", "라이선스")}: {ds.license}
+                    </span>
+                    <span className="trends-card-meta-sep">·</span>
+                    <span className="trends-card-meta-item">
+                      {t("trends.datasets.sizeLabel", "크기")}: {sizeLabel}
+                    </span>
+                    {ds.row_count !== undefined && (
+                      <>
+                        <span className="trends-card-meta-sep">·</span>
+                        <span className="trends-card-meta-item">
+                          {t("trends.datasets.rowCountLabel", "행")}:{" "}
+                          {ds.row_count.toLocaleString()}
+                        </span>
+                      </>
+                    )}
+                    <span className="trends-card-meta-sep">·</span>
+                    <span className="trends-card-meta-item">
+                      {t("trends.datasets.languagesLabel", "언어")}:{" "}
+                      {ds.languages.join(" / ")}
+                    </span>
+                  </p>
+                  <p className="trends-card-source">
+                    <span className="trends-card-source-label">HF</span>{" "}
+                    <code>{repo}</code>
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       <footer className="trends-footnote">
