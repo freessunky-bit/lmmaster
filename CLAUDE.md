@@ -86,6 +86,32 @@ pnpm run build
 
 스크립트는 PATH 보강 + 출력 트리밍을 자체 처리한다. Claude Code가 매 페이즈 검증마다 이 6개 중 하나로 호출하면 prompt 0.
 
+### 신규 모델 manifest 추가 흐름 (필수)
+
+ADR-0044 라이브 카탈로그 갱신 정책 — `manifests/snapshot/models/<cat>/<id>.json` 추가만으로는 부족. **번들 합본** `manifests/apps/catalog.json`이 사용자 카탈로그의 진실의 출처. 누락 시 사용자가 새 모델 영영 못 봄.
+
+```powershell
+# 1. 신규 모델 manifest 작성
+#    manifests/snapshot/models/<category>/<model-id>.json
+
+# 2. 번들 재생성 (필수)
+node .claude\scripts\build-catalog-bundle.mjs
+
+# 3. 차분 확인
+git diff manifests/apps/catalog.json
+
+# 4. 두 파일 모두 commit
+git add manifests/snapshot/models/<cat>/<id>.json manifests/apps/catalog.json
+git commit -m "feat(catalog): <id> 추가 — entries N → N+1"
+git push origin main
+
+# 5. sign-catalog.yml 자동 트리거 → catalog.json.minisig 자동 갱신
+# 6. jsdelivr 1~24h propagate
+# 7. 사용자 측: 진단 → "지금 점검할게요" 또는 6h cron 자동 fetch
+```
+
+검증: `recommender_test::snapshot_loads_seed_entries`가 자동 검증 (entries 카운트 + 핵심 한국어 모델 6종 보존).
+
 ---
 
 ## 4. 코드 품질 / 스타일
