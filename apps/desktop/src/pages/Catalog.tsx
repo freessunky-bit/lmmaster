@@ -6,7 +6,7 @@
 // - 카드 클릭 → ModelDetailDrawer 슬라이드.
 // - 데이터: getCatalog() 1회 + getRecommendation(category) (카테고리 변경 시).
 
-import { Eye, EyeOff, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Flame, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -35,7 +35,7 @@ import { RecommendationStrip } from "../components/catalog/RecommendationStrip";
 import { idOf, modelHasFlag } from "../components/catalog/format";
 import { HelpButton } from "../components/HelpButton";
 import { HuggingFaceMark } from "../components/HuggingFaceMark";
-import { useAdultContentAllowed } from "../hooks/useAdultContentAllowed";
+import { nextMode, useAdultContentMode } from "../hooks/useAdultContentMode";
 
 import "./catalog.css";
 
@@ -76,7 +76,7 @@ export function CatalogPage() {
   const [lastRefresh, setLastRefresh] = useState<LastRefresh | null>(null);
   const [refreshBusy, setRefreshBusy] = useState(false);
   const [hfModalOpen, setHfModalOpen] = useState(false);
-  const [adultAllowed, setAdultAllowed] = useAdultContentAllowed();
+  const [adultMode, setAdultMode] = useAdultContentMode();
 
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
 
@@ -224,9 +224,14 @@ export function CatalogPage() {
     }
     // deprecated tier는 어느 탭에서도 메인 노출 안 함 — 별도 "안 권장" 필터로 v1.x.
     list = list.filter((e) => e.tier !== "deprecated");
-    // Phase 13'.f.2.3 — content_warning 게이팅. adultAllowed=false면 rp-explicit 모델 hidden.
-    if (!adultAllowed) {
+    // Phase v0.0.3 — adultMode 3-state 필터.
+    //   - hide: NSFW 모델 숨김 (기본).
+    //   - mixed: NSFW 포함 모두 표시 (⚠ chip으로 식별).
+    //   - only: NSFW 모델만 표시.
+    if (adultMode === "hide") {
       list = list.filter((e) => e.content_warning !== "rp-explicit");
+    } else if (adultMode === "only") {
+      list = list.filter((e) => e.content_warning === "rp-explicit");
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -245,7 +250,7 @@ export function CatalogPage() {
     }
     list = sortEntries(list, sort, recommendation);
     return list;
-  }, [entries, category, search, filters, sort, recommendedIds, recommendation, adultAllowed]);
+  }, [entries, category, search, filters, sort, recommendedIds, recommendation, adultMode]);
 
   const handleSlotSelect = (modelId: string) => {
     const el = cardRefs.current.get(modelId);
@@ -304,26 +309,26 @@ export function CatalogPage() {
             </button>
             <button
               type="button"
-              role="switch"
-              aria-checked={adultAllowed}
-              className={`catalog-adult-toggle${adultAllowed ? " is-on" : ""}`}
-              onClick={() => setAdultAllowed(!adultAllowed)}
+              className={`catalog-adult-toggle is-mode-${adultMode}`}
+              onClick={() => setAdultMode(nextMode(adultMode))}
               data-testid="catalog-adult-toggle"
+              data-mode={adultMode}
+              aria-label={t(
+                "catalog.adultContent.toggleAria",
+                "성인 콘텐츠 필터 모드: {{mode}}. 클릭하면 다음 모드로 바뀌어요.",
+                {
+                  mode: t(`catalog.adultContent.modes.${adultMode}`),
+                },
+              )}
               title={t(
                 "catalog.adultContent.toggleTitle",
-                "성인 콘텐츠 모델을 카탈로그에 노출할지 선택해요. 기본 OFF — 켜면 NSFW 라벨 모델이 경고 아이콘과 함께 표시돼요.",
+                "성인 콘텐츠 필터를 골라요. 클릭마다 숨김 → 모두 보임 → 성인만으로 순환해요. 기본은 숨김이에요.",
               )}
             >
-              {adultAllowed ? (
-                <Eye size={14} aria-hidden="true" />
-              ) : (
-                <EyeOff size={14} aria-hidden="true" />
-              )}
-              <span>
-                {adultAllowed
-                  ? t("catalog.adultContent.on", "성인 모델 보임")
-                  : t("catalog.adultContent.off", "성인 모델 숨김")}
-              </span>
+              {adultMode === "hide" && <EyeOff size={14} aria-hidden="true" />}
+              {adultMode === "mixed" && <Eye size={14} aria-hidden="true" />}
+              {adultMode === "only" && <Flame size={14} aria-hidden="true" />}
+              <span>{t(`catalog.adultContent.modes.${adultMode}`)}</span>
             </button>
           </div>
         </div>

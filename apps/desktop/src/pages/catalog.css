@@ -1622,10 +1622,21 @@
   outline-offset: 2px;
 }
 
-.catalog-adult-toggle.is-on {
+/* v0.0.3 — 3-state mode 색상.
+ *  - hide: 기본 (회색).
+ *  - mixed: 노란색 (NSFW 식별 + 일반 함께 표시).
+ *  - only: 주황/빨강 강조 (NSFW 모델만 보는 의도적 강한 시그널).
+ */
+.catalog-adult-toggle.is-mode-mixed {
   background: rgba(255, 200, 60, 0.12);
   border-color: rgba(255, 200, 60, 0.4);
   color: rgba(255, 220, 100, 0.95);
+}
+
+.catalog-adult-toggle.is-mode-only {
+  background: rgba(255, 130, 80, 0.16);
+  border-color: rgba(255, 130, 80, 0.55);
+  color: rgba(255, 170, 120, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

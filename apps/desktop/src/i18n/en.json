@@ -954,9 +954,13 @@
       "startWorkbenchTitle": "Start in Workbench with this model? Intent and model context travel together."
     },
     "adultContent": {
-      "on": "Adult models shown",
-      "off": "Adult models hidden",
-      "toggleTitle": "Choose whether to show adult-content models in the catalog. Default OFF — turning it on reveals NSFW-labeled models with a warning chip.",
+      "modes": {
+        "hide": "Hide adult models",
+        "mixed": "Show all",
+        "only": "Adult only"
+      },
+      "toggleTitle": "Choose the adult-content filter. Each click cycles: hide → show all → adult only. Default is hide.",
+      "toggleAria": "Adult content filter mode: {{mode}}. Click to advance.",
       "chip": "Adult",
       "chipTitle": "Adult content — visible because the filter is on"
     },
