@@ -20,6 +20,8 @@ on:
       - 'manifests/apps/catalog.json'
       - 'manifests/apps/ollama.json'
       - 'manifests/apps/lm-studio.json'
+      - 'manifests/apps/datasets-bundle.json'
+      - 'manifests/apps/trends-bundle.json'
   workflow_dispatch: {}
 
 permissions:
@@ -63,7 +65,7 @@ jobs:
           # password 입력은 stdin 1회 — 여러 파일 사용 시 매 호출마다 같은 password 주입.
           # 변경된 매니페스트만 처리해도 되지만 단순화 위해 3종 모두 서명 (idempotent — 변경 없으면 .minisig도 byte-identical).
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          for manifest in catalog.json ollama.json lm-studio.json; do
+          for manifest in catalog.json ollama.json lm-studio.json datasets-bundle.json trends-bundle.json; do
             target="manifests/apps/$manifest"
             sig="$target.minisig"
             if [ ! -f "$target" ]; then
@@ -90,7 +92,7 @@ jobs:
           PUBKEY_FILE=$(mktemp)
           trap 'rm -f "$PUBKEY_FILE"' EXIT
           printf '%s' "$PUBKEY" > "$PUBKEY_FILE"
-          for manifest in catalog.json ollama.json lm-studio.json; do
+          for manifest in catalog.json ollama.json lm-studio.json datasets-bundle.json trends-bundle.json; do
             target="manifests/apps/$manifest"
             sig="$target.minisig"
             [ -f "$target" ] || continue
@@ -109,7 +111,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # 3종 .minisig 모두 변경 검사. 하나라도 변경 시 single commit.
           changed=0
-          for manifest in catalog.json ollama.json lm-studio.json; do
+          for manifest in catalog.json ollama.json lm-studio.json datasets-bundle.json trends-bundle.json; do
             sig="manifests/apps/$manifest.minisig"
             [ -f "$sig" ] || continue
             if ! git diff --quiet "$sig"; then

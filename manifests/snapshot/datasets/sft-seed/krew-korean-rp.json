@@ -1,0 +1,32 @@
+{
+  "$schema_hint": "dataset-catalog DatasetBundle schema_version=1 (ADR-0061).",
+  "schema_version": 1,
+  "generated_at": "2026-05-07T00:00:00Z",
+  "entries": [
+    {
+      "id": "krew-korean-rp",
+      "display_name": "huggingface-KREW/korean-role-playing (한국어 RP 시드)",
+      "category": "sft-seed",
+      "source": {
+        "type": "hugging-face",
+        "repo": "huggingface-KREW/korean-role-playing"
+      },
+      "size_mb": 99,
+      "row_count": 35300,
+      "languages": ["ko"],
+      "license": "Apache-2.0",
+      "commercial": true,
+      "use_case": {
+        "kind": "sft-seed",
+        "format": "sharegpt",
+        "language": ["ko"]
+      },
+      "format": "parquet",
+      "checksums": {},
+      "curator_note_ko": "한국어 native RP fine-tune 시드 1순위에요. 35.3K rows × 4 subsets (exa-data 890 / general 32.4K / gf-persona 1.92K / youtube-couple 125). SFW 분류 — explicit 콘텐츠 X, romantic persona OK. EXAONE 7.8B / HCX-SEED 8B와 LoRA fine-tune 시 한국어 캐릭터 자연스러움 ↑.",
+      "sources": [
+        "huggingface.co/datasets/huggingface-KREW/korean-role-playing"
+      ]
+    }
+  ]
+}

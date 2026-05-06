@@ -1,0 +1,36 @@
+{
+  "$schema_hint": "dataset-catalog DatasetBundle schema_version=1 (ADR-0061).",
+  "schema_version": 1,
+  "generated_at": "2026-05-07T00:00:00Z",
+  "entries": [
+    {
+      "id": "personas-korea",
+      "display_name": "NVIDIA Nemotron-Personas-Korea (가상 한국인 700만)",
+      "category": "persona-seed",
+      "source": {
+        "type": "hugging-face",
+        "repo": "nvidia/Nemotron-Personas-Korea"
+      },
+      "size_mb": 1843,
+      "row_count": 1000000,
+      "languages": ["ko"],
+      "license": "CC-BY-4.0",
+      "commercial": true,
+      "use_case": {
+        "kind": "persona-seed",
+        "count": 7000000,
+        "narrative_field": "persona"
+      },
+      "format": "parquet",
+      "checksums": {},
+      "curator_note_ko": "NVIDIA가 KOSIS·대법원·건강보험공단 통계 기반으로 합성한 가상 한국인 700만 페르소나. 100만 row × 평균 7개 페르소나 narrative. 26개 컬럼 (uuid/sex/age/marital_status/family_type/housing_type/education_level/occupation/district/province + 7 페르소나 narrative). 가상 한국인 100인 콘텐츠 설문 시뮬레이션의 1순위 시드예요. 사용 시 NVIDIA + KOSIS + 대법원 + 건강보험공단 + 한국농촌경제연구원 5개 출처 표기 필수.",
+      "sources": [
+        "huggingface.co/datasets/nvidia/Nemotron-Personas-Korea",
+        "huggingface.co/blog/nvidia/build-korean-agents-with-nemotron-personas",
+        "kosis.kr",
+        "scourt.go.kr",
+        "nhis.or.kr"
+      ]
+    }
+  ]
+}

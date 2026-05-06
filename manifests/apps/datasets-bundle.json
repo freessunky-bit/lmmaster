@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-05-06T18:18:32.566Z",
+  "entries": [
+    {
+      "id": "krew-korean-rp",
+      "display_name": "huggingface-KREW/korean-role-playing (한국어 RP 시드)",
+      "category": "sft-seed",
+      "source": {
+        "type": "hugging-face",
+        "repo": "huggingface-KREW/korean-role-playing"
+      },
+      "size_mb": 99,
+      "row_count": 35300,
+      "languages": [
+        "ko"
+      ],
+      "license": "Apache-2.0",
+      "commercial": true,
+      "use_case": {
+        "kind": "sft-seed",
+        "format": "sharegpt",
+        "language": [
+          "ko"
+        ]
+      },
+      "format": "parquet",
+      "checksums": {},
+      "curator_note_ko": "한국어 native RP fine-tune 시드 1순위에요. 35.3K rows × 4 subsets (exa-data 890 / general 32.4K / gf-persona 1.92K / youtube-couple 125). SFW 분류 — explicit 콘텐츠 X, romantic persona OK. EXAONE 7.8B / HCX-SEED 8B와 LoRA fine-tune 시 한국어 캐릭터 자연스러움 ↑.",
+      "sources": [
+        "huggingface.co/datasets/huggingface-KREW/korean-role-playing"
+      ]
+    },
+    {
+      "id": "limarp",
+      "display_name": "lemonilia/LimaRP (영문 RP, hand-curated)",
+      "category": "sft-seed",
+      "source": {
+        "type": "hugging-face",
+        "repo": "lemonilia/LimaRP"
+      },
+      "size_mb": 35,
+      "row_count": 1550,
+      "languages": [
+        "en"
+      ],
+      "license": "Apache-2.0",
+      "commercial": true,
+      "content_warning": "rp-explicit",
+      "minor_safety_attestation": {
+        "verified_at": "2026-05-07T00:00:00Z",
+        "verified_by": "lmmaster-curator",
+        "keyword_scan_clean": true,
+        "hf_nfaa_flag": true,
+        "license_whitelist": true,
+        "curator_note_ko": "본문 표본 검토 완료. 미성년 묘사 0건 확인. NFAA 플래그 있음. Apache-2.0 화이트리스트."
+      },
+      "use_case": {
+        "kind": "sft-seed",
+        "format": "alpaca",
+        "language": [
+          "en"
+        ]
+      },
+      "format": "jsonl",
+      "checksums": {},
+      "curator_note_ko": "RP 표준 시드 — 1550건 hand-curated thread. *영문 only*라 한국어 RP에는 직접 사용 어렵지만 Cydonia 24B 같은 NSFW 모델 fine-tune의 base + 한국어 RP fine-tune 후 cross-lingual 보강 시 활용. NFAA 플래그 + minor_safety 검증 완료.",
+      "sources": [
+        "huggingface.co/datasets/lemonilia/LimaRP"
+      ]
+    },
+    {
+      "id": "personas-korea",
+      "display_name": "NVIDIA Nemotron-Personas-Korea (가상 한국인 700만)",
+      "category": "persona-seed",
+      "source": {
+        "type": "hugging-face",
+        "repo": "nvidia/Nemotron-Personas-Korea"
+      },
+      "size_mb": 1843,
+      "row_count": 1000000,
+      "languages": [
+        "ko"
+      ],
+      "license": "CC-BY-4.0",
+      "commercial": true,
+      "use_case": {
+        "kind": "persona-seed",
+        "count": 7000000,
+        "narrative_field": "persona"
+      },
+      "format": "parquet",
+      "checksums": {},
+      "curator_note_ko": "NVIDIA가 KOSIS·대법원·건강보험공단 통계 기반으로 합성한 가상 한국인 700만 페르소나. 100만 row × 평균 7개 페르소나 narrative. 26개 컬럼 (uuid/sex/age/marital_status/family_type/housing_type/education_level/occupation/district/province + 7 페르소나 narrative). 가상 한국인 100인 콘텐츠 설문 시뮬레이션의 1순위 시드예요. 사용 시 NVIDIA + KOSIS + 대법원 + 건강보험공단 + 한국농촌경제연구원 5개 출처 표기 필수.",
+      "sources": [
+        "huggingface.co/datasets/nvidia/Nemotron-Personas-Korea",
+        "huggingface.co/blog/nvidia/build-korean-agents-with-nemotron-personas",
+        "kosis.kr",
+        "scourt.go.kr",
+        "nhis.or.kr"
+      ]
+    },
+    {
+      "id": "rp-opus",
+      "display_name": "taozi555/rp-opus (다국어 RP, 한국어 포함)",
+      "category": "sft-seed",
+      "source": {
+        "type": "hugging-face",
+        "repo": "taozi555/rp-opus"
+      },
+      "size_mb": 2110,
+      "row_count": 50000,
+      "languages": [
+        "en",
+        "zh",
+        "ja",
+        "ko"
+      ],
+      "license": "CC-BY-NC-4.0",
+      "commercial": false,
+      "content_warning": "rp-explicit",
+      "minor_safety_attestation": {
+        "verified_at": "2026-05-07T00:00:00Z",
+        "verified_by": "lmmaster-curator",
+        "keyword_scan_clean": true,
+        "hf_nfaa_flag": true,
+        "license_whitelist": false,
+        "curator_note_ko": "본문 표본 검토 완료 — `nsfw` 바이너리 플래그가 row마다 있어 미성년 키워드 hit 0건 확인. NFAA 플래그 있음. CC-BY-NC-4.0이라 화이트리스트 X — `commercial: false` 강제로 비상업 트랙."
+      },
+      "use_case": {
+        "kind": "sft-seed",
+        "format": "sharegpt",
+        "language": [
+          "en",
+          "zh",
+          "ja",
+          "ko"
+        ]
+      },
+      "format": "jsonl",
+      "checksums": {},
+      "curator_note_ko": "다국어 RP 시드 — 한국어 비율 미공개이지만 ko 포함. NSFW 바이너리 플래그(`nsfw: 0|1`)가 LMmaster의 NSFW 토글과 1:1 매칭. **비상업** 라이선스라 사용자가 본인 LMmaster를 *비상업 목적*으로만 사용 시 OK. 상업 사용 거부.",
+      "sources": [
+        "huggingface.co/datasets/taozi555/rp-opus"
+      ]
+    }
+  ]
+}

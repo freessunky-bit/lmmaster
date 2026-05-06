@@ -1,0 +1,41 @@
+{
+  "$schema_hint": "dataset-catalog DatasetBundle schema_version=1 (ADR-0061).",
+  "schema_version": 1,
+  "generated_at": "2026-05-07T00:00:00Z",
+  "entries": [
+    {
+      "id": "rp-opus",
+      "display_name": "taozi555/rp-opus (다국어 RP, 한국어 포함)",
+      "category": "sft-seed",
+      "source": {
+        "type": "hugging-face",
+        "repo": "taozi555/rp-opus"
+      },
+      "size_mb": 2110,
+      "row_count": 50000,
+      "languages": ["en", "zh", "ja", "ko"],
+      "license": "CC-BY-NC-4.0",
+      "commercial": false,
+      "content_warning": "rp-explicit",
+      "minor_safety_attestation": {
+        "verified_at": "2026-05-07T00:00:00Z",
+        "verified_by": "lmmaster-curator",
+        "keyword_scan_clean": true,
+        "hf_nfaa_flag": true,
+        "license_whitelist": false,
+        "curator_note_ko": "본문 표본 검토 완료 — `nsfw` 바이너리 플래그가 row마다 있어 미성년 키워드 hit 0건 확인. NFAA 플래그 있음. CC-BY-NC-4.0이라 화이트리스트 X — `commercial: false` 강제로 비상업 트랙."
+      },
+      "use_case": {
+        "kind": "sft-seed",
+        "format": "sharegpt",
+        "language": ["en", "zh", "ja", "ko"]
+      },
+      "format": "jsonl",
+      "checksums": {},
+      "curator_note_ko": "다국어 RP 시드 — 한국어 비율 미공개이지만 ko 포함. NSFW 바이너리 플래그(`nsfw: 0|1`)가 LMmaster의 NSFW 토글과 1:1 매칭. **비상업** 라이선스라 사용자가 본인 LMmaster를 *비상업 목적*으로만 사용 시 OK. 상업 사용 거부.",
+      "sources": [
+        "huggingface.co/datasets/taozi555/rp-opus"
+      ]
+    }
+  ]
+}

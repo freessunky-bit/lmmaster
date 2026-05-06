@@ -1,0 +1,41 @@
+{
+  "$schema_hint": "dataset-catalog DatasetBundle schema_version=1 (ADR-0061).",
+  "schema_version": 1,
+  "generated_at": "2026-05-07T00:00:00Z",
+  "entries": [
+    {
+      "id": "limarp",
+      "display_name": "lemonilia/LimaRP (영문 RP, hand-curated)",
+      "category": "sft-seed",
+      "source": {
+        "type": "hugging-face",
+        "repo": "lemonilia/LimaRP"
+      },
+      "size_mb": 35,
+      "row_count": 1550,
+      "languages": ["en"],
+      "license": "Apache-2.0",
+      "commercial": true,
+      "content_warning": "rp-explicit",
+      "minor_safety_attestation": {
+        "verified_at": "2026-05-07T00:00:00Z",
+        "verified_by": "lmmaster-curator",
+        "keyword_scan_clean": true,
+        "hf_nfaa_flag": true,
+        "license_whitelist": true,
+        "curator_note_ko": "본문 표본 검토 완료. 미성년 묘사 0건 확인. NFAA 플래그 있음. Apache-2.0 화이트리스트."
+      },
+      "use_case": {
+        "kind": "sft-seed",
+        "format": "alpaca",
+        "language": ["en"]
+      },
+      "format": "jsonl",
+      "checksums": {},
+      "curator_note_ko": "RP 표준 시드 — 1550건 hand-curated thread. *영문 only*라 한국어 RP에는 직접 사용 어렵지만 Cydonia 24B 같은 NSFW 모델 fine-tune의 base + 한국어 RP fine-tune 후 cross-lingual 보강 시 활용. NFAA 플래그 + minor_safety 검증 완료.",
+      "sources": [
+        "huggingface.co/datasets/lemonilia/LimaRP"
+      ]
+    }
+  ]
+}
