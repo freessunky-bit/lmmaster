@@ -1,0 +1,75 @@
+# Phase 21'.d — Trending Watcher cron + GitHub Issue 자동.
+#
+# 정책 (ADR-0059 §5):
+# - 매 6시간 cron + workflow_dispatch 수동 트리거.
+# - cargo run -p trending-watcher --release --batch --out report.md → JasonEtco/create-an-issue.
+# - dedupe: 동일 제목 fingerprint 검색 + 갱신.
+# - 라벨 auto-curate + trending-watcher + needs-review.
+# - assignee freessunky-bit (큐레이터 1인).
+#
+# secrets: GITHUB_TOKEN 자동 (read:repo + write:issues 필요 — Actions 기본 권한 OK).
+
+name: Trending Watcher
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # 6시간마다 (UTC).
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '[skip-trending]') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: '. -> target'
+
+      - name: Build trending-watcher
+        run: cargo build --release --package trending-watcher
+
+      - name: Run trending-watcher (batch summary)
+        id: scan
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/trending
+          cargo run --release --package trending-watcher -- --batch --out /tmp/trending/summary.md
+          echo "summary_path=/tmp/trending/summary.md" >> "$GITHUB_OUTPUT"
+
+      - name: Create / update curator review issue
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          filename: /tmp/trending/summary.md
+          update_existing: true
+          search_existing: open
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Trending watcher 실행 결과"
+            echo ""
+            echo "- Triggered by: ${{ github.event_name }}"
+            echo "- Run ID: ${{ github.run_id }}"
+            echo ""
+            echo "### Report preview"
+            echo ""
+            echo '```markdown'
+            cat /tmp/trending/summary.md || echo "(빈 결과)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -166,10 +166,45 @@ NEW에서 Verified 졸업: 60일+ 안정 + 큐레이터 확인.
 
 ## 5. 큐레이션 워크플로
 
+### 5.1 자동 발견 (Phase 21' Trending Watcher 후) ⭐ NEW
+
+`crates/trending-watcher/`가 매 6시간 GHA cron으로 다음 자동 수행:
+
+```
+[GHA cron 6h]
+HF Trending API + Open LLM Leaderboard 2 dataset
+   ↓ source.rs::fetch_*
+원시 200개 후보
+   ↓ filter.rs::rank_candidates (deterministic 가중치)
+Queue / InfoOnly / Reject 분류
+   ↓ report.rs::render_batch_summary
+JasonEtco/create-an-issue (dedupe)
+   ↓
+GitHub Issue [trending] <hub_id> (Avg: 0.84) — 라벨 auto-curate + needs-review, assignee = 큐레이터
+```
+
+큐레이터는 **GitHub Issue 알림 받고 §5.2 검토 흐름**으로 진입.
+
+### 5.2 큐레이터 검토 흐름 (Issue → manifest PR)
+
+각 Issue는 자동으로 다음 체크리스트가 본문에 들어있어요 (report.rs):
+
+1. [ ] **chat template 한국어 발화 검증** — LMmaster 본 repo의 EXAONE 같은 한국어 모델에 동일 prompt 보내 자연스러움 비교.
+2. [ ] **라이선스 약관 정밀 확인** — NVIDIA Open Model License / EXAONE Custom 등 footgun 항목 점검.
+3. [ ] **GGUF 변종 sha256 검증** — `bartowski` / `unsloth` / `lmstudio-community` 미러 중 하나 결정.
+4. [ ] **Korean signal 실측** — 모델 카드 본문 + r/LocalLLaMA 한국어 후기 확인.
+5. [ ] **manifest 작성** — `manifests/snapshot/models/<cat>/<id>.json` (본 가이드 §3).
+6. [ ] **`build-catalog-bundle.mjs` 실행** (CLAUDE.md §3 트랩 노트 #9 — *반드시*).
+7. [ ] **PR 머지 후 jsDelivr propagate** — 사용자 카탈로그에 자동 노출.
+
+### 5.3 수동 큐레이션 (자동 발견 외)
+
+자동 watcher가 놓치는 후보 (예: 한국 통신사 출시 비공식 모델, 커뮤니티 fine-tune)는 수동으로:
+
 ```
 1. 후보 발굴 — leaderboard / trending / 커뮤니티
    ↓
-2. 필터 적용 — GGUF / 라이선스 / 트래픽
+2. 필터 적용 — GGUF / 라이선스 / 트래픽 (본 가이드 §2)
    ↓
 3. manifest 초안 작성 (`manifests/snapshot/models/<cat>/<id>.json`)
    - 본 가이드 §3 모든 필드
