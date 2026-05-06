@@ -251,7 +251,47 @@ Phase 9'.c — Multi-runtime adapters expansion
 
 ---
 
+## 2026-05-06 — v1.x 마무리 라운드 (사용자 결정 후속)
+
+**사용자 결정 7건**:
+1. 코드 서명: **안 함 + 안내 카피로 대응** — 이미 README + release.yml에 완비 (closure).
+2. 재빌드 + 다른 PC 검증: 사용자 확인 완료 (closure).
+3. SHA256 + minisign release notes: release.yml 이미 완비 (matrix + tauri-action + draft + ko/en + job summary SHA256, closure).
+4. release.yml matrix: 이미 완비 (closure).
+5. GlitchTip self-hosted: **보류** (cost 결정).
+6. README ko/en: README.md + README.en.md 이미 존재 (closure).
+7. **catalog 외 manifest signature**: 신규 작업 — sign-catalog.yml 확장 + 결정 노트.
+- 후순위 PromptSanitize Pipeline: **Phase 8'.c.1에 이미 완료** + pipeline_layer chain 등록 (closure).
+
+**산출물 (신규)**:
+- `.github/workflows/sign-catalog.yml` — `Sign manifests`로 일반화 + `catalog.json` + `ollama.json` + `lm-studio.json` 3종 .minisig 자동 생성·commit·push. paths trigger + sign loop + verify loop + commit batch.
+- `docs/research/phase-13pg3-manifest-signature-expansion-decision.md` — 6-section 결정 노트. runtime verify 통합은 **v1.x phase 13'.g.4** 후속 분리 명시 (registry-fetcher가 이미 generic 설계 — 호출 측 추가만 필요하나 통합 테스트 + fail-fast UX 정의 부담).
+
+**검증**:
+- `cargo fmt --check` ✅ / `cargo clippy --workspace --all-targets -D warnings` ✅ (Finished, 0 warnings).
+- 본 sub-phase 변경은 yml + md만 — Rust/TypeScript 빌드 영향 0. 풀 verify는 main push 후 GitHub Actions 자동.
+
+**기각안 핵심**:
+- runtime verify 통합 (registry-fetcher 호출 측) v1.x 분리 — fail-fast UX + 통합 테스트 부담.
+- ADR-0047 v2 즉시 발행 거부 — verify 통합 시점에 정식 갱신 (현재는 결정 노트로 추적).
+- `snapshot/models/*.json` 개별 .minisig 거부 — catalog 1개로 모델 무결성 충분.
+
+**다음 standby 후보** (v1.x):
+- Phase 13'.g.4 — registry-fetcher 호출 측에 ollama/lm-studio verify 통합 + Settings 토글.
+- GlitchTip self-hosted endpoint 결정 (사용자 비용 의지 확인 후).
+
+---
+
 ## 🟢 다음 standby
+
+**Phase 20' Connect Mode (v2.0, v1.x 안정화 후 진입 — 2026-05-06 설계 완료)**:
+- 트리거: 사용자 요청 — PC1↔PC2 LMmaster 페어링 + 채팅 라우팅 + 카탈로그 미러 + 모델 설치 위임.
+- thesis 재정의: "외부 통신 0 → Cloud-zero, user-owned mesh OK". ADR-0058 신설 (`docs/adr/0058-user-owned-mesh-connect-mode.md`).
+- 보강 리서치: `docs/research/phase-20p-connect-mode-reinforcement.md` — iroh 0.97 / magic-wormhole.rs / mdns-sd / rustls / snow / automerge 6 라이브러리 final pick (모두 Apache-2/MIT).
+- 결정 노트: `docs/research/phase-20p-connect-mode-decision.md` — 6-section + 8영역 설계 + 18건 기각안 + sub-phase 6단계 분할 + 위험 매트릭스.
+- sub-phase: **20'.a** LAN mDNS → **20'.b** PAKE 페어링 (magic-wormhole + mTLS mini-CA) → **20'.c** R1 chat-route → **20'.d** R2 catalog-read (pull+ETag) → **20'.e** R3 model-install-delegate (macaroon caveat + 호스트 동의 prompt) → **20'.f** v2.1 WAN-P2P (iroh, 사용자 relay URL 옵트인).
+- 진입 조건: v1.x 안정화 종료 + 사용자 명시 승인 + Phase 7'.b 보안 감사 후속.
+- 첫 standby: Phase 20'.a — `crates/mesh-discovery` 신설 + mdns-sd 통합 + TXT schema 정의.
 
 **Phase 7'.x 마무리 (2026-05-05 응급 픽스 후속)**:
 - **재빌드** — `pnpm tauri build` (Windows). NSIS installer +1.8MB (embedBootstrapper) + binary +200KB (+crt-static) 예상.

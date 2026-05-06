@@ -1,19 +1,25 @@
-# Catalog manifest 서명 — Phase 13'.g.2.d (ADR-0047).
+# Manifest 서명 — Phase 13'.g.2.d (ADR-0047) + 13'.g.3 확장 (catalog 외 매니페스트).
 #
 # 정책:
-# - main branch에 catalog.json 변경 push 시 자동 트리거.
+# - main branch에 매니페스트 변경 push 시 자동 트리거.
+#   - catalog.json (모델 카탈로그 — 13'.g.2)
+#   - ollama.json / lm-studio.json (앱 매니페스트 — 13'.g.3 확장)
 # - rsign2 (zero-deps Rust)로 minisign 서명 생성.
 # - .minisig 파일을 같은 commit에 자동 push (jsDelivr가 mirror하도록).
 # - GitHub Releases tier도 동일 .minisig 동봉.
 # - secret keypair: CATALOG_MINISIGN_SECRET_KEY (password-protected) + CATALOG_MINISIGN_PASSWORD.
+# - registry-fetcher의 verify 호출 측 통합은 v1.x 후속 (결정 노트 phase-13pg3-* §4 참조).
+#   현재는 .minisig 파일을 *생성*만 — verify 측 fail-fast 통합은 별개 sub-phase.
 
-name: Sign catalog
+name: Sign manifests
 
 on:
   push:
     branches: [main]
     paths:
       - 'manifests/apps/catalog.json'
+      - 'manifests/apps/ollama.json'
+      - 'manifests/apps/lm-studio.json'
   workflow_dispatch: {}
 
 permissions:
@@ -38,7 +44,7 @@ jobs:
       - name: Install rsign2
         run: cargo install rsign2 --locked --quiet
 
-      - name: Sign catalog.json
+      - name: Sign manifests (catalog + ollama + lm-studio)
         env:
           MINISIGN_SECRET_KEY: ${{ secrets.CATALOG_MINISIGN_SECRET_KEY }}
           MINISIGN_PASSWORD: ${{ secrets.CATALOG_MINISIGN_PASSWORD }}
@@ -54,42 +60,67 @@ jobs:
           KEY_FILE=$(mktemp)
           trap 'rm -f "$KEY_FILE"' EXIT
           printf '%s' "$MINISIGN_SECRET_KEY" > "$KEY_FILE"
-          # password가 비어있으면 빈 문자열로 처리 — rsign2는 stdin password 지원.
-          printf '%s' "${MINISIGN_PASSWORD:-}" | rsign sign \
-            -s "$KEY_FILE" \
-            -x manifests/apps/catalog.json.minisig \
-            -t "LMmaster catalog signed at $(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            manifests/apps/catalog.json
-          echo "✅ Generated manifests/apps/catalog.json.minisig"
+          # password 입력은 stdin 1회 — 여러 파일 사용 시 매 호출마다 같은 password 주입.
+          # 변경된 매니페스트만 처리해도 되지만 단순화 위해 3종 모두 서명 (idempotent — 변경 없으면 .minisig도 byte-identical).
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          for manifest in catalog.json ollama.json lm-studio.json; do
+            target="manifests/apps/$manifest"
+            sig="$target.minisig"
+            if [ ! -f "$target" ]; then
+              echo "::warning::$target 미존재 — skip."
+              continue
+            fi
+            printf '%s' "${MINISIGN_PASSWORD:-}" | rsign sign \
+              -s "$KEY_FILE" \
+              -x "$sig" \
+              -t "LMmaster $manifest signed at $NOW" \
+              "$target"
+            echo "✅ Generated $sig"
+          done
 
-      - name: Verify signature self-check
+      - name: Verify signatures self-check
         env:
           PUBKEY: ${{ secrets.CATALOG_MINISIGN_PUBKEY }}
         run: |
           set -euo pipefail
-          if [ -n "${PUBKEY:-}" ]; then
-            PUBKEY_FILE=$(mktemp)
-            trap 'rm -f "$PUBKEY_FILE"' EXIT
-            printf '%s' "$PUBKEY" > "$PUBKEY_FILE"
+          if [ -z "${PUBKEY:-}" ]; then
+            echo "::warning::CATALOG_MINISIGN_PUBKEY secret 미설정 — self-check skip."
+            exit 0
+          fi
+          PUBKEY_FILE=$(mktemp)
+          trap 'rm -f "$PUBKEY_FILE"' EXIT
+          printf '%s' "$PUBKEY" > "$PUBKEY_FILE"
+          for manifest in catalog.json ollama.json lm-studio.json; do
+            target="manifests/apps/$manifest"
+            sig="$target.minisig"
+            [ -f "$target" ] || continue
+            [ -f "$sig" ] || { echo "::warning::$sig 미생성 — verify skip."; continue; }
             rsign verify \
               -p "$PUBKEY_FILE" \
-              -x manifests/apps/catalog.json.minisig \
-              manifests/apps/catalog.json
-            echo "✅ Signature verified against pubkey"
-          else
-            echo "::warning::CATALOG_MINISIGN_PUBKEY secret 미설정 — self-check skip."
-          fi
+              -x "$sig" \
+              "$target"
+            echo "✅ Verified $manifest against pubkey"
+          done
 
-      - name: Commit + push .minisig
+      - name: Commit + push .minisig files
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet manifests/apps/catalog.json.minisig; then
+          # 3종 .minisig 모두 변경 검사. 하나라도 변경 시 single commit.
+          changed=0
+          for manifest in catalog.json ollama.json lm-studio.json; do
+            sig="manifests/apps/$manifest.minisig"
+            [ -f "$sig" ] || continue
+            if ! git diff --quiet "$sig"; then
+              git add "$sig"
+              changed=1
+            fi
+          done
+          if [ "$changed" -eq 0 ]; then
             echo "ℹ️ .minisig 변경 없음 — commit skip."
             exit 0
           fi
-          git add manifests/apps/catalog.json.minisig
-          git commit -m "ci(sign): re-sign catalog [skip-sign]" -m "Auto-generated by .github/workflows/sign-catalog.yml on $(date -u +%Y-%m-%dT%H:%M:%SZ)."
+          git commit -m "ci(sign): re-sign manifests [skip-sign]" -m "Auto-generated by .github/workflows/sign-catalog.yml on $(date -u +%Y-%m-%dT%H:%M:%SZ)."
           git push
           echo "✅ Pushed .minisig to main"
