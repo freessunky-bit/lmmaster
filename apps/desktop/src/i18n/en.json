@@ -9,9 +9,80 @@
     "projects": "Projects",
     "keys": "Local API",
     "workbench": "Workbench",
+    "trends": "Trend Report",
     "diagnostics": "Diagnostics",
     "guide": "Guide",
     "settings": "Settings"
+  },
+  "trends": {
+    "title": "AI Trend Report",
+    "prototype": "Prototype",
+    "subtitle": "Latest AI model releases, company news, papers, and key voices from SNS — all summarized in Korean. Curated bundle ships weekly (Phase 22' B plan).",
+    "loading": "Preparing trend data…",
+    "gate": {
+      "title": "4B+ model required",
+      "body": "The trend menu needs a 4B+ instruction-tuned model for Korean summarization. Install EXAONE 3.5 7.8B / Nemotron 3 Nano 4B / Gemma 3 4B / HCX-SEED 8B from the catalog.",
+      "cta": "Open catalog"
+    },
+    "kind": {
+      "paper": "Paper",
+      "blog": "Blog",
+      "news": "News",
+      "video": "Video",
+      "sns": "SNS",
+      "github": "GitHub"
+    },
+    "cards": {
+      "heading": "This week's signal",
+      "meta": "Phase 22' v2.0 entry will replace this with live curated data (jsdelivr weekly). For now, preview the planned sources.",
+      "sourceLabel": "Source candidates",
+      "paper": {
+        "title": "Research papers — HF Daily + arXiv",
+        "hint": "AK's curation on HuggingFace + arXiv cs.LG/CL/AI/CV daily top 10. One-line Korean summary."
+      },
+      "blog": {
+        "title": "Official AI company blogs",
+        "hint": "OpenAI / Anthropic / Google DeepMind / Meta AI / NVIDIA / Mistral via RSS. Korean companies (Naver Cloud / Kakao / LG AI) follow."
+      },
+      "news": {
+        "title": "AI news media",
+        "hint": "TechCrunch AI / The Verge / VentureBeat + Korean (THE AI / AI Times). Fair-use 1–2 sentence + source link."
+      },
+      "video": {
+        "title": "YouTube AI channels",
+        "hint": "3Blue1Brown / Yannic Kilcher / Two Minute Papers / Sebastian Raschka. Daily YouTube Data API v3 polling."
+      },
+      "sns": {
+        "title": "Key voices on SNS",
+        "hint": "Karpathy / Lilian Weng / Simon Willison personal blogs + Bluesky public.api. X (Twitter) excluded — ToS-conscious."
+      },
+      "github": {
+        "title": "GitHub OSS trends",
+        "hint": "Apache-2 / MIT + AI/LLM topic filter. LangChain / vLLM / Korean OSS surfaced."
+      }
+    },
+    "datasets": {
+      "heading": "Dataset catalog",
+      "meta": "Korean personas / RP fine-tune seeds / training datasets. After ADR-0061 + ADR-0062, real download IPC + 1-click RAG seed import will follow.",
+      "status": {
+        "available": "Available",
+        "research": "In research",
+        "queued": "Queued"
+      },
+      "personas_korea": {
+        "title": "Nemotron-Personas-Korea (7M synthetic personas)",
+        "hint": "NVIDIA synthetic dataset. Grounded in KOSIS / Supreme Court / NHIS official statistics. CC BY 4.0 (commercial OK with attribution). See docs/guides/personas-korea-survey-simulation.md."
+      },
+      "kor_rp": {
+        "title": "Korean RP seed (KREW korean-role-playing)",
+        "hint": "huggingface-KREW/korean-role-playing — Apache-2.0, 35.3K rows, Korean-native, SFW. Top candidate for Korean persona fine-tune."
+      },
+      "deepseek_gemma_rp": {
+        "title": "Multilingual RP seed (LimaRP / rp-opus)",
+        "hint": "lemonilia/LimaRP (Apache-2.0, 1550 hand-curated, English) + taozi555/rp-opus (CC BY-NC, multilingual incl. Korean, NSFW flag). Applied after minor-protection policy review."
+      }
+    },
+    "footnote": "This prototype is a pre-v2.0 placeholder. Real curated data ships weekly from lmmaster-trends-bundle (or v1.x in-repo prototype) → jsdelivr propagate → user PC. See docs/adr/0060-trend-report.md."
   },
   "home": {
     "title": "Home",

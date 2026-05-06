@@ -43,6 +43,7 @@ import { InstallPage } from "./pages/Install";
 import { Projects } from "./pages/Projects";
 import { RuntimesPage } from "./pages/Runtimes";
 import { Settings } from "./pages/Settings";
+import { Trends } from "./pages/Trends";
 import { Workbench } from "./pages/Workbench";
 import { Workspace } from "./pages/Workspace";
 import "./components/workspace/workspace.css";
@@ -58,6 +59,7 @@ const NAV_KEYS = [
   "projects",
   "keys",
   "workbench",
+  "trends",
   "diagnostics",
   "guide",
   "settings",
@@ -318,6 +320,8 @@ function MainShell({
           <Projects />
         ) : activeNav === "workbench" ? (
           <Workbench />
+        ) : activeNav === "trends" ? (
+          <Trends onNavigate={(target) => setActiveNav(target)} />
         ) : activeNav === "diagnostics" ? (
           <Diagnostics />
         ) : activeNav === "guide" ? (

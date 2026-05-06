@@ -1,0 +1,110 @@
+{
+  "$schema_hint": "model-registry ModelManifest schema_version=1.",
+  "schema_version": 1,
+  "generated_at": "2026-05-07T00:00:00Z",
+  "entries": [
+    {
+      "id": "nemotron-3-nano-30b-a3b",
+      "display_name": "NVIDIA Nemotron 3 Nano 30B A3B (MoE, 다국어)",
+      "category": "agent-general",
+      "model_family": "nemotron",
+      "source": {
+        "type": "hugging-face",
+        "repo": "unsloth/Nemotron-3-Nano-30B-A3B-GGUF",
+        "file": "Nemotron-3-Nano-30B-A3B-Q3_K_M.gguf"
+      },
+      "tier": "new",
+      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "quantization_options": [
+        {
+          "label": "Q3_K_M",
+          "size_mb": 20480,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Nemotron-3-Nano-30B-A3B-Q3_K_M.gguf"
+        },
+        {
+          "label": "Q4_K_M",
+          "size_mb": 25190,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Nemotron-3-Nano-30B-A3B-Q4_K_M.gguf"
+        },
+        {
+          "label": "Q5_K_M",
+          "size_mb": 26726,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "file_path": "Nemotron-3-Nano-30B-A3B-Q5_K_M.gguf"
+        }
+      ],
+      "min_vram_mb": 20480,
+      "rec_vram_mb": 24576,
+      "min_ram_mb": 16384,
+      "rec_ram_mb": 32768,
+      "install_size_mb": 20480,
+      "context_guidance": "MoE 30B 전체 / 활성 3.5B. 128K context. 4090(24GB) 사용자는 Q3_K_M 권장 — Q4_K_M(24.6GB)은 KV cache까지 빡빡해요. 활성 3.5B라 추론 속도는 4B Dense와 비슷하면서 품질이 더 높아요.",
+      "language_strength": 6,
+      "roleplay_strength": 6,
+      "coding_strength": 7,
+      "tool_support": true,
+      "vision_support": false,
+      "structured_output_support": true,
+      "license": "NVIDIA Nemotron Open Model License",
+      "maturity": "stable",
+      "portable_suitability": 5,
+      "on_device_suitability": 6,
+      "fine_tune_suitability": 8,
+      "verification": {
+        "tier": "community",
+        "verified_at": "2026-05-07",
+        "verified_by": "lmmaster-curator"
+      },
+      "purpose": "general-chat",
+      "commercial": true,
+      "use_case_examples": [
+        "긴 문서 추론 (128K context, 32GB+ VRAM 사용자)",
+        "다국어 + 한국어 혼합 대화 (한국어 sprinkle 수준)",
+        "Personas-Korea 페르소나 시뮬레이션 (4B보다 정성 ↑, 4090에서 Q3_K_M로 동작)"
+      ],
+      "warnings": [
+        "Q4_K_M(24.6GB)은 RTX 4090(24GB)에 KV cache까지 빡빡해요. Q3_K_M(20GB)을 권장하거나 RTX 5090/A100 이상 사용해 주세요.",
+        "한국어가 *post-training 주력 6개 언어*에 포함 안 됐어요 — corpus에는 들어있지만 EXAONE/HCX-SEED 대비 자연스러움 한 단계 낮아요.",
+        "Mamba-2 + MoE 하이브리드라 llama.cpp 신규 아키텍처 — 첫 로드 시 출력 깨지면 LMmaster 재시작 후 재시도."
+      ],
+      "intents": [
+        "agent-tool-use",
+        "translation-multi",
+        "ko-rag"
+      ],
+      "domain_scores": {
+        "agent-tool-use": 78.0,
+        "translation-multi": 80.0,
+        "ko-rag": 60.0,
+        "ko-conversation": 54.0
+      },
+      "community_insights": {
+        "strengths_ko": [
+          "MoE 30B / 활성 3.5B — 4B Dense와 비슷한 추론 속도에서 품질 ↑",
+          "128K context — 긴 한국어 문서 + 페르소나 narrative 통째 처리",
+          "다국어 15개 학습 — 일본어 / 중국어 / 영어 + 한국어 sprinkle",
+          "NVIDIA Open Model License — 상업 사용 자유"
+        ],
+        "weaknesses_ko": [
+          "RTX 4090(24GB) Q4_K_M 빡빡 — Q3_K_M 권장 (품질 약간 저하)",
+          "한국어 단독은 EXAONE 7.8B / HCX-SEED 8B에 밀려요",
+          "Mamba-2 MoE 하이브리드 첫 로드 시 안정성 issue 가끔 발생"
+        ],
+        "use_cases_ko": [
+          "Personas-Korea 시뮬레이션 (정성 ↑ — 4B 대안)",
+          "한·일·중 혼합 다국어 RAG / 번역 (긴 문서)",
+          "Workbench LoRA 베이스 (한국어 fine-tune 후보)"
+        ],
+        "curator_note_ko": "RTX 4090 사용자가 *4B보다 더 강력한 다국어 모델*을 원할 때 권장이에요. Q3_K_M로 4090 fit + 활성 3.5B로 빠른 추론 + Personas-Korea와 짝지어 가상 한국인 시뮬레이션 정성 ↑. 단 한국어 *전용*은 여전히 EXAONE 7.8B가 정공이에요.",
+          "sources": [
+          "huggingface.co/unsloth/Nemotron-3-Nano-30B-A3B-GGUF",
+          "huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
+          "huggingface.co/datasets/nvidia/Nemotron-Personas-Korea"
+        ],
+        "last_reviewed_at": "2026-05-07T00:00:00Z"
+      }
+    }
+  ]
+}

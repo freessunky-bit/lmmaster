@@ -9,9 +9,80 @@
     "projects": "프로젝트 연결",
     "keys": "로컬 API",
     "workbench": "워크벤치",
+    "trends": "트렌드 리포트",
     "diagnostics": "진단",
     "guide": "가이드",
     "settings": "설정"
+  },
+  "trends": {
+    "title": "AI 트렌드 리포트",
+    "prototype": "Prototype",
+    "subtitle": "최신 AI 모델 출시 + 회사 동향 + 학술 + 거물 SNS 인용을 한국어로 한 곳에서 봐요. 큐레이션 데이터셋이 매주 도착해요 (Phase 22' B 안).",
+    "loading": "트렌드 데이터를 준비하고 있어요…",
+    "gate": {
+      "title": "4B+ 모델이 필요해요",
+      "body": "트렌드 메뉴는 한국어 요약 정렬을 위해 4B+ 모델 1개 이상 설치가 필요해요. EXAONE 3.5 7.8B / Nemotron 3 Nano 4B / Gemma 3 4B / HCX-SEED 8B 중 하나를 카탈로그에서 받아 주세요.",
+      "cta": "카탈로그로 갈게요"
+    },
+    "kind": {
+      "paper": "학술",
+      "blog": "블로그",
+      "news": "뉴스",
+      "video": "영상",
+      "sns": "SNS",
+      "github": "GitHub"
+    },
+    "cards": {
+      "heading": "이번 주 흐름",
+      "meta": "Phase 22' v2.0 진입 시점에 실 큐레이션 데이터(jsdelivr 매주 갱신)로 채워져요. 현재는 어떤 출처가 들어올지 미리 보여드려요.",
+      "sourceLabel": "출처 후보",
+      "paper": {
+        "title": "학술 논문 — HF Daily Papers + arXiv 자동 큐레이션",
+        "hint": "AK 큐레이션 + arXiv cs.LG/CL/AI/CV 카테고리에서 매일 트렌딩 top 10. 한국어 1줄 요약."
+      },
+      "blog": {
+        "title": "AI 회사 공식 블로그",
+        "hint": "OpenAI / Anthropic / Google DeepMind / Meta AI / NVIDIA / Mistral 신규 발표를 RSS로 받아요. 한국 회사(Naver Cloud / Kakao / LG AI / SKT) 후속 합류."
+      },
+      "news": {
+        "title": "AI 뉴스 미디어",
+        "hint": "TechCrunch AI / The Verge / VentureBeat + 한국 매체(THE AI / AI타임스). fair use 1~2문장 + 출처 링크."
+      },
+      "video": {
+        "title": "유튜브 AI 채널",
+        "hint": "3Blue1Brown / Yannic Kilcher / Two Minute Papers / Sebastian Raschka. YouTube Data API v3 매일 폴링."
+      },
+      "sns": {
+        "title": "거물 인사 SNS 인용",
+        "hint": "Karpathy / Lilian Weng / Simon Willison 등 본인 블로그 RSS + Bluesky public.api. X(Twitter) 거부 — ToS 위반 회피."
+      },
+      "github": {
+        "title": "GitHub OSS 트렌드",
+        "hint": "Apache-2 / MIT 라이선스 + AI/LLM 토픽 필터. LangChain / vLLM / 한국 OSS 발견."
+      }
+    },
+    "datasets": {
+      "heading": "데이터셋 카탈로그",
+      "meta": "한국어 페르소나 / RP fine-tune 시드 / 학습 데이터셋. ADR-0061 + ADR-0062 진입 후 실 다운로드 IPC와 RAG 시드 1-click 자동 import가 합류해요.",
+      "status": {
+        "available": "사용 가능",
+        "research": "리서치 중",
+        "queued": "대기"
+      },
+      "personas_korea": {
+        "title": "Nemotron-Personas-Korea (가상 한국인 700만)",
+        "hint": "NVIDIA 합성 데이터셋. KOSIS·대법원·건강보험공단 통계 기반. CC BY 4.0 (상업 OK + 출처 표기). docs/guides/personas-korea-survey-simulation.md 가이드 참고."
+      },
+      "kor_rp": {
+        "title": "한국어 RP 시드 (KREW korean-role-playing)",
+        "hint": "huggingface-KREW/korean-role-playing — Apache-2.0, 35.3K rows, 한국어 native, SFW (explicit X). LMmaster 한국어 페르소나 fine-tune 1순위 후보."
+      },
+      "deepseek_gemma_rp": {
+        "title": "다국어 RP 시드 (LimaRP / rp-opus 후보)",
+        "hint": "lemonilia/LimaRP (Apache-2.0, 1550 hand-curated, English) + taozi555/rp-opus (CC BY-NC, 다국어 한국어 포함, NSFW 바이너리 플래그). 미성년자 보호 정책 적용 후 큐레이션."
+      }
+    },
+    "footnote": "본 prototype은 v2.0 진입 전 placeholder예요. 실 큐레이션 데이터는 별도 repo lmmaster-trends-bundle (또는 v1.x 본 repo prototype)에서 매주 push되어 jsdelivr propagate 후 사용자 PC에 도착해요. 자세한 흐름은 docs/adr/0060-trend-report.md 참고."
   },
   "home": {
     "title": "홈",
