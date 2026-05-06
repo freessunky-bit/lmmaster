@@ -1,0 +1,22 @@
+[package]
+name = "trending-watcher"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "AI 모델 trending watcher — HF + Open LLM Leaderboard + Arena + KMMLU 큐레이터 review queue (Phase 21'.a, ADR-0059)"
+
+[[bin]]
+name = "trending-watcher"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { workspace = true }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"

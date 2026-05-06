@@ -27,6 +27,7 @@ members = [
   "crates/auto-updater",
   "crates/knowledge-stack",
   "crates/pipelines",
+  "crates/trending-watcher",
 ]
 
 [workspace.package]

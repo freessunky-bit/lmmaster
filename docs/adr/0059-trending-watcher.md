@@ -26,6 +26,8 @@ ADR-0019에서 trending 모니터링 인프라가 약속됐지만 *상시 watche
 
 별도 GitHub repo + GHA cron `0 */6 * * *` (6h). 사용자 PC 무관, public audit-able, secrets 관리 분리, LMmaster 본 repo는 *PR 받는 측*만.
 
+**v1.x prototype 단계 예외 (2026-05-07 사용자 결정)**: v1.x 검증 단계는 본 repo 안 `crates/trending-watcher/`로 prototype. 운영 1~2개월 검증 (큐레이션 부담 측정 + 가중치 튜닝) 후 v2.x에 별도 repo 분리. 이 분리 자체는 GitHub repo create + git filter-repo 한 번 작업이라 비용 낮음. *분리 시점*은 큐레이터 운영 안정화 + 별도 secrets 관리 필요성 확인 후.
+
 ### 2. 외부 통신 화이트리스트 — 기존 도메인 유지
 
 ADR-0026 `huggingface.co` + `github.com`만 사용. **`openrouter.ai` 추가 거부** — 가치 대비 정체성 훼손 큼. v1.x 후순위 이월.
