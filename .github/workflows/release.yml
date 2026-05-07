@@ -138,6 +138,8 @@ jobs:
       - name: Build & sign Tauri bundle
         uses: tauri-apps/tauri-action@v0
         env:
+          # tauri-action이 GitHub Release(draft) 생성 + asset 업로드에 사용 — 필수.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Tauri v2 minisign signing — 비밀키 + password.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
