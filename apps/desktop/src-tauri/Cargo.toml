@@ -54,6 +54,7 @@ key-manager.workspace = true
 preset-registry.workspace = true
 workbench-core.workspace = true
 knowledge-stack.workspace = true
+dataset-importer.workspace = true
 auto-updater.workspace = true
 pipelines.workspace = true
 registry-fetcher.workspace = true

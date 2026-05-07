@@ -2,19 +2,20 @@
 //!
 //! 정책:
 //! - knowledge-stack의 `KnowledgeStore`에 *dataset_chunks* 테이블 INSERT.
-//! - `rusqlite::Connection`은 `!Sync` — `tokio::sync::Mutex<KnowledgeStore>`로 보호 +
-//!   `spawn_blocking` + `blocking_lock`으로 dedicated thread에서 실행.
+//! - `rusqlite::Connection`은 `!Sync` — `Arc<std::sync::Mutex<KnowledgeStore>>`로 보호 +
+//!   `tokio::task::spawn_blocking` + `lock().expect(...)`로 dedicated thread에서 실행.
+//!   `KnowledgeStorePool`(`apps/desktop/src-tauri`)이 동일 std Mutex 사용 — 패턴 일치.
 //! - batch INSERT (32 단위, transaction) — embedding_batch_size와 정렬.
 //! - 채널 close 시 partial buffer flush + `update_dataset_total_chunks` counter 갱신.
 
 #![allow(dead_code)]
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex as StdMutex};
 
 #[cfg(test)]
 use knowledge_stack::AddDatasetInput;
 use knowledge_stack::{DatasetChunkRecord, KnowledgeStore};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc;
 
 use crate::error::{DatasetImportError, DatasetImportResult};
 use crate::service::EmbeddedChunk;
@@ -29,7 +30,7 @@ pub const DEFAULT_WRITER_BATCH_SIZE: usize = 32;
 ///
 /// 반환: 총 INSERT 시도한 chunk 수 (`INSERT OR IGNORE`로 duplicate 카운트 포함).
 pub async fn run_writer(
-    store: Arc<Mutex<KnowledgeStore>>,
+    store: Arc<StdMutex<KnowledgeStore>>,
     dataset_id: String,
     mut embedded_rx: mpsc::Receiver<EmbeddedChunk>,
     batch_size: usize,
@@ -60,7 +61,7 @@ pub async fn run_writer(
         let store = Arc::clone(&store);
         let id = dataset_id.clone();
         tokio::task::spawn_blocking(move || {
-            let store = store.blocking_lock();
+            let store = store.lock().expect("dataset store mutex poisoned");
             store.update_dataset_total_chunks(&id, total)
         })
         .await
@@ -72,14 +73,14 @@ pub async fn run_writer(
 }
 
 async fn flush_batch(
-    store: &Arc<Mutex<KnowledgeStore>>,
+    store: &Arc<StdMutex<KnowledgeStore>>,
     dataset_id: &str,
     batch: Vec<DatasetChunkRecord>,
 ) -> DatasetImportResult<usize> {
     let store = Arc::clone(store);
     let id = dataset_id.to_string();
     let inserted = tokio::task::spawn_blocking(move || {
-        let mut store = store.blocking_lock();
+        let mut store = store.lock().expect("dataset store mutex poisoned");
         store.add_dataset_chunks(&id, &batch)
     })
     .await
@@ -93,11 +94,11 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    fn make_store() -> (TempDir, Arc<Mutex<KnowledgeStore>>) {
+    fn make_store() -> (TempDir, Arc<StdMutex<KnowledgeStore>>) {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join("ds.db");
         let store = KnowledgeStore::open(&path).unwrap();
-        (dir, Arc::new(Mutex::new(store)))
+        (dir, Arc::new(StdMutex::new(store)))
     }
 
     fn input<'a>(repo: &'a str, sample: &'a str) -> AddDatasetInput<'a> {
@@ -116,7 +117,7 @@ mod tests {
     async fn writer_inserts_and_updates_counter() {
         let (_dir, store) = make_store();
         let dataset_id = {
-            let s = store.lock().await;
+            let s = store.lock().expect("test store mutex poisoned");
             let row = s
                 .add_dataset(input("test/repo", "{\"kind\":\"first\",\"n\":5}"))
                 .unwrap();
@@ -146,7 +147,7 @@ mod tests {
         let total = writer_handle.await.unwrap().unwrap();
         assert_eq!(total, 5);
 
-        let s = store.lock().await;
+        let s = store.lock().expect("test store mutex poisoned");
         assert_eq!(s.dataset_chunks_count(&dataset_id).unwrap(), 5);
         let datasets = s.list_datasets().unwrap();
         let target = datasets.iter().find(|d| d.id == dataset_id).unwrap();
@@ -157,7 +158,7 @@ mod tests {
     async fn writer_handles_empty_channel() {
         let (_dir, store) = make_store();
         let dataset_id = {
-            let s = store.lock().await;
+            let s = store.lock().expect("test store mutex poisoned");
             s.add_dataset(input("empty/repo", "{\"kind\":\"full\"}"))
                 .unwrap()
                 .id
@@ -171,7 +172,7 @@ mod tests {
             .unwrap();
         assert_eq!(total, 0);
 
-        let s = store.lock().await;
+        let s = store.lock().expect("test store mutex poisoned");
         assert_eq!(s.dataset_chunks_count(&dataset_id).unwrap(), 0);
         let datasets = s.list_datasets().unwrap();
         let target = datasets.iter().find(|d| d.id == dataset_id).unwrap();
@@ -182,7 +183,7 @@ mod tests {
     async fn writer_idempotent_on_duplicate_keys() {
         let (_dir, store) = make_store();
         let dataset_id = {
-            let s = store.lock().await;
+            let s = store.lock().expect("test store mutex poisoned");
             s.add_dataset(input("dup/repo", "{\"kind\":\"full\"}"))
                 .unwrap()
                 .id
@@ -205,7 +206,7 @@ mod tests {
         let _total = writer_handle.await.unwrap().unwrap();
 
         // 실 row 수는 1.
-        let s = store.lock().await;
+        let s = store.lock().expect("test store mutex poisoned");
         assert_eq!(
             s.dataset_chunks_count(&dataset_id).unwrap(),
             1,
@@ -216,7 +217,7 @@ mod tests {
     #[tokio::test]
     async fn add_dataset_idempotent_on_repeat() {
         let (_dir, store) = make_store();
-        let s = store.lock().await;
+        let s = store.lock().expect("test store mutex poisoned");
         let a = s.add_dataset(input("x/y", "{\"kind\":\"full\"}")).unwrap();
         let b = s.add_dataset(input("x/y", "{\"kind\":\"full\"}")).unwrap();
         assert_eq!(

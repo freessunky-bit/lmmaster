@@ -168,6 +168,7 @@ workbench-core = { path = "crates/workbench-core" }
 auto-updater = { path = "crates/auto-updater" }
 knowledge-stack = { path = "crates/knowledge-stack" }
 pipelines = { path = "crates/pipelines" }
+dataset-importer = { path = "crates/dataset-importer" }
 
 [profile.release]
 opt-level = 3

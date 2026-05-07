@@ -143,6 +143,8 @@ pub fn run() {
             knowledge::cancel_embedding_download,
             datasets::list_datasets,
             datasets::delete_dataset,
+            datasets::dataset_import_start,
+            datasets::dataset_import_cancel,
             updater::check_for_update,
             updater::cancel_update_check,
             updater::start_auto_update_poller,
@@ -343,6 +345,10 @@ pub fn run() {
             //       app_data_dir/embed/active.json에 active kind를 영속, models/ 하위에 ONNX 파일 저장.
             let embedding_state: Arc<EmbeddingState> = knowledge::provision_embedding_state(app.handle());
             app.manage(Arc::clone(&embedding_state));
+
+            // 10.a.1. DatasetIngestRegistry — Phase 23'.c.2.d.3.2. import id → cancel atomic.
+            let dataset_ingest_registry = datasets::provision_dataset_ingest_registry();
+            app.manage(dataset_ingest_registry);
 
             // 10.b. WorkspacesState — Phase 8'.1. 사용자 향 workspace 관리 IPC.
             //       app_data_dir/workspaces/index.json — atomic rename 영속 + 첫 실행 시 default 자동 시드.
