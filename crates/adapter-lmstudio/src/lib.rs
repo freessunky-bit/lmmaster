@@ -834,8 +834,14 @@ mod tests {
             .await
             .unwrap();
         // usage.completion_tokens=30이라 e2e_ms 매우 짧아 tg_tps 큰 값.
+        // e2e_ms는 빠른 머신(Windows release / WSL)에서 0이 나올 수 있어 `<= 60_000` 사용.
+        // u32 자체가 음수 불가라 *finite + 합리적 상한*만 검증.
         assert!(sample.tg_tps >= 0.0);
-        assert!(sample.e2e_ms > 0);
+        assert!(
+            sample.e2e_ms <= 60_000,
+            "mock 서버 응답이라 1분 이내여야 해요 (got: {}ms)",
+            sample.e2e_ms
+        );
     }
 
     #[tokio::test]
