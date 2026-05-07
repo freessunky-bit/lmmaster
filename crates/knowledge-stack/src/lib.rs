@@ -30,4 +30,7 @@ pub use error::KnowledgeError;
 pub use ingest::{
     CancelToken, IngestProgress, IngestService, IngestStage, IngestSummary, ProgressTx,
 };
-pub use store::{ChunkRow, DocumentRow, KnowledgeStore, SearchHit, WorkspaceRow};
+pub use store::{
+    AddDatasetInput, ChunkRow, DatasetChunkRecord, DatasetRow, DocumentRow, KnowledgeStore,
+    SearchHit, WorkspaceRow,
+};

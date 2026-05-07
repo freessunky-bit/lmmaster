@@ -15,6 +15,7 @@ pub mod error;
 pub mod parquet_stream;
 pub mod pipeline;
 pub mod service;
+pub mod writer;
 
 pub use chunker::{ChunkConfigParams, DatasetChunk, DatasetChunker};
 pub use error::{DatasetImportError, DatasetImportResult};
@@ -23,3 +24,4 @@ pub use pipeline::{DatasetIngestStage, IngestProgress, SampleStrategy};
 pub use service::{
     DatasetIngestService, EmbeddedChunk, IngestRequest, IngestStats, DEFAULT_EMBEDDING_BATCH_SIZE,
 };
+pub use writer::{run_writer, DEFAULT_WRITER_BATCH_SIZE};

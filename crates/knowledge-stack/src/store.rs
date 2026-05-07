@@ -54,6 +54,47 @@ pub struct SearchHit {
     pub score: f32,
 }
 
+/// Phase 23'.c.2.d.2 — 외부 dataset 카탈로그 row.
+///
+/// `sample_strategy`는 JSON 문자열 (caller가 `serde_json::to_string(&SampleStrategy)`로 인코딩).
+/// `minor_safety = true`면 미성년 보호 attestation 통과 (ADR-0062).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DatasetRow {
+    pub id: String,
+    pub repo: String,
+    pub config: String,
+    pub split: String,
+    pub license: String,
+    pub minor_safety: bool,
+    pub sample_strategy: String,
+    pub embedding_dim: usize,
+    pub total_chunks: u64,
+    pub created_at: String,
+}
+
+/// Phase 23'.c.2.d.2 — dataset chunk 입력 단위 (writer가 batch 단위로 전달).
+#[derive(Debug, Clone, PartialEq)]
+pub struct DatasetChunkRecord {
+    pub row_index: u64,
+    pub chunk_index: u32,
+    pub content: String,
+    pub embedding: Vec<f32>,
+}
+
+/// Phase 23'.c.2.d.2 — `add_dataset` 입력 단위.
+///
+/// `sample_strategy`는 `serde_json::to_string(&SampleStrategy)`의 결과 JSON 문자열.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AddDatasetInput<'a> {
+    pub repo: &'a str,
+    pub config: &'a str,
+    pub split: &'a str,
+    pub license: &'a str,
+    pub minor_safety: bool,
+    pub sample_strategy: &'a str,
+    pub embedding_dim: usize,
+}
+
 pub struct KnowledgeStore {
     conn: Connection,
 }
@@ -125,6 +166,10 @@ impl KnowledgeStore {
     }
 
     /// 스키마 초기화 — idempotent.
+    ///
+    /// Phase 23'.c.2.d.2: 외부 데이터셋 (HF parquet) 카탈로그를 위한 `datasets` + `dataset_chunks`
+    /// 테이블 추가. workspace_id 격리는 강제하지 않음 — dataset은 *전역 카탈로그*이고 워크스페이스 횡단
+    /// 검색 가능. 기존 documents/chunks와 별도 테이블 (CREATE IF NOT EXISTS, 기존 DB 영향 X).
     pub fn init_schema(&mut self) -> Result<(), KnowledgeError> {
         self.conn.execute_batch(
             r#"
@@ -156,6 +201,31 @@ impl KnowledgeStore {
             CREATE INDEX IF NOT EXISTS idx_documents_workspace ON documents(workspace_id);
             CREATE INDEX IF NOT EXISTS idx_chunks_workspace ON chunks(workspace_id);
             CREATE INDEX IF NOT EXISTS idx_chunks_doc ON chunks(document_id);
+
+            -- Phase 23'.c.2.d.2 — 외부 dataset 카탈로그 (workspace 횡단).
+            CREATE TABLE IF NOT EXISTS datasets (
+                id              TEXT PRIMARY KEY,
+                repo            TEXT NOT NULL,
+                config          TEXT NOT NULL,
+                split           TEXT NOT NULL,
+                license         TEXT NOT NULL,
+                minor_safety    INTEGER NOT NULL DEFAULT 1,
+                sample_strategy TEXT NOT NULL,
+                embedding_dim   INTEGER NOT NULL,
+                total_chunks    INTEGER NOT NULL DEFAULT 0,
+                created_at      TEXT NOT NULL,
+                UNIQUE(repo, config, split, sample_strategy)
+            );
+            CREATE TABLE IF NOT EXISTS dataset_chunks (
+                id           TEXT PRIMARY KEY,
+                dataset_id   TEXT NOT NULL,
+                row_index    INTEGER NOT NULL,
+                chunk_index  INTEGER NOT NULL,
+                content      TEXT NOT NULL,
+                embedding    BLOB NOT NULL,
+                FOREIGN KEY(dataset_id) REFERENCES datasets(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_dataset_chunks_dataset ON dataset_chunks(dataset_id);
             "#,
         )?;
         Ok(())
@@ -274,6 +344,150 @@ impl KnowledgeStore {
         tx.commit()?;
         Ok(())
     }
+
+    // ────────────────────────────────────────────────────────────────────
+    // Phase 23'.c.2.d.2 — Dataset 카탈로그 (외부 HF parquet).
+    // ────────────────────────────────────────────────────────────────────
+
+    /// 새 dataset 등록. (repo, config, split, sample_strategy) 중복이면 *기존 row 반환* (idempotent).
+    pub fn add_dataset(&self, input: AddDatasetInput<'_>) -> Result<DatasetRow, KnowledgeError> {
+        // 중복 체크.
+        let existing: Option<DatasetRow> = self
+            .conn
+            .query_row(
+                "SELECT id, repo, config, split, license, minor_safety, sample_strategy,
+                        embedding_dim, total_chunks, created_at
+                 FROM datasets
+                 WHERE repo=?1 AND config=?2 AND split=?3 AND sample_strategy=?4",
+                params![input.repo, input.config, input.split, input.sample_strategy],
+                row_to_dataset,
+            )
+            .ok();
+        if let Some(d) = existing {
+            return Ok(d);
+        }
+
+        let id = Uuid::new_v4().to_string();
+        let now = OffsetDateTime::now_utc()
+            .format(&Rfc3339)
+            .map_err(|e| KnowledgeError::EmbeddingFailed(format!("time format: {e}")))?;
+        self.conn.execute(
+            "INSERT INTO datasets
+             (id, repo, config, split, license, minor_safety, sample_strategy,
+              embedding_dim, total_chunks, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0, ?9)",
+            params![
+                id,
+                input.repo,
+                input.config,
+                input.split,
+                input.license,
+                input.minor_safety as i64,
+                input.sample_strategy,
+                input.embedding_dim as i64,
+                now
+            ],
+        )?;
+        Ok(DatasetRow {
+            id,
+            repo: input.repo.into(),
+            config: input.config.into(),
+            split: input.split.into(),
+            license: input.license.into(),
+            minor_safety: input.minor_safety,
+            sample_strategy: input.sample_strategy.into(),
+            embedding_dim: input.embedding_dim,
+            total_chunks: 0,
+            created_at: now,
+        })
+    }
+
+    /// dataset chunks 일괄 INSERT (transaction). 같은 (dataset_id, row_index, chunk_index) 중복은
+    /// PK 충돌이므로 *INSERT OR IGNORE* — resume 안전.
+    pub fn add_dataset_chunks(
+        &mut self,
+        dataset_id: &str,
+        chunks: &[DatasetChunkRecord],
+    ) -> Result<usize, KnowledgeError> {
+        if chunks.is_empty() {
+            return Ok(0);
+        }
+        let tx = self.conn.transaction()?;
+        {
+            let mut stmt = tx.prepare(
+                "INSERT OR IGNORE INTO dataset_chunks
+                 (id, dataset_id, row_index, chunk_index, content, embedding)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            )?;
+            for c in chunks {
+                let id = format!("{}:{}:{}", dataset_id, c.row_index, c.chunk_index);
+                let blob = encode_embedding(&c.embedding);
+                stmt.execute(params![
+                    id,
+                    dataset_id,
+                    c.row_index as i64,
+                    c.chunk_index as i64,
+                    c.content,
+                    blob,
+                ])?;
+            }
+        }
+        tx.commit()?;
+        Ok(chunks.len())
+    }
+
+    /// `total_chunks` counter 갱신 (writer task가 마지막에 호출).
+    pub fn update_dataset_total_chunks(
+        &self,
+        dataset_id: &str,
+        total: u64,
+    ) -> Result<(), KnowledgeError> {
+        self.conn.execute(
+            "UPDATE datasets SET total_chunks = ?1 WHERE id = ?2",
+            params![total as i64, dataset_id],
+        )?;
+        Ok(())
+    }
+
+    /// 등록된 dataset 목록 (최신순).
+    pub fn list_datasets(&self) -> Result<Vec<DatasetRow>, KnowledgeError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, repo, config, split, license, minor_safety, sample_strategy,
+                    embedding_dim, total_chunks, created_at
+             FROM datasets
+             ORDER BY created_at DESC",
+        )?;
+        let rows = stmt.query_map([], row_to_dataset)?;
+        let mut out = Vec::new();
+        for row in rows {
+            out.push(row?);
+        }
+        Ok(out)
+    }
+
+    /// dataset의 실 chunk 수 (counter 검증용).
+    pub fn dataset_chunks_count(&self, dataset_id: &str) -> Result<u64, KnowledgeError> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM dataset_chunks WHERE dataset_id = ?1",
+            params![dataset_id],
+            |r| r.get(0),
+        )?;
+        Ok(count as u64)
+    }
+
+    /// dataset 삭제 (cascade — dataset_chunks도 함께 제거).
+    pub fn delete_dataset(&mut self, dataset_id: &str) -> Result<(), KnowledgeError> {
+        let tx = self.conn.transaction()?;
+        tx.execute(
+            "DELETE FROM dataset_chunks WHERE dataset_id = ?1",
+            params![dataset_id],
+        )?;
+        tx.execute("DELETE FROM datasets WHERE id = ?1", params![dataset_id])?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    // search_dataset (cosine top-k): Phase 23'.c.2.d.4 (RAG search 통합) 시 추가.
 
     /// workspace_id + query_embedding으로 cosine top-k 반환.
     /// k=0이면 빈 Vec.
@@ -432,6 +646,22 @@ fn apply_passphrase(conn: &Connection, passphrase: &str) -> Result<(), Knowledge
     conn.execute_batch(&format!("PRAGMA key = '{escaped}'"))?;
     let _: i64 = conn.query_row("SELECT count(*) FROM sqlite_master", [], |r| r.get(0))?;
     Ok(())
+}
+
+/// `query_row`/`query_map` 콜백 — datasets 테이블의 한 row → DatasetRow.
+fn row_to_dataset(r: &rusqlite::Row<'_>) -> rusqlite::Result<DatasetRow> {
+    Ok(DatasetRow {
+        id: r.get(0)?,
+        repo: r.get(1)?,
+        config: r.get(2)?,
+        split: r.get(3)?,
+        license: r.get(4)?,
+        minor_safety: r.get::<_, i64>(5)? != 0,
+        sample_strategy: r.get(6)?,
+        embedding_dim: r.get::<_, i64>(7)? as usize,
+        total_chunks: r.get::<_, i64>(8)? as u64,
+        created_at: r.get(9)?,
+    })
 }
 
 fn encode_embedding(v: &[f32]) -> Vec<u8> {

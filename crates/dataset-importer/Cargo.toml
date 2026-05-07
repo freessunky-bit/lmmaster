@@ -34,4 +34,5 @@ knowledge-stack = { workspace = true }
 
 [dev-dependencies]
 wiremock = { workspace = true }
+tempfile = { workspace = true }
 tokio = { workspace = true, features = ["full", "test-util"] }
