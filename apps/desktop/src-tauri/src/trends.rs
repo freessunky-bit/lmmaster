@@ -13,15 +13,20 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
 
+use adapter_ollama::OllamaAdapter;
+use async_trait::async_trait;
+use chat_protocol::{ChatEvent, ChatMessage, ChatOutcome};
 use rusqlite::{params, Connection};
 use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
 use thiserror::Error;
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
+use tokio_util::sync::CancellationToken;
 
 use trend_summarizer::{
-    cache_key, summarize_bundle, MockSummarizer, SummarizerError, SummaryInput, TrendsSummary,
+    cache_key, summarize_bundle, MockSummarizer, Summarizer, SummarizerError, SummarizerResult,
+    SummaryInput, TrendsSummary,
 };
 
 // ───────────────────────────────────────────────────────────────────
@@ -207,23 +212,106 @@ pub fn provision_trends_summary_store(
 }
 
 // ───────────────────────────────────────────────────────────────────
+// OllamaSummarizer — Phase 22'.e.3
+// ───────────────────────────────────────────────────────────────────
+
+/// `chat_stream`을 non-streaming wrapper로 변환 — Delta 텍스트 누적.
+///
+/// 정책:
+/// - `OllamaAdapter::chat_stream`이 token-by-token Delta event 발행 → 누적 → 최종 String.
+/// - `ChatOutcome::Completed`만 Ok. Cancelled / Failed는 LlmCallFailed.
+/// - cancel token은 본 호출 안에서만 사용 (외부에서 cancel 받지 않음 — `.e.4`에서 추가 가능).
+/// - 4B+ 모델 게이트 — caller (frontend Trends.tsx)가 사전 검사. `model_id`는 trust.
+pub struct OllamaSummarizer {
+    pub model_id: String,
+    pub adapter: OllamaAdapter,
+}
+
+impl OllamaSummarizer {
+    pub fn new(model_id: String) -> Self {
+        Self {
+            model_id,
+            adapter: OllamaAdapter::new(),
+        }
+    }
+}
+
+#[async_trait]
+impl Summarizer for OllamaSummarizer {
+    fn model_kind(&self) -> String {
+        format!("ollama:{}", self.model_id)
+    }
+
+    async fn complete(&self, system: &str, user: &str) -> SummarizerResult<String> {
+        let messages = vec![
+            ChatMessage {
+                role: "system".into(),
+                content: system.into(),
+                images: None,
+            },
+            ChatMessage {
+                role: "user".into(),
+                content: user.into(),
+                images: None,
+            },
+        ];
+
+        let buf = Arc::new(StdMutex::new(String::new()));
+        let buf_clone = Arc::clone(&buf);
+        let on_event = move |ev: ChatEvent| {
+            if let ChatEvent::Delta { text } = ev {
+                if let Ok(mut g) = buf_clone.lock() {
+                    g.push_str(&text);
+                }
+            }
+        };
+
+        let cancel = CancellationToken::new();
+        let outcome = self
+            .adapter
+            .chat_stream(&self.model_id, &messages, on_event, &cancel)
+            .await;
+
+        match outcome {
+            ChatOutcome::Completed => {
+                let g = buf
+                    .lock()
+                    .map_err(|_| SummarizerError::Internal("응답 buffer mutex poisoned".into()))?;
+                Ok(g.clone())
+            }
+            ChatOutcome::Cancelled => Err(SummarizerError::LlmCallFailed("취소됐어요".into())),
+            ChatOutcome::Failed(msg) => Err(SummarizerError::LlmCallFailed(msg)),
+        }
+    }
+}
+
+// ───────────────────────────────────────────────────────────────────
 // Tauri command
 // ───────────────────────────────────────────────────────────────────
 
 /// 트렌드 항목 요약 — cache hit이면 즉시, miss이면 LLM 호출.
 ///
-/// 정책 (Phase 22'.e.2):
+/// 정책 (Phase 22'.e.2 → .e.3):
 /// - `force_refresh = true`이면 cache 무시하고 새로 생성.
-/// - 본 cut은 *MockSummarizer* 사용 (.e.3에서 ollama/lm-studio adapter inject).
-/// - SQLite cache miss → MockSummarizer.complete() → cache put → 반환.
+/// - `runtime_kind = "ollama"` + `model_id` 주어지면 OllamaSummarizer.
+/// - `runtime_kind = None` 또는 미지원 runtime이면 MockSummarizer fallback (placeholder).
+/// - 4B+ 모델 게이트 — frontend Trends.tsx가 사전 검사 (Phase 22'.c prototype 활용).
 #[tauri::command]
 pub async fn summarize_trends(
     items: Vec<SummaryInput>,
     force_refresh: bool,
+    runtime_kind: Option<String>,
+    model_id: Option<String>,
     store: State<'_, Arc<TrendsSummaryStore>>,
 ) -> Result<TrendsSummary, TrendsApiError> {
-    let summarizer = MockSummarizer::new();
-    let model_kind = summarizer.model_kind.clone();
+    // dispatch — runtime_kind + model_id 둘 다 있을 때만 실 LLM, 아니면 Mock.
+    let summarizer: Box<dyn Summarizer> = match (runtime_kind.as_deref(), model_id.as_deref()) {
+        (Some("ollama"), Some(model)) if !model.is_empty() => {
+            Box::new(OllamaSummarizer::new(model.to_string()))
+        }
+        _ => Box::new(MockSummarizer::new()),
+    };
+    let model_kind = summarizer.model_kind();
     let key = cache_key(&items, &model_kind);
 
     // cache hit & !force_refresh → 즉시 반환.
@@ -236,13 +324,13 @@ pub async fn summarize_trends(
                 message: format!("cache get join: {e}"),
             })??;
         if let Some(s) = cached {
-            tracing::info!(cache_key = %key, "trends summary cache hit");
+            tracing::info!(cache_key = %key, model = %model_kind, "trends summary cache hit");
             return Ok(s);
         }
     }
 
     // miss → 새로 생성.
-    let summary = summarize_bundle(&items, &summarizer).await?;
+    let summary = summarize_bundle(&items, summarizer.as_ref()).await?;
 
     // cache put — blocking.
     let store_clone = Arc::clone(&store);
