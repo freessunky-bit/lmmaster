@@ -80,7 +80,9 @@
       "licenseLabel": "라이선스",
       "sizeLabel": "크기",
       "rowCountLabel": "행",
-      "languagesLabel": "언어"
+      "languagesLabel": "언어",
+      "importCta": "이 데이터셋 가져올게요",
+      "importAria": "{{name}} 가져오기"
     },
     "footnote": "본 prototype은 v2.0 진입 전 placeholder예요. 실 큐레이션 데이터는 별도 repo lmmaster-trends-bundle (또는 v1.x 본 repo prototype)에서 매주 push되어 jsdelivr propagate 후 사용자 PC에 도착해요. 자세한 흐름은 docs/adr/0060-trend-report.md 참고."
   },

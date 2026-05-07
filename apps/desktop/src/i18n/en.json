@@ -80,7 +80,9 @@
       "licenseLabel": "License",
       "sizeLabel": "Size",
       "rowCountLabel": "Rows",
-      "languagesLabel": "Lang"
+      "languagesLabel": "Lang",
+      "importCta": "Import this dataset",
+      "importAria": "Import {{name}}"
     },
     "footnote": "This prototype is a pre-v2.0 placeholder. Real curated data ships weekly from lmmaster-trends-bundle (or v1.x in-repo prototype) → jsdelivr propagate → user PC. See docs/adr/0060-trend-report.md."
   },

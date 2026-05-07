@@ -27,6 +27,7 @@ import { useTranslation } from "react-i18next";
 
 import { getCatalog, type ModelEntry } from "../ipc/catalog";
 import { listDatasets, type DatasetEntry } from "../ipc/datasets";
+import { DatasetImportDrawer } from "../components/datasets/DatasetImportDrawer";
 
 import "./trends.css";
 
@@ -103,6 +104,9 @@ export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => voi
   const [entries, setEntries] = useState<ModelEntry[]>([]);
   const [datasets, setDatasets] = useState<DatasetEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDataset, setSelectedDataset] = useState<DatasetEntry | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -330,12 +334,29 @@ export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => voi
                     <span className="trends-card-source-label">HF</span>{" "}
                     <code>{repo}</code>
                   </p>
+                  <button
+                    type="button"
+                    className="trends-card-action"
+                    onClick={() => setSelectedDataset(ds)}
+                    aria-label={t(
+                      "trends.datasets.importAria",
+                      "{{name}} 가져오기",
+                      { name: ds.display_name },
+                    )}
+                  >
+                    {t("trends.datasets.importCta", "이 데이터셋 가져올게요")}
+                  </button>
                 </li>
               );
             })}
           </ul>
         )}
       </section>
+
+      <DatasetImportDrawer
+        dataset={selectedDataset}
+        onClose={() => setSelectedDataset(null)}
+      />
 
       <footer className="trends-footnote">
         <p>
