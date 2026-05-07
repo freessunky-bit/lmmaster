@@ -30,6 +30,7 @@ members = [
   "crates/trending-watcher",
   "crates/dataset-catalog",
   "crates/trends-bundle-curator",
+  "crates/dataset-importer",
 ]
 
 [workspace.package]
@@ -127,6 +128,15 @@ arc-swap = "1"
 ort = { version = "2.0.0-rc.10", default-features = false, features = ["load-dynamic"] }
 tokenizers = { version = "0.20", default-features = false, features = ["onig"] }
 ndarray = "0.16"
+
+# Phase 23'.c.2 — Dataset Import Pipeline (ADR-0063).
+# parquet (arrow-rs) — async reader + Range request 호환 (HfParquetReader).
+# arrow-array / arrow-schema — RecordBatch 처리.
+# text-splitter — RecursiveCharacter Rust + tokenizers integration.
+parquet = { version = "53", default-features = false, features = ["async", "arrow"] }
+arrow-array = "53"
+arrow-schema = "53"
+text-splitter = { version = "0.18", features = ["tokenizers"] }
 
 # semver (Phase 6'.a — auto-updater 버전 비교)
 semver = "1"

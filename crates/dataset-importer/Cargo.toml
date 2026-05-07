@@ -1,0 +1,31 @@
+[package]
+name = "dataset-importer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "LMmaster dataset import pipeline — HF parquet streaming + chunk + OnnxEmbedder + SQLCipher (ADR-0063, Phase 23'.c.2)"
+
+[dependencies]
+tokio = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+bytes = { workspace = true }
+futures = { workspace = true }
+
+# Phase 23'.c.2 신규 deps.
+parquet = { workspace = true }
+arrow-array = { workspace = true }
+arrow-schema = { workspace = true }
+text-splitter = { workspace = true }
+tokenizers = { workspace = true }
+
+# 내부 의존성.
+shared-types = { workspace = true }
+dataset-catalog = { path = "../dataset-catalog" }
