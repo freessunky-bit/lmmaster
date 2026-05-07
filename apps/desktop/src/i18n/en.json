@@ -84,6 +84,23 @@
       "importCta": "Import this dataset",
       "importAria": "Import {{name}}"
     },
+    "installedDatasets": {
+      "heading": "My datasets",
+      "refreshAria": "Refresh list",
+      "loading": "Loading list…",
+      "fetchError": "Failed to load list: {{error}}",
+      "empty": "No imported datasets yet. Click 'Import this dataset' on a card above.",
+      "licenseLabel": "License",
+      "chunksLabel": "Chunks",
+      "dimLabel": "Dim",
+      "deleteCta": "Delete",
+      "deleteAria": "Delete {{repo}}",
+      "deleteConfirm": "Really delete? Embedding chunks will also be removed.",
+      "deleteConfirmCta": "Yes, delete",
+      "deleteConfirmAria": "Confirm delete {{repo}}",
+      "cancelCta": "Cancel",
+      "deleteFailed": "Failed to delete: {{error}}"
+    },
     "footnote": "This prototype is a pre-v2.0 placeholder. Real curated data ships weekly from lmmaster-trends-bundle (or v1.x in-repo prototype) → jsdelivr propagate → user PC. See docs/adr/0060-trend-report.md."
   },
   "home": {

@@ -84,6 +84,23 @@
       "importCta": "이 데이터셋 가져올게요",
       "importAria": "{{name}} 가져오기"
     },
+    "installedDatasets": {
+      "heading": "내 데이터셋",
+      "refreshAria": "목록 새로고침",
+      "loading": "목록 불러오고 있어요…",
+      "fetchError": "목록을 불러오지 못했어요: {{error}}",
+      "empty": "아직 가져온 데이터셋이 없어요. 위 카드에서 '이 데이터셋 가져올게요'를 눌러 보세요.",
+      "licenseLabel": "라이선스",
+      "chunksLabel": "청크",
+      "dimLabel": "차원",
+      "deleteCta": "삭제할래요",
+      "deleteAria": "{{repo}} 삭제",
+      "deleteConfirm": "정말 삭제할까요? 임베딩 청크도 함께 사라져요.",
+      "deleteConfirmCta": "정말 삭제할게요",
+      "deleteConfirmAria": "{{repo}} 삭제 확인",
+      "cancelCta": "취소할래요",
+      "deleteFailed": "삭제에 실패했어요: {{error}}"
+    },
     "footnote": "본 prototype은 v2.0 진입 전 placeholder예요. 실 큐레이션 데이터는 별도 repo lmmaster-trends-bundle (또는 v1.x 본 repo prototype)에서 매주 push되어 jsdelivr propagate 후 사용자 PC에 도착해요. 자세한 흐름은 docs/adr/0060-trend-report.md 참고."
   },
   "home": {

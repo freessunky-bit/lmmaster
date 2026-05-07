@@ -28,6 +28,7 @@ import { useTranslation } from "react-i18next";
 import { getCatalog, type ModelEntry } from "../ipc/catalog";
 import { listDatasets, type DatasetEntry } from "../ipc/datasets";
 import { DatasetImportDrawer } from "../components/datasets/DatasetImportDrawer";
+import { InstalledDatasetsSection } from "../components/datasets/InstalledDatasetsSection";
 
 import "./trends.css";
 
@@ -107,6 +108,7 @@ export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => voi
   const [selectedDataset, setSelectedDataset] = useState<DatasetEntry | null>(
     null,
   );
+  const [installedRefresh, setInstalledRefresh] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -353,9 +355,12 @@ export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => voi
         )}
       </section>
 
+      <InstalledDatasetsSection refreshSignal={installedRefresh} />
+
       <DatasetImportDrawer
         dataset={selectedDataset}
         onClose={() => setSelectedDataset(null)}
+        onCompleted={() => setInstalledRefresh((n) => n + 1)}
       />
 
       <footer className="trends-footnote">

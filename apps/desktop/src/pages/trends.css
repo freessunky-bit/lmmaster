@@ -224,6 +224,62 @@
   outline-offset: 2px;
 }
 
+/* Phase 23'.c.2.d.4.2 — 설치된 데이터셋 관리. */
+.trends-section-refresh {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--surface-3);
+  color: var(--text-muted);
+  font: inherit;
+  text-align: center;
+  width: auto;
+  margin-left: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.trends-section-refresh:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text-default);
+}
+
+.trends-section-refresh:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
+.trends-section-refresh:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.installed-dataset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  align-items: center;
+}
+
+.installed-dataset-action-danger {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: rgb(248, 113, 113);
+}
+
+.installed-dataset-action-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.16);
+}
+
+.installed-dataset-confirm-text {
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+  flex-basis: 100%;
+}
+
 /* ── 카드 status 색상 (데이터셋 섹션) ─────────────────── */
 
 .trends-card-status-available {
