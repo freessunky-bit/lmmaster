@@ -69,5 +69,5 @@ Full policy: `docs/adr/0060-trend-report.md` + `docs/research/phase-22p-trend-re
 
 ## 10. Contact
 
-- Official email: wind@joycity.com
+- Official email: freessunky@gmail.com
 - If you do not agree with this agreement, click "I do not agree" to exit the app.
