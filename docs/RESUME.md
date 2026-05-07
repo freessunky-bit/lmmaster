@@ -17,6 +17,19 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-08 마라톤 — Phase 21' + 22' 완전 종결 (16 sub-phase)
+
+이번 세션 진척:
+- **Phase 23' 폴리싱 4 sub-cut**: `.d.4.2`(설치된 dataset 관리 UI) / `.d.4.3`(비상업 EULA) / `.d.4.4`(stage stepper) / `.d.4.5`(DatasetImportDrawer 9 invariant 단위 테스트).
+- **Phase 21' 8 sub-phase 완전 종결** — 별도 GitHub repo `freessunky-bit/lmmaster-trending-watcher` 신설 (8 commits, 49 tests). ADR-0059 §1~§6 모두 구현: HF Trending + Open LLM Leaderboard 2 + filter 매트릭스 + Korean signal regex + model card fetch + GHA cron 6h + JasonEtco/create-an-issue Issue dedupe + LMmaster 본 repo CURATION_GUIDE §1.5.
+- **Phase 22' 5 sub-phase 완전 종결** — Trend Report v2 ADR-0060 §1~§8 *완전 채택*. trends-bundle-curator (이전 commit) + 신규 trend-summarizer crate (18 invariant) + Tauri summarize_trends IPC + SQLite 30일 캐시 + Ollama/LM Studio Summarizer + Trends.tsx UI 통합 + EULA v1.0.0→v1.2.0 bump (재동의 trigger) + CURATION_GUIDE §1.6 1주 모니터링 7 항목.
+- **adapter-lmstudio flaky timing fix** — `e2e_ms > 0` → `e2e_ms <= 60_000` (빠른 머신 0 측정 허용).
+
+**다음 standby**:
+- v0.0.1 release tag push (사용자 결정 — GPT Pro 30-issue 검수 + Phase 21'/22' 종결됨).
+- Phase 21' GHA cron 실 운영 1주 모니터링 (가중치/임계 튜닝).
+- Phase 22' weekly Mon 09:00 KST push 안정화 + 사용자 향 처음 trends-bundle 사용 후 피드백.
+
 ## 누적 검증 (2026-04-29 — 9'.a/9'.b까지 완료. **v1 ship 가능 + v1.x 90%**)
 
 - **cargo (lmmaster-desktop 제외)**: **817 / 0 failed**
