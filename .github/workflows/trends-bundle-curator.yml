@@ -47,16 +47,17 @@ jobs:
         id: curate
         run: |
           set -euo pipefail
-          mkdir -p /tmp/trends
-          cargo run --release --package trends-bundle-curator -- --out /tmp/trends/report.md
-          echo "report_path=/tmp/trends/report.md" >> "$GITHUB_OUTPUT"
+          # report.md는 github.workspace cwd에 작성 — JasonEtco/create-an-issue가
+          # workspace 안 file만 찾을 수 있어요 (절대 경로 /tmp/... 거부됨).
+          cargo run --release --package trends-bundle-curator -- --out report.md
+          echo "report_path=report.md" >> "$GITHUB_OUTPUT"
 
       - name: Create / update curator review issue
         uses: JasonEtco/create-an-issue@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          filename: /tmp/trends/report.md
+          filename: report.md
           update_existing: true
           search_existing: open
 
@@ -72,6 +73,6 @@ jobs:
             echo "### Report preview"
             echo ""
             echo '```markdown'
-            cat /tmp/trends/report.md || echo "(빈 결과)"
+            cat report.md || echo "(빈 결과)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
