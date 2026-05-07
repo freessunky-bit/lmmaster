@@ -65,9 +65,10 @@ export function DatasetImportDrawer({
     defaultSampleStrategy(),
   );
   const [eulaAccepted, setEulaAccepted] = useState(false);
+  const [noncommercialAccepted, setNoncommercialAccepted] = useState(false);
 
   const isNsfw = dataset?.content_warning === "rp-explicit";
-  const isNoncommercial = dataset && !dataset.commercial;
+  const isNoncommercial = dataset != null && !dataset.commercial;
 
   // Esc 닫기 (running 상태에서는 cancel 권장 — 닫지 않음).
   useEffect(() => {
@@ -91,13 +92,16 @@ export function DatasetImportDrawer({
       setStep({ kind: "config" });
       setSample(defaultSampleStrategy());
       setEulaAccepted(false);
+      setNoncommercialAccepted(false);
     }
   }, [dataset]);
 
   const handleStart = useCallback(async () => {
     if (!dataset) return;
     if (isNsfw && !eulaAccepted) {
-      // 동의 필수 — 버튼 disabled가 막지만 안전망.
+      return;
+    }
+    if (isNoncommercial && !noncommercialAccepted) {
       return;
     }
 
@@ -203,7 +207,15 @@ export function DatasetImportDrawer({
     } catch (e) {
       setStep({ kind: "failed", error: String(e) });
     }
-  }, [dataset, sample, isNsfw, eulaAccepted, onCompleted]);
+  }, [
+    dataset,
+    sample,
+    isNsfw,
+    eulaAccepted,
+    isNoncommercial,
+    noncommercialAccepted,
+    onCompleted,
+  ]);
 
   const handleCancel = useCallback(async () => {
     if (step.kind === "running") {
@@ -215,7 +227,8 @@ export function DatasetImportDrawer({
 
   if (!dataset) return null;
 
-  const startDisabled = isNsfw && !eulaAccepted;
+  const startDisabled =
+    (isNsfw && !eulaAccepted) || (isNoncommercial && !noncommercialAccepted);
 
   return (
     <div
@@ -268,6 +281,38 @@ export function DatasetImportDrawer({
                   {isNoncommercial && " (비상업 전용)"}
                 </p>
               </section>
+
+              {isNoncommercial && (
+                <section aria-labelledby="dataset-import-noncommercial-heading">
+                  <h4 id="dataset-import-noncommercial-heading">
+                    비상업 라이선스 동의
+                  </h4>
+                  <p className="catalog-drawer-hint">
+                    이 데이터셋은 비상업 라이선스(CC-BY-NC 등)에요. 개인 학습 /
+                    연구 / 비영리 목적으로만 사용할 수 있고, 매출이 발생하는
+                    상업 환경에서는 별도 라이선스 협의가 필요해요.
+                  </p>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "var(--space-2)",
+                      padding: "var(--space-2) 0",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={noncommercialAccepted}
+                      onChange={(e) =>
+                        setNoncommercialAccepted(e.target.checked)
+                      }
+                    />
+                    <span>
+                      이 데이터셋과 그 파생물을 비상업 용도로만 사용할게요.
+                    </span>
+                  </label>
+                </section>
+              )}
 
               <section
                 aria-labelledby="dataset-import-sample-heading"
