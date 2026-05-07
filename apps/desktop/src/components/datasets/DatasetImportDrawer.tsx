@@ -9,8 +9,24 @@
 // - 한국어 해요체 카피 (CLAUDE.md §4.1).
 
 import { Channel } from "@tauri-apps/api/core";
-import { Database, Loader2, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Check,
+  Database,
+  Download,
+  HardDrive,
+  ListChecks,
+  Loader2,
+  Scissors,
+  Sparkles,
+  X,
+} from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+} from "react";
 
 import type { DatasetEntry } from "../../ipc/datasets";
 import {
@@ -23,6 +39,8 @@ import {
   type DatasetIngestEvent,
   type SampleStrategy,
 } from "../../ipc/dataset-import";
+
+import "./DatasetImportDrawer.css";
 
 export interface DatasetImportDrawerProps {
   dataset: DatasetEntry | null;
@@ -53,6 +71,72 @@ const STAGE_LABEL_KO = {
   embedding: "임베딩 처리 중이에요",
   writing: "데이터베이스에 저장하고 있어요",
 } as const;
+
+/** Stepper 짧은 라벨 (해요체 단어). 한 단어로 끝내 stepper row가 좁게 유지됨. */
+const STAGE_SHORT_LABEL_KO = {
+  manifest: "정보 확인",
+  downloading: "Parquet 받기",
+  chunking: "청크 분할",
+  embedding: "임베딩",
+  writing: "저장",
+} as const;
+
+/** stepper 표시 순서 — backend stage emit 순서와 일치. */
+const STEPPER_ORDER = [
+  "manifest",
+  "downloading",
+  "chunking",
+  "embedding",
+  "writing",
+] as const;
+
+type StageKey = (typeof STEPPER_ORDER)[number];
+
+const STAGE_ICON: Record<StageKey, ReactElement> = {
+  manifest: <ListChecks size={14} aria-hidden="true" />,
+  downloading: <Download size={14} aria-hidden="true" />,
+  chunking: <Scissors size={14} aria-hidden="true" />,
+  embedding: <Sparkles size={14} aria-hidden="true" />,
+  writing: <HardDrive size={14} aria-hidden="true" />,
+};
+
+function isStageKey(s: string): s is StageKey {
+  return (STEPPER_ORDER as readonly string[]).includes(s);
+}
+
+function DatasetStepper({ currentStage }: { currentStage: string }) {
+  const curIdx = isStageKey(currentStage)
+    ? STEPPER_ORDER.indexOf(currentStage)
+    : -1;
+  return (
+    <ol className="dataset-stepper" aria-label="가져오기 진행 단계">
+      {STEPPER_ORDER.map((stage, idx) => {
+        const status =
+          idx < curIdx ? "done" : idx === curIdx ? "current" : "pending";
+        return (
+          <li
+            key={stage}
+            className={`dataset-stepper-step dataset-stepper-step-${status}`}
+            aria-current={status === "current" ? "step" : undefined}
+          >
+            <span className="dataset-stepper-icon">
+              {status === "done" ? (
+                <Check size={14} aria-hidden="true" />
+              ) : status === "current" ? (
+                <Loader2 size={14} aria-hidden="true" className="spin" />
+              ) : (
+                STAGE_ICON[stage]
+              )}
+            </span>
+            <span className="dataset-stepper-label">
+              {STAGE_SHORT_LABEL_KO[stage]}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 export function DatasetImportDrawer({
   dataset,
@@ -395,17 +479,8 @@ export function DatasetImportDrawer({
 
           {step.kind === "running" && (
             <>
-              <p
-                className="catalog-drawer-hint"
-                style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}
-              >
-                <Loader2
-                  size={14}
-                  aria-hidden="true"
-                  className="spin"
-                />
-                {step.message}
-              </p>
+              <DatasetStepper currentStage={step.stage} />
+              <p className="catalog-drawer-hint">{step.message}</p>
               <button
                 type="button"
                 className="catalog-drawer-install"
