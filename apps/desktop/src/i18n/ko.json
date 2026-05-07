@@ -84,6 +84,16 @@
       "importCta": "이 데이터셋 가져올게요",
       "importAria": "{{name}} 가져오기"
     },
+    "summary": {
+      "heading": "내 모델로 요약하기",
+      "meta": "현재 trends-bundle 큐레이션 데이터를 내 PC의 4B+ 모델로 한국어 요약해요. 모델 미설치 시에는 placeholder 응답이 보여요. 같은 데이터에 대해 한 번 요약하면 30일 캐시돼요.",
+      "bundleCount": "현재 bundle 항목: {{count}}건",
+      "cta": "지금 요약할게요",
+      "runningCta": "요약하고 있어요…",
+      "emptyCta": "큐레이션 데이터 도착 후 가능해요",
+      "error": "요약에 실패했어요: {{error}}",
+      "modelInfo": "요약 모델: {{model}}"
+    },
     "installedDatasets": {
       "heading": "내 데이터셋",
       "refreshAria": "목록 새로고침",

@@ -22,13 +22,21 @@ import {
   Users,
   Video,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getCatalog, type ModelEntry } from "../ipc/catalog";
 import { listDatasets, type DatasetEntry } from "../ipc/datasets";
 import { DatasetImportDrawer } from "../components/datasets/DatasetImportDrawer";
 import { InstalledDatasetsSection } from "../components/datasets/InstalledDatasetsSection";
+import {
+  SUMMARY_KIND_LABEL_KO,
+  summarizeTrends,
+  type SummaryInput,
+  type SummaryKind,
+  type TrendsSummary,
+} from "../ipc/trends";
+import trendsBundleData from "../../../../manifests/apps/trends-bundle.json";
 
 import "./trends.css";
 
@@ -109,6 +117,25 @@ export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => voi
     null,
   );
   const [installedRefresh, setInstalledRefresh] = useState(0);
+  const [trendsSummary, setTrendsSummary] = useState<TrendsSummary | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  const bundleItems = (trendsBundleData.items ?? []) as SummaryInput[];
+
+  const handleSummarize = useCallback(async () => {
+    if (bundleItems.length === 0) return;
+    setSummarizing(true);
+    setSummaryError(null);
+    try {
+      const result = await summarizeTrends(bundleItems, false);
+      setTrendsSummary(result);
+    } catch (e) {
+      setSummaryError(String(e));
+    } finally {
+      setSummarizing(false);
+    }
+  }, [bundleItems]);
 
   useEffect(() => {
     let cancelled = false;
@@ -356,6 +383,89 @@ export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => voi
       </section>
 
       <InstalledDatasetsSection refreshSignal={installedRefresh} />
+
+      <section
+        className="trends-section"
+        aria-labelledby="trends-summary-heading"
+        data-testid="trends-summary-section"
+      >
+        <h2 id="trends-summary-heading" className="trends-section-heading">
+          <Sparkles size={18} aria-hidden="true" />
+          <span>{t("trends.summary.heading", "내 모델로 요약하기")}</span>
+        </h2>
+        <p className="trends-section-meta">
+          {t(
+            "trends.summary.meta",
+            "현재 trends-bundle 큐레이션 데이터를 내 PC의 4B+ 모델로 한국어 요약해요. 모델 미설치 시에는 placeholder 응답이 보여요. 같은 데이터에 대해 한 번 요약하면 30일 캐시돼요.",
+          )}
+        </p>
+        <p className="trends-section-meta">
+          {t(
+            "trends.summary.bundleCount",
+            "현재 bundle 항목: {{count}}건",
+            { count: bundleItems.length },
+          )}
+        </p>
+        <button
+          type="button"
+          className="trends-card-action"
+          onClick={() => void handleSummarize()}
+          disabled={summarizing || bundleItems.length === 0}
+          data-testid="trends-summarize-cta"
+        >
+          {summarizing
+            ? t("trends.summary.runningCta", "요약하고 있어요…")
+            : bundleItems.length === 0
+              ? t(
+                  "trends.summary.emptyCta",
+                  "큐레이션 데이터 도착 후 가능해요",
+                )
+              : t("trends.summary.cta", "지금 요약할게요")}
+        </button>
+
+        {summaryError && (
+          <p
+            className="trends-card-hint"
+            style={{ color: "var(--danger, var(--text-muted))" }}
+          >
+            {t(
+              "trends.summary.error",
+              "요약에 실패했어요: {{error}}",
+              { error: summaryError },
+            )}
+          </p>
+        )}
+
+        {trendsSummary && (
+          <div data-testid="trends-summary-result">
+            <p className="trends-card-hint">
+              {t(
+                "trends.summary.modelInfo",
+                "요약 모델: {{model}}",
+                { model: trendsSummary.model_kind },
+              )}
+            </p>
+            <ul className="trends-grid" role="list">
+              {(Object.entries(trendsSummary.sections) as Array<
+                [SummaryKind, string]
+              >).map(([kind, text]) => (
+                <li
+                  key={kind}
+                  className={`trends-card trends-card-${kind}`}
+                  role="listitem"
+                >
+                  <div className="trends-card-head">
+                    <span className="trends-card-kind">
+                      {SUMMARY_KIND_LABEL_KO[kind]}
+                    </span>
+                  </div>
+                  <p className="trends-card-hint">{text}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
 
       <DatasetImportDrawer
         dataset={selectedDataset}

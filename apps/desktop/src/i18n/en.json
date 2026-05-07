@@ -84,6 +84,16 @@
       "importCta": "Import this dataset",
       "importAria": "Import {{name}}"
     },
+    "summary": {
+      "heading": "Summarize with my model",
+      "meta": "Summarize the current trends-bundle curation in Korean using your local 4B+ model. Without a model, a placeholder shows. The same input is cached for 30 days.",
+      "bundleCount": "Current bundle items: {{count}}",
+      "cta": "Summarize now",
+      "runningCta": "Summarizing…",
+      "emptyCta": "Available once curation arrives",
+      "error": "Summary failed: {{error}}",
+      "modelInfo": "Model: {{model}}"
+    },
     "installedDatasets": {
       "heading": "My datasets",
       "refreshAria": "Refresh list",

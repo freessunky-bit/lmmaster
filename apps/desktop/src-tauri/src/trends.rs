@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
 
+use adapter_lmstudio::LmStudioAdapter;
 use adapter_ollama::OllamaAdapter;
 use async_trait::async_trait;
 use chat_protocol::{ChatEvent, ChatMessage, ChatOutcome};
@@ -286,6 +287,77 @@ impl Summarizer for OllamaSummarizer {
 }
 
 // ───────────────────────────────────────────────────────────────────
+// LmStudioSummarizer — Phase 22'.e.4 (OpenAI compat)
+// ───────────────────────────────────────────────────────────────────
+
+/// `LmStudioAdapter::chat_stream`의 OpenAI compat `/v1/chat/completions` SSE를
+/// non-streaming wrapper로 변환 — Delta 누적 → 최종 String.
+///
+/// Ollama와 동일 ChatMessage / ChatEvent / ChatOutcome 인터페이스 (chat-protocol).
+pub struct LmStudioSummarizer {
+    pub model_id: String,
+    pub adapter: LmStudioAdapter,
+}
+
+impl LmStudioSummarizer {
+    pub fn new(model_id: String) -> Self {
+        Self {
+            model_id,
+            adapter: LmStudioAdapter::new(),
+        }
+    }
+}
+
+#[async_trait]
+impl Summarizer for LmStudioSummarizer {
+    fn model_kind(&self) -> String {
+        format!("lm-studio:{}", self.model_id)
+    }
+
+    async fn complete(&self, system: &str, user: &str) -> SummarizerResult<String> {
+        let messages = vec![
+            ChatMessage {
+                role: "system".into(),
+                content: system.into(),
+                images: None,
+            },
+            ChatMessage {
+                role: "user".into(),
+                content: user.into(),
+                images: None,
+            },
+        ];
+
+        let buf = Arc::new(StdMutex::new(String::new()));
+        let buf_clone = Arc::clone(&buf);
+        let on_event = move |ev: ChatEvent| {
+            if let ChatEvent::Delta { text } = ev {
+                if let Ok(mut g) = buf_clone.lock() {
+                    g.push_str(&text);
+                }
+            }
+        };
+
+        let cancel = CancellationToken::new();
+        let outcome = self
+            .adapter
+            .chat_stream(&self.model_id, &messages, on_event, &cancel)
+            .await;
+
+        match outcome {
+            ChatOutcome::Completed => {
+                let g = buf
+                    .lock()
+                    .map_err(|_| SummarizerError::Internal("응답 buffer mutex poisoned".into()))?;
+                Ok(g.clone())
+            }
+            ChatOutcome::Cancelled => Err(SummarizerError::LlmCallFailed("취소됐어요".into())),
+            ChatOutcome::Failed(msg) => Err(SummarizerError::LlmCallFailed(msg)),
+        }
+    }
+}
+
+// ───────────────────────────────────────────────────────────────────
 // Tauri command
 // ───────────────────────────────────────────────────────────────────
 
@@ -308,6 +380,9 @@ pub async fn summarize_trends(
     let summarizer: Box<dyn Summarizer> = match (runtime_kind.as_deref(), model_id.as_deref()) {
         (Some("ollama"), Some(model)) if !model.is_empty() => {
             Box::new(OllamaSummarizer::new(model.to_string()))
+        }
+        (Some("lm-studio"), Some(model)) if !model.is_empty() => {
+            Box::new(LmStudioSummarizer::new(model.to_string()))
         }
         _ => Box::new(MockSummarizer::new()),
     };
