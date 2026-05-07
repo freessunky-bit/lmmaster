@@ -1,8 +1,69 @@
 {
   "$schema_hint": "trends-bundle schema_version=1 (ADR-0060). Phase 22'.b 큐레이터 GHA cron이 큐레이션 후 push 예정.",
   "schema_version": 1,
-  "generated_at": "2026-05-07T00:00:00Z",
-  "expires_at": "2026-05-14T00:00:00Z",
-  "curator_note_ko": "v0.2.0 시점 placeholder예요. Phase 22'.b 큐레이터 GHA cron이 가동되면 매주 RSS+arXiv+HF Daily Papers 큐레이션 결과가 jsdelivr로 도착해요.",
-  "items": []
+  "generated_at": "2026-05-08T00:00:00+09:00",
+  "expires_at": "2026-05-15T00:00:00+09:00",
+  "curator_note_ko": "이번 주는 LLM 추론 정책 + 멀티모달 검색 에이전트 + Diffusion 분할 + 공간 지능 멀티모달 + 영상 편집까지 — AI 모델이 *어디까지 통합되는지* 흐름이 도드라졌어요.",
+  "items": [
+    {
+      "id": "paper-when-to-think-2605.03314",
+      "kind": "paper",
+      "title": "When to Think, When to Speak: Learning Disclosure Policies for LLM Reasoning",
+      "summary_ko": "LLM(대규모 언어모델)이 추론 과정을 외부로 공개할지 학습 정책으로 결정해요. 정확도와 보안·노출 사이 균형을 자동으로 맞춰요.",
+      "source": "arXiv",
+      "source_url": "https://arxiv.org/abs/2605.03314",
+      "attribution": "arXiv 2605.03314 (Wei et al.)",
+      "published_at": "2026-05-01",
+      "tags": ["llm", "reasoning", "policy"],
+      "score": 0.0
+    },
+    {
+      "id": "paper-opensearch-vl-2605.05185",
+      "kind": "paper",
+      "title": "OpenSearch-VL: An Open Recipe for Frontier Multimodal Search Agents",
+      "summary_ko": "멀티모달 검색 에이전트의 오픈 레시피예요. 텍스트와 이미지를 함께 활용해 *검색 추론*하는 새 표준을 시도해요.",
+      "source": "arXiv",
+      "source_url": "https://arxiv.org/abs/2605.05185",
+      "attribution": "arXiv 2605.05185 (Chen et al.)",
+      "published_at": "2026-05-05",
+      "tags": ["multimodal", "search", "agent"],
+      "score": 0.0
+    },
+    {
+      "id": "paper-diffusion-seg-2604.24575",
+      "kind": "paper",
+      "title": "Diffusion Model as a Generalist Segmentation Learner",
+      "summary_ko": "Diffusion(확산) 모델을 *분할(segmentation)* 작업의 일반 학습기로 활용한 연구예요. 여러 종류 분할 작업을 한 모델로 처리해요.",
+      "source": "arXiv",
+      "source_url": "https://arxiv.org/abs/2604.24575",
+      "attribution": "arXiv 2604.24575 (Wang et al.)",
+      "published_at": "2026-04-29",
+      "tags": ["diffusion", "segmentation", "vision"],
+      "score": 0.0
+    },
+    {
+      "id": "paper-spatial-intelligence-2605.04128",
+      "kind": "paper",
+      "title": "Awaking Spatial Intelligence in Unified Multimodal Understanding and Generation",
+      "summary_ko": "멀티모달 이해와 생성을 통합한 시스템에 *공간 지능*을 부여하는 연구예요. 3D 공간 추론을 이미지 모델에 통합해요.",
+      "source": "arXiv",
+      "source_url": "https://arxiv.org/abs/2605.04128",
+      "attribution": "arXiv 2605.04128 (Song et al.)",
+      "published_at": "2026-05-04",
+      "tags": ["multimodal", "spatial", "3d"],
+      "score": 0.0
+    },
+    {
+      "id": "paper-lightning-video-edit-2605.04569",
+      "kind": "paper",
+      "title": "Lightning Unified Video Editing via In-Context Sparse Attention",
+      "summary_ko": "Sparse Attention(희소 주의)으로 영상 편집을 통합 처리하는 빠른 모델이에요. 동영상 편집을 단일 프롬프트로 처리해요.",
+      "source": "arXiv",
+      "source_url": "https://arxiv.org/abs/2605.04569",
+      "attribution": "arXiv 2605.04569 (Shao et al.)",
+      "published_at": "2026-05-04",
+      "tags": ["video", "editing", "attention"],
+      "score": 0.0
+    }
+  ]
 }
