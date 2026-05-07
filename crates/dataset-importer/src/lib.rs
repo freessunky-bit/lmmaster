@@ -14,8 +14,10 @@ pub mod chunker;
 pub mod error;
 pub mod parquet_stream;
 pub mod pipeline;
+pub mod service;
 
-pub use chunker::DatasetChunker;
+pub use chunker::{ChunkConfigParams, DatasetChunk, DatasetChunker};
 pub use error::{DatasetImportError, DatasetImportResult};
 pub use parquet_stream::{HfParquetReader, ParquetUrlResolver};
 pub use pipeline::{DatasetIngestStage, IngestProgress, SampleStrategy};
+pub use service::{DatasetIngestService, IngestRequest, IngestStats};
