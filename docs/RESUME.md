@@ -282,6 +282,38 @@ Phase 9'.c — Multi-runtime adapters expansion
 
 ---
 
+## 2026-05-07 — Phase 23'.c.2 신중 설계 완료 (사용자 명시 진입 신호 시 코드 작업)
+
+**산출물 (이번 세션)**:
+- `docs/adr/0063-dataset-import-pipeline.md` — Dataset Import Pipeline ADR (parquet + chunk + embed + SQLCipher).
+- `docs/research/phase-23pc2-dataset-import-reinforcement.md` — Agent 보강 리서치 영구화 (10 결정 포인트 + 14 출처).
+- `docs/research/phase-23pc2-dataset-import-decision.md` — 6-section 결정 노트 + 12건 기각안 + sub-phase 6단계 분할 + 위험 매트릭스.
+- `apps/desktop/src/i18n/guide-{ko,en}-v1.md` — `<!-- section: persona-simulation -->` 별도 섹션 신설 (이전 워크벤치 단락 외에).
+- `apps/desktop/src/pages/Guide.tsx` — SECTION_IDS + SECTION_KEYWORDS + SECTION_NAV_MAP에 persona-simulation 등재.
+
+**핵심 결정 (Agent 보강 리서치 반영)**:
+- 라이브러리: `arrow-rs parquet` (polars 거부) + `text-splitter` + `tokenizers` + `OnnxEmbedder` cascade.
+- HF endpoint: `huggingface.co/api/datasets/{ds}/parquet/{config}/{split}` (datasets-server 거부, ADR-0026 화이트리스트 적중).
+- 신규 crate: `crates/dataset-importer` (dataset-catalog 분리, fetch + chunk + indexer).
+- 권장 sample: **10K stratified** (`province × occupation`), 전체 import 시 경고 modal.
+- v1 SQLCipher BLOB brute-force, **v1.x sqlite-vec PoC ADR 신설 후 마이그레이션**.
+- 5단계 progress (Manifest / Downloading / Chunking / Embedding / Writing).
+
+**다음 standby = Phase 23'.c.2.a** (사용자 명시 진입 시점):
+1. 23'.c.2.a — workspace dep `parquet` + `text-splitter` 추가 + `crates/dataset-importer` 신설 (0.5일).
+2. 23'.c.2.b — `parquet_stream.rs` HfParquetReader + Range request (1~2일).
+3. 23'.c.2.c — `chunker.rs` + `pipeline.rs` (1~2일).
+4. 23'.c.2.d — Tauri command + 진행 채널 + SQLCipher 마이그레이션 (1~2일).
+5. 23'.c.2.e — UI `DatasetImportDrawer` + Trends 카드 버튼 (1일).
+6. 23'.c.2.f — License + minor_safety + EULA modal + CURATION_GUIDE (1일).
+
+**총 작업량**: 6~10일 (1~2주, 다음 세션부터 분할 진입). v0.3.0 ship 시점 = 6단계 완료 후.
+
+**기각안 핵심 (다음 세션 보호)**:
+- polars-parquet 거부 (workspace fit X) / sqlite-vec v1 거부 (SQLCipher hook 충돌 bench 필요) / 자동 import 거부 (라이선스 동의 강제 X) / 전체 import default 거부 (CPU 5시간) / Python sidecar 거부 (페이로드 폭증).
+
+---
+
 ## 🟢 다음 standby
 
 **Phase 21' Trending Watcher (v1.x, 2026-05-06 설계 완료)** — 사용자 명시 승인 옵션 1:

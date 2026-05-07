@@ -199,6 +199,60 @@ Pair NVIDIA's *Personas-Korea* dataset (7M synthetic Korean personas) with **NVI
 
 ---
 
+<!-- section: persona-simulation -->
+# Synthetic Korean Survey Simulation
+
+Use NVIDIA's *Nemotron-Personas-Korea* dataset (7M synthetic Korean personas) with a local LLM to simulate content-survey responses from 100 virtual Koreans. Useful for content A/B testing, marketing copy validation, and UX persona research.
+
+## Prerequisites
+
+- **RAM**: 8 GB minimum (with Nemotron 4B), 16 GB recommended.
+- **VRAM**: not required (CPU inference works); 6 GB+ for speed.
+- **Disk**: 5 GB (model) + 2 GB (dataset) + 1 GB (results).
+- **Python**: 3.10+ for sampling scripts.
+- **LMmaster**: v0.1.0+.
+
+## Six-step flow
+
+1. **Install the model** — Catalog → 🔥 NEW → **NVIDIA Nemotron 3 Nano 4B** (or **EXAONE 3.5 7.8B** if Korean fluency matters more).
+2. **Download the dataset** — Python `nvidia/Nemotron-Personas-Korea` (~1.8 GB Parquet, CC BY 4.0).
+3. **100-person stratified sampling** — proportional by sex/age/region with `random_state=42` for reproducibility.
+4. **Define your survey** — JSON with single-choice / scale / open-ended items.
+5. **Workbench batch run** — call LMmaster Local API (`http://127.0.0.1:8788/v1`) with 100 personas × N questions.
+6. **Aggregate** — pandas crosstabs + keyword frequency.
+
+Full Python scripts (`download_personas.py` / `sample_100.py` / `run_survey.py` / `aggregate.py`) live in `docs/guides/personas-korea-survey-simulation.md`.
+
+## Model selection
+
+- **Fast + RTX 4090 batch** → Nemotron 3 Nano 4B (Mamba-2 + Transformer, 4B Dense, multilingual sprinkle).
+- **Korean fluency first** → EXAONE 3.5 7.8B or HCX-SEED 8B (Korean-native pretrain).
+- **High-end + quality** → Nemotron 3 Nano 30B A3B (MoE, 3.5B active, Q3_K_M 20 GB).
+
+## Common pitfalls
+
+- English words leaking into Korean answers → emphasize "*Korean only*" in system prompt; switch to EXAONE.
+- All personas sound the same → include both `persona` and `cultural_background` in system prompt; raise temperature 0.8–0.9.
+- Off-list multiple-choice answers → end user prompt with "Answer (one of the options):".
+- Too-short replies → bump `max_tokens` 256 → 512.
+
+## Attribution
+
+When publishing results:
+- **Data**: NVIDIA Nemotron-Personas-Korea (must cite all five sources: KOSIS, Supreme Court, NHIS, KREI, NAVER Cloud — CC BY 4.0).
+- **Model**: NVIDIA Nemotron 3 Nano 4B (NVIDIA Open Model License, commercial OK).
+
+## Coming: 1-click automation
+
+Phase 23'.c.2 (next sub-phase) will collapse all six steps into a single *"Add to my workspace"* button:
+- Auto download + chunk + embed + SQLCipher store.
+- Auto-appear in Workspace → Knowledge tab.
+- Toggle RAG context in chat for instant use.
+
+For now, the six-step flow is manual, but with no Python setup needed once 1-click ships.
+
+---
+
 <!-- section: knowledge -->
 # Knowledge Indexing (RAG)
 
