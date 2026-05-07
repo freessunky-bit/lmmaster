@@ -1,9 +1,10 @@
 # Phase 22'.d — Trends bundle curator cron + GitHub Issue 자동.
 #
-# 정책 (ADR-0060 §3):
-# - 매일 00:00 UTC (한국 09:00 KST) cron + workflow_dispatch 수동.
+# 정책 (ADR-0060 §5):
+# - 매주 월요일 00:00 UTC (한국 09:00 KST) cron + workflow_dispatch 수동.
+#   ADR-0060 §5 weekly 권장 — 매일 cron은 큐레이터 부담 큼 (2026-05-08 정합화).
 # - cargo run -p trends-bundle-curator --release --out report.md → JasonEtco/create-an-issue.
-# - dedupe: 동일 제목 prefix `[trends]` 검색 + 갱신 (동일 issue 매일 update).
+# - dedupe: 동일 제목 prefix `[trends]` 검색 + 갱신 (동일 issue 매주 update).
 # - 라벨 auto-curate + trends-bundle + needs-review.
 # - assignee freessunky-bit (큐레이터 1인).
 # - 큐레이터가 Issue 본문 검토 → manifests/apps/trends-bundle.json PR (한국어 요약 손작업).
@@ -14,7 +15,7 @@ name: Trends Bundle Curator
 
 on:
   schedule:
-    - cron: '0 0 * * *' # 매일 00:00 UTC.
+    - cron: '0 0 * * 1' # 매주 월요일 00:00 UTC = 09:00 KST.
   workflow_dispatch: {}
 
 permissions:
