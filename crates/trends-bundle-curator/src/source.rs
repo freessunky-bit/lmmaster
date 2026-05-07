@@ -1,33 +1,18 @@
-//! 데이터 소스 fetcher 골격 — Phase 22'.b → 22'.c에서 실 fetch.
+//! 데이터 소스 fetcher — Phase 22'.d (ADR-0060 §2).
 //!
-//! 정책 (ADR-0060 §2):
-//! - arXiv RSS: `https://rss.arxiv.org/atom/cs.LG+cs.CL+cs.AI+cs.CV` — User-Agent 필수, 3 req/sec.
-//! - HF Daily Papers: `https://huggingface.co/api/daily_papers?date=YYYY-MM-DD&limit=100`.
-//! - 회사 블로그 RSS: OpenAI / TechCrunch AI / The Verge / VentureBeat / NVIDIA / 한국 매체.
-//! - YouTube Data API v3 (옵션, secret YOUTUBE_API_KEY).
-//! - 외부 통신: huggingface.co + github.com + arxiv.org + techcrunch.com 등 화이트리스트 (GHA runner 측만).
+//! 정책:
+//! - HF Daily Papers: `huggingface.co/api/daily_papers?date=YYYY-MM-DD&limit=100` (anonymous).
+//! - arXiv RSS: `https://rss.arxiv.org/atom/cs.LG+cs.CL+cs.AI+cs.CV` (User-Agent 필수, 3 req/sec).
+//! - 외부 통신 화이트리스트: `huggingface.co` + `arxiv.org` (큐레이터 GHA runner 측만, 사용자 PC 무관).
+//! - User-Agent: `lmmaster-trends-bundle-curator/<ver>`.
+//! - rate limit 회피: 매일 cron이라 호출 ≤5회/일, 안전 마진 충분.
 
 #![allow(dead_code)]
 
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 /// trends-bundle 1 item (kind tagged enum 6종).
-///
-/// ADR-0060 §1 schema:
-/// ```json
-/// {
-///   "id": "...",
-///   "kind": "paper" | "blog" | "news" | "video" | "github" | "sns",
-///   "title": "...",
-///   "summary_ko": "한국어 1~2문장 요약",
-///   "source": "huggingface-daily-papers" | "arxiv" | "openai-blog" | ...,
-///   "source_url": "...",
-///   "attribution": "...",
-///   "published_at": "RFC3339",
-///   "tags": ["llm", "korean"],
-///   "score": 0.84
-/// }
-/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrendItem {
     pub id: String,
@@ -42,7 +27,6 @@ pub struct TrendItem {
     pub score: f64,
 }
 
-/// trends-bundle item 종류 (ADR-0060 §1 tagged enum).
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum TrendKind {
@@ -59,7 +43,6 @@ pub enum TrendKind {
 pub struct HfDailyPaper {
     #[serde(default)]
     pub paper: HfPaperMeta,
-    /// HF API 원본 키 `publishedAt` — Rust 필드는 snake_case.
     #[serde(default, rename = "publishedAt")]
     pub published_at: Option<String>,
     #[serde(default)]
@@ -82,16 +65,103 @@ pub struct HfAuthor {
     pub name: String,
 }
 
+const HF_DAILY_PAPERS_URL: &str = "https://huggingface.co/api/daily_papers";
+const ARXIV_FEED_URL: &str = "https://rss.arxiv.org/atom/cs.LG+cs.CL+cs.AI+cs.CV";
+const USER_AGENT: &str = concat!("lmmaster-trends-bundle-curator/", env!("CARGO_PKG_VERSION"));
+
 /// HF Daily Papers JSON parse — 단위 테스트 가능.
-pub fn parse_hf_daily_papers(json: &str) -> anyhow::Result<Vec<HfDailyPaper>> {
-    Ok(serde_json::from_str(json)?)
+pub fn parse_hf_daily_papers(json: &str) -> Result<Vec<HfDailyPaper>> {
+    serde_json::from_str(json).context("HF Daily Papers 응답 파싱 실패")
 }
 
-// 실 fetch 함수는 Phase 22'.c에서 추가:
-//   pub async fn fetch_arxiv(client: &reqwest::Client) -> Result<Vec<TrendItem>>;
-//   pub async fn fetch_hf_daily_papers(client: &reqwest::Client, date: &str) -> Result<Vec<TrendItem>>;
-//   pub async fn fetch_company_blogs(client: &reqwest::Client) -> Result<Vec<TrendItem>>;
-//   pub async fn fetch_youtube(client: &reqwest::Client, api_key: &str, channel_ids: &[&str]) -> Result<Vec<TrendItem>>;
+/// HF Daily Papers fetch — 익명 GET. 날짜 미지정 시 today (UTC).
+pub async fn fetch_hf_daily_papers(
+    client: &reqwest::Client,
+    date: Option<&str>,
+) -> Result<Vec<HfDailyPaper>> {
+    let url = match date {
+        Some(d) => format!("{HF_DAILY_PAPERS_URL}?date={d}&limit=100"),
+        None => format!("{HF_DAILY_PAPERS_URL}?limit=100"),
+    };
+    let body = client
+        .get(&url)
+        .header(reqwest::header::USER_AGENT, USER_AGENT)
+        .send()
+        .await
+        .context("HF Daily Papers 요청 실패")?
+        .error_for_status()
+        .context("HF Daily Papers HTTP 에러")?
+        .text()
+        .await
+        .context("HF Daily Papers 본문 읽기 실패")?;
+    parse_hf_daily_papers(&body)
+}
+
+/// arXiv Atom RSS fetch — 익명 GET. parse는 호출자 책임 (feed-rs 도입 검토 후 22'.d.2).
+pub async fn fetch_arxiv_atom(client: &reqwest::Client) -> Result<String> {
+    let body = client
+        .get(ARXIV_FEED_URL)
+        .header(reqwest::header::USER_AGENT, USER_AGENT)
+        .send()
+        .await
+        .context("arXiv RSS 요청 실패")?
+        .error_for_status()
+        .context("arXiv RSS HTTP 에러")?
+        .text()
+        .await
+        .context("arXiv RSS 본문 읽기 실패")?;
+    Ok(body)
+}
+
+/// HfDailyPaper → TrendItem 변환 (큐레이터 한국어 요약은 GHA review queue에서 사람 손).
+pub fn hf_paper_to_trend_item(paper: &HfDailyPaper) -> TrendItem {
+    let id = format!("hf-paper-{}", paper.paper.id);
+    let attribution = if paper.paper.authors.is_empty() {
+        "AK on HuggingFace".to_string()
+    } else {
+        paper
+            .paper
+            .authors
+            .iter()
+            .take(3)
+            .map(|a| a.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let summary_en = paper.paper.summary.clone().unwrap_or_default();
+    let summary_ko = if summary_en.is_empty() {
+        "(큐레이터 한국어 요약 작성 대기)".to_string()
+    } else {
+        // 1차 placeholder — 22'.d.2에서 LLM 요약 또는 큐레이터 손길.
+        format!(
+            "(영문 요약 {} 자) — 큐레이터 한국어 번역 대기",
+            summary_en.len()
+        )
+    };
+    let score = (paper.upvotes as f64 / 100.0).min(1.0);
+    TrendItem {
+        id,
+        kind: TrendKind::Paper,
+        title: paper.paper.title.clone(),
+        summary_ko,
+        source: "huggingface-daily-papers".into(),
+        source_url: format!("https://arxiv.org/abs/{}", paper.paper.id),
+        attribution,
+        published_at: paper.published_at.clone().unwrap_or_default(),
+        tags: vec!["llm".into()],
+        score,
+    }
+}
+
+/// 외부 호출용 reqwest::Client — `.no_proxy()` + rustls TLS (ADR-0055 정합).
+pub fn make_client() -> Result<reqwest::Client> {
+    reqwest::Client::builder()
+        .no_proxy()
+        .user_agent(USER_AGENT)
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .context("reqwest::Client builder 실패 (TLS init)")
+}
 
 #[cfg(test)]
 mod tests {
@@ -141,6 +211,62 @@ mod tests {
     fn parse_hf_daily_papers_empty() {
         let papers = parse_hf_daily_papers("[]").unwrap();
         assert_eq!(papers.len(), 0);
+    }
+
+    #[test]
+    fn parse_hf_daily_papers_with_authors() {
+        let json = r#"[
+            {
+                "paper": {
+                    "id": "test/x",
+                    "title": "T",
+                    "authors": [{"name": "A"}, {"name": "B"}, {"name": "C"}, {"name": "D"}]
+                }
+            }
+        ]"#;
+        let papers = parse_hf_daily_papers(json).unwrap();
+        assert_eq!(papers[0].paper.authors.len(), 4);
+        let item = hf_paper_to_trend_item(&papers[0]);
+        // top 3 attribution.
+        assert!(item.attribution.contains("A"));
+        assert!(item.attribution.contains("C"));
+        assert!(!item.attribution.contains("D"));
+    }
+
+    #[test]
+    fn parse_hf_daily_papers_no_authors_fallback_attribution() {
+        let json = r#"[{"paper": {"id": "x", "title": "T"}}]"#;
+        let papers = parse_hf_daily_papers(json).unwrap();
+        let item = hf_paper_to_trend_item(&papers[0]);
+        assert_eq!(item.attribution, "AK on HuggingFace");
+    }
+
+    #[test]
+    fn hf_paper_to_trend_item_id_format() {
+        let json = r#"[{"paper": {"id": "2405.12345", "title": "T"}}]"#;
+        let papers = parse_hf_daily_papers(json).unwrap();
+        let item = hf_paper_to_trend_item(&papers[0]);
+        assert_eq!(item.id, "hf-paper-2405.12345");
+        assert_eq!(item.kind, TrendKind::Paper);
+        assert_eq!(item.source, "huggingface-daily-papers");
+        assert_eq!(item.source_url, "https://arxiv.org/abs/2405.12345");
+    }
+
+    #[test]
+    fn hf_paper_score_normalized_by_upvotes() {
+        let json = r#"[{"paper": {"id": "x", "title": "T"}, "upvotes": 50}]"#;
+        let item = hf_paper_to_trend_item(&parse_hf_daily_papers(json).unwrap()[0]);
+        assert!((item.score - 0.5).abs() < 0.001);
+
+        let json_max = r#"[{"paper": {"id": "x", "title": "T"}, "upvotes": 200}]"#;
+        let item_max = hf_paper_to_trend_item(&parse_hf_daily_papers(json_max).unwrap()[0]);
+        assert_eq!(item_max.score, 1.0);
+    }
+
+    #[test]
+    fn make_client_succeeds() {
+        let client = make_client();
+        assert!(client.is_ok());
     }
 
     #[test]

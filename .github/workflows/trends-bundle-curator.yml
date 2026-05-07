@@ -1,0 +1,76 @@
+# Phase 22'.d — Trends bundle curator cron + GitHub Issue 자동.
+#
+# 정책 (ADR-0060 §3):
+# - 매일 00:00 UTC (한국 09:00 KST) cron + workflow_dispatch 수동.
+# - cargo run -p trends-bundle-curator --release --out report.md → JasonEtco/create-an-issue.
+# - dedupe: 동일 제목 prefix `[trends]` 검색 + 갱신 (동일 issue 매일 update).
+# - 라벨 auto-curate + trends-bundle + needs-review.
+# - assignee freessunky-bit (큐레이터 1인).
+# - 큐레이터가 Issue 본문 검토 → manifests/apps/trends-bundle.json PR (한국어 요약 손작업).
+#
+# secrets: GITHUB_TOKEN 자동.
+
+name: Trends Bundle Curator
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 매일 00:00 UTC.
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  curate:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '[skip-trends]') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: '. -> target'
+
+      - name: Build trends-bundle-curator
+        run: cargo build --release --package trends-bundle-curator
+
+      - name: Run trends-bundle-curator
+        id: curate
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/trends
+          cargo run --release --package trends-bundle-curator -- --out /tmp/trends/report.md
+          echo "report_path=/tmp/trends/report.md" >> "$GITHUB_OUTPUT"
+
+      - name: Create / update curator review issue
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          filename: /tmp/trends/report.md
+          update_existing: true
+          search_existing: open
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Trends bundle curator 실행 결과"
+            echo ""
+            echo "- Triggered by: ${{ github.event_name }}"
+            echo "- Run ID: ${{ github.run_id }}"
+            echo ""
+            echo "### Report preview"
+            echo ""
+            echo '```markdown'
+            cat /tmp/trends/report.md || echo "(빈 결과)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
