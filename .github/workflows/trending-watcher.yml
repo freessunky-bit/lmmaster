@@ -1,19 +1,18 @@
-# Phase 21'.d — Trending Watcher cron + GitHub Issue 자동.
+# Phase 21'.d — Trending Watcher cron (DEPRECATED).
 #
-# 정책 (ADR-0059 §5):
-# - 매 6시간 cron + workflow_dispatch 수동 트리거.
-# - cargo run -p trending-watcher --release --batch --out report.md → JasonEtco/create-an-issue.
-# - dedupe: 동일 제목 fingerprint 검색 + 갱신.
-# - 라벨 auto-curate + trending-watcher + needs-review.
-# - assignee freessunky-bit (큐레이터 1인).
+# ⚠️ DEPRECATED — production은 별도 repo `freessunky-bit/lmmaster-trending-watcher`
+# (Phase 21'.a 신설, 2026-05-08). 본 prototype workflow는 *이중 실행 / Issue 중복 생성*
+# 방지 위해 schedule 제거 + workflow_dispatch만 유지 (manual debug용).
 #
-# secrets: GITHUB_TOKEN 자동 (read:repo + write:issues 필요 — Actions 기본 권한 OK).
+# 별도 repo 운영 안정화 후 본 file 자체를 삭제 권장 (1~2개월 운영 후 v0.4 release 시).
+#
+# 정책 (ADR-0059 §5) — 별도 repo로 이동:
+# https://github.com/freessunky-bit/lmmaster-trending-watcher/.github/workflows/cron.yml
 
-name: Trending Watcher
+name: Trending Watcher (deprecated — see lmmaster-trending-watcher repo)
 
 on:
-  schedule:
-    - cron: '0 */6 * * *' # 6시간마다 (UTC).
+  # schedule cron 제거 — 별도 repo가 production. 본 file은 manual trigger만.
   workflow_dispatch: {}
 
 permissions:
