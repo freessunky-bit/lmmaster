@@ -61,6 +61,11 @@
         "hint": "Apache-2 / MIT + AI/LLM topic filter. LangChain / vLLM / Korean OSS surfaced."
       }
     },
+    "bundle": {
+      "heading": "This week's curation",
+      "publishedAt": "Published",
+      "attribution": "Attribution"
+    },
     "datasets": {
       "heading": "Dataset catalog",
       "meta": "Korean personas / RP fine-tune seeds / training datasets. After ADR-0061 + ADR-0062, real download IPC + 1-click RAG seed import will follow.",

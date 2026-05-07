@@ -57,6 +57,14 @@ interface MockTrendCard {
   source: string;
 }
 
+/** Phase 22'.c — trends-bundle.json items type. SummaryInput + 큐레이션 메타. */
+type TrendBundleItem = SummaryInput & {
+  attribution?: string;
+  published_at?: string;
+  tags?: string[];
+  score?: number;
+};
+
 /** Phase 22' B 안 — placeholder 카드 6 카테고리. 실 데이터는 trends-bundle fetch (v2.0). */
 const MOCK_CARDS: readonly MockTrendCard[] = [
   {
@@ -121,7 +129,9 @@ export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => voi
   const [summarizing, setSummarizing] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
-  const bundleItems = (trendsBundleData.items ?? []) as SummaryInput[];
+  // Phase 22'.c — bundleItems의 attribution / published_at / tags / score는
+  // SummaryInput에 없는 큐레이션 메타. type 확장으로 type-safe 접근.
+  const bundleItems = (trendsBundleData.items ?? []) as TrendBundleItem[];
 
   const handleSummarize = useCallback(async () => {
     if (bundleItems.length === 0) return;
@@ -219,6 +229,73 @@ export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => voi
               {t("trends.gate.cta", "카탈로그로 갈게요")}
             </button>
           </div>
+        </section>
+      )}
+
+      {/* Phase 22'.c — 실 큐레이션 5건 카드 그리드. bundleItems 비어있으면 미렌더. */}
+      {bundleItems.length > 0 && (
+        <section
+          className="trends-section"
+          aria-labelledby="trends-bundle-heading"
+          data-testid="trends-bundle-section"
+        >
+          <h2 id="trends-bundle-heading" className="trends-section-heading">
+            <Sparkles size={18} aria-hidden="true" />
+            <span>{t("trends.bundle.heading", "이번 주 큐레이션")}</span>
+          </h2>
+          {trendsBundleData.curator_note_ko && (
+            <p className="trends-section-meta trends-curator-note">
+              {trendsBundleData.curator_note_ko}
+            </p>
+          )}
+          <ul className="trends-grid" role="list">
+            {bundleItems.map((item) => {
+              const Icon =
+                KIND_ICON[item.kind as MockTrendCard["kind"]] ?? BookOpen;
+              return (
+                <li
+                  key={item.id}
+                  className={`trends-card trends-card-${item.kind}`}
+                  role="listitem"
+                  data-testid={`trends-bundle-item-${item.id}`}
+                >
+                  <div className="trends-card-head">
+                    <Icon size={16} aria-hidden="true" />
+                    <span className="trends-card-kind">
+                      {t(`trends.kind.${item.kind}`, item.kind)}
+                    </span>
+                  </div>
+                  <h3 className="trends-card-title">{item.title}</h3>
+                  <p className="trends-card-hint">{item.summary_ko}</p>
+                  <p className="trends-card-meta">
+                    <span className="trends-card-meta-item">{item.source}</span>
+                    {item.published_at && (
+                      <>
+                        <span className="trends-card-meta-sep">·</span>
+                        <span className="trends-card-meta-item">
+                          {t("trends.bundle.publishedAt", "발행")}:{" "}
+                          {item.published_at}
+                        </span>
+                      </>
+                    )}
+                  </p>
+                  {item.attribution && (
+                    <p className="trends-card-source">
+                      <span className="trends-card-source-label">
+                        {t("trends.bundle.attribution", "출처")}:
+                      </span>{" "}
+                      {item.attribution}
+                    </p>
+                  )}
+                  {item.source_url && (
+                    <p className="trends-card-source-url">
+                      <code>{item.source_url}</code>
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </section>
       )}
 

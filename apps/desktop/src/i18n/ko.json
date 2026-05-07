@@ -61,6 +61,11 @@
         "hint": "Apache-2 / MIT 라이선스 + AI/LLM 토픽 필터. LangChain / vLLM / 한국 OSS 발견."
       }
     },
+    "bundle": {
+      "heading": "이번 주 큐레이션",
+      "publishedAt": "발행",
+      "attribution": "출처"
+    },
     "datasets": {
       "heading": "데이터셋 카탈로그",
       "meta": "한국어 페르소나 / RP fine-tune 시드 / 학습 데이터셋. ADR-0061 + ADR-0062 진입 후 실 다운로드 IPC와 RAG 시드 1-click 자동 import가 합류해요.",
