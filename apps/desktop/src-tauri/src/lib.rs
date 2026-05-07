@@ -10,6 +10,7 @@ pub mod bench;
 pub mod chat;
 pub mod commands;
 pub mod crash;
+pub mod datasets;
 pub mod gateway;
 pub mod hf_meta;
 pub mod hf_search;
@@ -140,6 +141,8 @@ pub fn run() {
             knowledge::set_active_embedding_model,
             knowledge::download_embedding_model,
             knowledge::cancel_embedding_download,
+            datasets::list_datasets,
+            datasets::delete_dataset,
             updater::check_for_update,
             updater::cancel_update_check,
             updater::start_auto_update_poller,
