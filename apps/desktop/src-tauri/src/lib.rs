@@ -25,6 +25,7 @@ pub mod registry_fetcher;
 pub mod registry_provider;
 pub mod runtimes;
 pub mod telemetry;
+pub mod trends;
 pub mod updater;
 pub mod workbench;
 pub mod workspace;
@@ -145,6 +146,7 @@ pub fn run() {
             datasets::delete_dataset,
             datasets::dataset_import_start,
             datasets::dataset_import_cancel,
+            trends::summarize_trends,
             updater::check_for_update,
             updater::cancel_update_check,
             updater::start_auto_update_poller,
@@ -349,6 +351,16 @@ pub fn run() {
             // 10.a.1. DatasetIngestRegistry — Phase 23'.c.2.d.3.2. import id → cancel atomic.
             let dataset_ingest_registry = datasets::provision_dataset_ingest_registry();
             app.manage(dataset_ingest_registry);
+
+            // 10.a.2. TrendsSummaryStore — Phase 22'.e.2 (ADR-0060 §6). app_data_dir/trends-summary.db.
+            match trends::provision_trends_summary_store(app.handle()) {
+                Ok(store) => {
+                    app.manage(store);
+                }
+                Err(e) => {
+                    tracing::warn!(error = ?e, "trends-summary 캐시 store 초기화 실패 — Trends 메뉴 비활성");
+                }
+            }
 
             // 10.b. WorkspacesState — Phase 8'.1. 사용자 향 workspace 관리 IPC.
             //       app_data_dir/workspaces/index.json — atomic rename 영속 + 첫 실행 시 default 자동 시드.
