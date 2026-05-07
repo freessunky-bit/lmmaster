@@ -69,5 +69,7 @@ Full policy: `docs/adr/0060-trend-report.md` + `docs/research/phase-22p-trend-re
 
 ## 10. Contact
 
-- Official email: freessunky@gmail.com
+- **General questions / bugs / feature requests**: <https://github.com/freessunky-bit/lmmaster/issues>
+- **Security vulnerability reports** (private channel): <https://github.com/freessunky-bit/lmmaster/security/advisories/new>
+- **Copyright holder reports** (Trends Report citation): please file a GitHub Issue.
 - If you do not agree with this agreement, click "I do not agree" to exit the app.

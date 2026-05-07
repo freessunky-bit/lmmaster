@@ -77,5 +77,7 @@ LMmaster의 *AI 트렌드 리포트* 메뉴(별도 4B+ 모델 설치 시 활성)
 
 ## 10. 문의
 
-- 공식 이메일: freessunky@gmail.com
+- **일반 문의 / 버그 / 기능 제안**: <https://github.com/freessunky-bit/lmmaster/issues>
+- **보안 취약점 신고** (비공개 채널): <https://github.com/freessunky-bit/lmmaster/security/advisories/new>
+- **저작권자 신고** (Trends Report 인용 관련): GitHub Issue로 부탁드려요.
 - 본 동의서에 동의하지 않으시면 "동의하지 않을래요"를 눌러 앱을 종료할 수 있어요.
