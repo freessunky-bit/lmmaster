@@ -1,4 +1,4 @@
-# LMmaster 사용자 동의서 (v1.0.0)
+# LMmaster 사용자 동의서 (v1.2.0)
 
 **적용 시점**: TODO — 출시일 확정 후 채워 주세요.
 
@@ -56,7 +56,26 @@ LMmaster 데이터셋 카탈로그(Phase 23')는 다음 정책을 따라요:
 
 자세한 정책: `docs/adr/0062-nsfw-dataset-policy.md` 참조.
 
-## 8. 문의
+## 9. AI 트렌드 리포트 정책 (v1.2.0+, Phase 22')
+
+LMmaster의 *AI 트렌드 리포트* 메뉴(별도 4B+ 모델 설치 시 활성)는 다음 정책을 따라요:
+
+1. **외부 트렌드 데이터셋 fetch 동의** — 사용자 PC가 `cdn.jsdelivr.net`에서 큐레이션된
+   `trends-bundle.json`을 매주 1회 fetch해요. 사용자 PC가 직접 RSS / SNS / 뉴스 사이트를
+   scrape하지 않아요 (외부 통신 0 정체성 보존).
+2. **큐레이터 흐름** — 별도 repo `lmmaster-trends-bundle`(또는 본 repo prototype)의
+   GHA aggregator가 RSS / arXiv / HF Daily Papers / YouTube / Bluesky / Mastodon
+   소스를 사람이 검토 후 fair-use 기준 한국어 한 줄 요약으로 변환해 push해요.
+3. **로컬 LLM 한국어 요약 정책** — 메뉴 진입 시 사용자 PC의 4B+ 모델(Gemma 3 4B /
+   Nemotron 3 Nano 4B / EXAONE 3.5 7.8B / HCX-SEED 8B 등)이 카테고리별로 1~2문장
+   해요체 메타 요약을 생성해요. *원문 재출판은 금지*예요. 결과는 30일 캐시돼요.
+4. **저작권자 신고 채널** — 본인이 만든 콘텐츠가 부당하게 인용됐다고 판단하시면
+   본 repo의 GitHub Issue로 신고해 주세요. 큐레이터가 1주 안에 검토해 다음 push에서
+   제외하거나 인용 형식을 조정해요.
+
+자세한 정책: `docs/adr/0060-trend-report.md` + `docs/research/phase-22p-trend-report-decision.md` 참조.
+
+## 10. 문의
 
 - 공식 이메일: wind@joycity.com
 - 본 동의서에 동의하지 않으시면 "동의하지 않을래요"를 눌러 앱을 종료할 수 있어요.

@@ -34,6 +34,27 @@
 - 검토 체크리스트는 sister repo의 [`CURATION_GUIDE.md`](https://github.com/freessunky-bit/lmmaster-trending-watcher/blob/main/CURATION_GUIDE.md) 참고.
 - 거부 시 issue 코멘트로 사유 명시 후 close — *기각안 negative space* 보존 (CLAUDE.md §8).
 
+### 1.6 ⚙️ Trend Report v2 (Phase 22' 종결)
+
+`Phase 22'` AI 트렌드 리포트 메뉴는 4B+ 모델 설치 시 활성화돼요. 큐레이터가 매주 1회
+`lmmaster-trends-bundle`(또는 본 repo prototype)에 push하면 사용자 PC가
+`cdn.jsdelivr.net`에서 fetch + 로컬 LLM이 한국어 요약을 생성해요.
+
+**1주 운영 모니터링 항목** (Phase 22'.f — 첫 trends-bundle push 후 1주):
+
+- [ ] curator GHA aggregator가 weekly 09:00 KST에 안정 push (Actions fail rate 0%)
+- [ ] trends-bundle.json minisign 서명 + jsdelivr propagate (1~24h)
+- [ ] 사용자 PC fetch 4-tier fallback 정상 (jsdelivr → GitHub raw → bundled → 캐시)
+- [ ] 4B+ 모델 게이트 — 모델 미설치 시 disabled UI + CTA, 1개+ 설치 시 활성
+- [ ] 로컬 LLM 요약 SQLite 캐시 30일 TTL — 같은 bundle 재방문 시 즉시 응답
+- [ ] 카테고리 chip rail 6종 (논문/블로그/뉴스/영상/오픈소스/SNS) 빈 카테고리 graceful
+- [ ] 저작권자 신고 채널 (GitHub Issue) 1주 검토 SLA
+
+위 항목 중 2개 이상 실패면 ADR-0060 정책 + curator GHA workflow 튜닝. 결과는
+`docs/research/phase-22p-trend-report-decision.md`에 1주차 운영 노트로 기록.
+
+---
+
 **1주 운영 모니터링 항목** (Phase 21'.e — 첫 cron 시작 후 1주):
 
 - [ ] cron이 6h 간격으로 안정 동작 (Actions 탭에서 fail rate 0%)

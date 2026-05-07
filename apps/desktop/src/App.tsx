@@ -102,7 +102,7 @@ export default function App() {
       <CommandPaletteProvider>
         <PaletteHotkey />
         <CommandPalette />
-        <EulaGate eulaVersion="1.0.0" onAccept={handleEulaAccept}>
+        <EulaGate eulaVersion="1.2.0" onAccept={handleEulaAccept}>
         <ActiveWorkspaceProvider>
           {!completed ? (
             <OnboardingApp onComplete={handleComplete} />

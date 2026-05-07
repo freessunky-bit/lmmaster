@@ -1,4 +1,4 @@
-# LMmaster End User License Agreement (v1.0.0)
+# LMmaster End User License Agreement (v1.2.0)
 
 **Effective date**: TODO — fill in once the release date is confirmed.
 
@@ -56,7 +56,18 @@ The LMmaster dataset catalog (Phase 23') follows this policy:
 
 Full policy: `docs/adr/0062-nsfw-dataset-policy.md`.
 
-## 8. Contact
+## 9. AI Trend Report Policy (v1.2.0+, Phase 22')
+
+The LMmaster *AI Trend Report* menu (activated when a 4B+ model is installed) follows this policy:
+
+1. **External trend dataset fetch consent** — Your PC fetches a curated `trends-bundle.json` from `cdn.jsdelivr.net` once per week. Your PC does not directly scrape RSS / SNS / news sites (preserves the zero-external-call identity).
+2. **Curator workflow** — A separate repo `lmmaster-trends-bundle` (or in-repo prototype) runs a GHA aggregator that human-reviews RSS / arXiv / HF Daily Papers / YouTube / Bluesky / Mastodon sources and converts them into fair-use-compliant Korean one-line summaries.
+3. **Local LLM Korean summary policy** — On menu entry, your PC's 4B+ model (Gemma 3 4B / Nemotron 3 Nano 4B / EXAONE 3.5 7.8B / HCX-SEED 8B, etc.) generates 1–2 sentence meta-summaries per category in Korean. *Republishing the original content is forbidden.* Results are cached for 30 days.
+4. **Copyright holder reporting channel** — If you believe your content has been improperly cited, please file a GitHub Issue on this repo. The curator will review within one week and exclude or adjust the citation in the next push.
+
+Full policy: `docs/adr/0060-trend-report.md` + `docs/research/phase-22p-trend-report-decision.md`.
+
+## 10. Contact
 
 - Official email: wind@joycity.com
 - If you do not agree with this agreement, click "I do not agree" to exit the app.
