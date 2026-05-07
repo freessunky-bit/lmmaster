@@ -250,19 +250,14 @@ pub fn run() {
 
             // 6. KeyManager — Phase 3'.b. SQLite at app_data_dir/keys.db.
             //    Phase 8'.0.a (ADR-0035): SQLCipher 암호화 + OS 키체인 secret + 평문 마이그레이션.
+            //    Phase R-F+R-G hotfix (ADR-0064 §5): 단일 경로 + magic bytes 감지로 재작성.
+            //    기존 두-경로 분리 모델은 caller 인자 swap이 6개월 무사 통과한 회귀 원인이었어요.
             let keys_path = app
                 .path()
                 .app_data_dir()
                 .map(|d| d.join("keys.db"))
                 .unwrap_or_else(|_| std::path::PathBuf::from("keys.db"));
-            let legacy_path = app
-                .path()
-                .app_data_dir()
-                .map(|d| d.join("keys.db.legacy"))
-                .unwrap_or_else(|_| std::path::PathBuf::from("keys.db.legacy"));
-            // 기존 v1 사용자 호환: 이전 평문 DB 경로(keys.db) 그대로면 마이그레이션 후 .legacy.bak로
-            // rename. 새 사용자라면 keys.db는 처음부터 암호화로 생성.
-            let outcome = keys::provision(&keys_path, &legacy_path);
+            let outcome = keys::provision_v2(&keys_path);
             let key_manager: Arc<KeyManager> = match outcome.mode {
                 keys::KeyStoreMode::Encrypted { passphrase } => {
                     match KeyManager::open(&keys_path, &passphrase) {

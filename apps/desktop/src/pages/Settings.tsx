@@ -47,6 +47,9 @@ import {
   type UpdateEvent,
 } from "../ipc/updater";
 import { ToastUpdate } from "../components/ToastUpdate";
+// Phase R-F+R-G hotfix (ADR-0064 §4) — ManualUpdatePanel가 GitHub Releases 페이지를 외부 브라우저로 연다.
+// capability scope `https://github.com/**`로 이미 화이트리스트.
+import { open as openExternal } from "@tauri-apps/plugin-shell";
 import { PipelinesPanel } from "../components/PipelinesPanel";
 import { TelemetryPanel } from "../components/TelemetryPanel";
 import { CatalogRefreshPanel } from "../components/CatalogRefreshPanel";
@@ -81,9 +84,15 @@ const APP_VERSION = "0.1.0";
 const BUILD_COMMIT = "dev";
 
 /** 자동 갱신 — GitHub repo (외부 통신 0 정책 예외, ADR-0026 §1). */
-const UPDATE_REPO = "anthropics/lmmaster";
+const UPDATE_REPO = "freessunky-bit/lmmaster";
 /** Phase 7'.b — 베타 채널 별도 repo. 정식 release와 분리. */
-const UPDATE_REPO_BETA = "anthropics/lmmaster-beta";
+const UPDATE_REPO_BETA = "freessunky-bit/lmmaster-beta";
+
+/** Phase R-F+R-G hotfix (ADR-0064 §4) — Updater 옵션 B-3: v0.0.x 자동 갱신 비활성. */
+/** v1.x Phase R-K 진입 시 `true`로 토글. */
+const AUTO_UPDATE_ENABLED = false;
+/** GitHub Releases 페이지 — 사용자 수동 다운로드 안내 대상. */
+const RELEASES_URL = "https://github.com/freessunky-bit/lmmaster/releases/latest";
 
 /** ADR-0026 §2: 1h~24h 허용 범위. UI는 4개 단계로 압축. */
 const INTERVAL_OPTIONS: { secs: number; key: "1h" | "6h" | "12h" | "24h" }[] = [
@@ -304,14 +313,109 @@ function GeneralPanel({ currentLang, onChangeLanguage }: GeneralPanelProps) {
         </div>
       </fieldset>
 
-      <AutoUpdatePanel />
+      {AUTO_UPDATE_ENABLED ? <AutoUpdatePanel /> : <ManualUpdatePanel />}
       <PipelinesPanel />
       <TelemetryPanel />
     </form>
   );
 }
 
-// ── 자동 갱신 ────────────────────────────────────────────────────────
+// ── Phase R-F+R-G hotfix (ADR-0064 §4) — Updater 옵션 B-3: v0.0.x 수동 갱신 ──
+
+type ManualUpdateResult =
+  | { kind: "idle" }
+  | { kind: "latest" }
+  | { kind: "outdated"; version: string }
+  | { kind: "failed" };
+
+function ManualUpdatePanel() {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<ManualUpdateResult>({ kind: "idle" });
+
+  const handleOpen = useCallback(() => {
+    void openExternal(RELEASES_URL).catch((e) =>
+      console.warn("releases open failed:", e),
+    );
+  }, []);
+
+  const handleCheck = useCallback(async () => {
+    setBusy(true);
+    setResult({ kind: "idle" });
+    try {
+      await checkForUpdate(UPDATE_REPO, APP_VERSION, (ev: UpdateEvent) => {
+        if (ev.kind === "outdated") {
+          setResult({ kind: "outdated", version: ev.latest.version });
+        } else if (ev.kind === "up-to-date") {
+          setResult({ kind: "latest" });
+        } else if (ev.kind === "failed") {
+          setResult({ kind: "failed" });
+        }
+      });
+    } catch (e) {
+      console.warn("checkForUpdate failed:", e);
+      setResult({ kind: "failed" });
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  return (
+    <fieldset className="settings-fieldset" data-testid="settings-manual-update">
+      <legend className="settings-legend">
+        {t("screens.settings.autoUpdate.manualMode.title")}
+      </legend>
+      <p className="settings-hint">
+        {t("screens.settings.autoUpdate.manualMode.description")}
+      </p>
+      <p className="settings-readonly-text">
+        {t("screens.settings.autoUpdate.manualMode.currentVersion", {
+          version: APP_VERSION,
+        })}
+      </p>
+      <div className="settings-button-row">
+        <button
+          type="button"
+          className="settings-btn-primary"
+          onClick={handleOpen}
+          data-testid="settings-manual-update-open"
+        >
+          {t("screens.settings.autoUpdate.manualMode.openReleases")}
+        </button>
+        <button
+          type="button"
+          className="settings-btn-secondary"
+          onClick={handleCheck}
+          disabled={busy}
+          data-testid="settings-manual-update-check"
+        >
+          {busy
+            ? t("screens.settings.autoUpdate.manualMode.checking")
+            : t("screens.settings.autoUpdate.manualMode.checkLatest")}
+        </button>
+      </div>
+      {result.kind === "latest" && (
+        <p className="settings-success" role="status" aria-live="polite">
+          {t("screens.settings.autoUpdate.manualMode.isLatest")}
+        </p>
+      )}
+      {result.kind === "outdated" && (
+        <p className="settings-success" role="status" aria-live="polite">
+          {t("screens.settings.autoUpdate.manualMode.newVersionAvailable", {
+            latest: result.version,
+          })}
+        </p>
+      )}
+      {result.kind === "failed" && (
+        <p className="settings-error" role="alert">
+          {t("screens.settings.autoUpdate.manualMode.checkFailed")}
+        </p>
+      )}
+    </fieldset>
+  );
+}
+
+// ── 자동 갱신 (v1.x Phase R-K 진입 시 활성) ────────────────────────────
 
 interface AutoUpdateOutdatedState {
   release: ReleaseInfo;

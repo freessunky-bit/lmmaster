@@ -105,6 +105,22 @@ impl IngestService {
             )
             .await;
 
+            // Phase R-I.3 hotfix (ADR-0064 §I) — file size cap (10MB) — 사용자 PC 메모리 보호.
+            // read_to_string은 파일 전체를 메모리로 로드하므로 100MB+ 파일은 OOM 위험.
+            // chunk-level cancel은 v1.x deferred — file size cap만으로 실용적 충분.
+            const MAX_INGEST_FILE_BYTES: u64 = 10 * 1024 * 1024;
+            let metadata = std::fs::metadata(&file).map_err(|e| KnowledgeError::Io {
+                path: file.clone(),
+                source: e,
+            })?;
+            if metadata.len() > MAX_INGEST_FILE_BYTES {
+                return Err(KnowledgeError::FileTooLarge {
+                    path: file.clone(),
+                    size_mb: metadata.len() / (1024 * 1024),
+                    cap_mb: MAX_INGEST_FILE_BYTES / (1024 * 1024),
+                });
+            }
+
             let raw = match std::fs::read_to_string(&file) {
                 Ok(s) => s,
                 Err(e) => {

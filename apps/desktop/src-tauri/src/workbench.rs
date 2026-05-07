@@ -1083,14 +1083,19 @@ fn parse_responder_runtime(s: &str) -> ResponderRuntimeKind {
 ///
 /// - `responder_runtime` Some + Ollama/LM Studio + base_url Some → 실 HTTP responder.
 /// - 그 외 (None / Mock / 잘못된 값) → mock variant (deterministic stub).
-pub(crate) fn build_responder(config: &WorkbenchConfig) -> WorkbenchResponder {
+///
+/// Phase R-F+R-G hotfix (ADR-0064 §2): `WorkbenchResponder::new()`가 base_url localhost-only
+/// allowlist를 강제. 비-localhost host 입력 시 `WorkbenchError::InvalidBaseUrl` 그대로 전파.
+pub(crate) fn build_responder(
+    config: &WorkbenchConfig,
+) -> Result<WorkbenchResponder, workbench_core::WorkbenchError> {
     let kind = config
         .responder_runtime
         .as_deref()
         .map(parse_responder_runtime)
         .unwrap_or(ResponderRuntimeKind::Mock);
     match kind {
-        ResponderRuntimeKind::Mock => WorkbenchResponder::mock(),
+        ResponderRuntimeKind::Mock => Ok(WorkbenchResponder::mock()),
         ResponderRuntimeKind::Ollama => {
             let base_url = config
                 .responder_base_url
@@ -1489,7 +1494,13 @@ pub async fn start_workbench_run(
     // Phase 5'.e: WorkbenchResponder를 config의 runtime 필드 기준으로 dispatch.
     // - responder_runtime이 "ollama" / "lm-studio"면 실 HTTP 어댑터.
     // - None이거나 "mock"이면 deterministic stub (테스트/UI 데모).
-    let responder: Arc<dyn Responder> = Arc::new(build_responder(&config));
+    // Phase R-F+R-G hotfix (ADR-0064 §2): base_url이 비-localhost면 한국어 메시지로 즉시 거부.
+    let responder: Arc<dyn Responder> =
+        Arc::new(
+            build_responder(&config).map_err(|e| WorkbenchApiError::StartFailed {
+                message: format!("{e}"),
+            })?,
+        );
 
     // Tauri 2 정책: tauri::async_runtime::spawn 사용 (tokio::spawn 금지 — Tauri가 자체 runtime 소유).
     let registry_for_cleanup = registry_arc.clone();
@@ -2259,30 +2270,31 @@ mod tests {
     #[test]
     fn build_responder_default_is_mock() {
         let cfg = config();
-        let r = build_responder(&cfg);
+        let r = build_responder(&cfg).unwrap();
         assert_eq!(r.runtime_kind(), bench_harness::ResponderRuntimeKind::Mock);
     }
 
     #[test]
     fn build_responder_ollama_when_runtime_set() {
+        // Phase R-F+R-G hotfix: 비-localhost("http://example:11434")는 거부되므로 localhost 사용.
         let mut cfg = config();
         cfg.responder_runtime = Some("ollama".into());
-        cfg.responder_base_url = Some("http://example:11434".into());
+        cfg.responder_base_url = Some("http://localhost:11434".into());
         cfg.responder_model_id = Some("llama3.1:8b".into());
-        let r = build_responder(&cfg);
+        let r = build_responder(&cfg).unwrap();
         assert_eq!(
             r.runtime_kind(),
             bench_harness::ResponderRuntimeKind::Ollama
         );
         assert_eq!(r.model_id(), "llama3.1:8b");
-        assert_eq!(r.base_url(), "http://example:11434");
+        assert_eq!(r.base_url(), "http://localhost:11434");
     }
 
     #[test]
     fn build_responder_lmstudio_when_runtime_set() {
         let mut cfg = config();
         cfg.responder_runtime = Some("lm-studio".into());
-        let r = build_responder(&cfg);
+        let r = build_responder(&cfg).unwrap();
         assert_eq!(
             r.runtime_kind(),
             bench_harness::ResponderRuntimeKind::LmStudio
@@ -2293,8 +2305,35 @@ mod tests {
     fn build_responder_unknown_runtime_falls_back_to_mock() {
         let mut cfg = config();
         cfg.responder_runtime = Some("totally-unknown".into());
-        let r = build_responder(&cfg);
+        let r = build_responder(&cfg).unwrap();
         assert_eq!(r.runtime_kind(), bench_harness::ResponderRuntimeKind::Mock);
+    }
+
+    /// Phase R-F+R-G hotfix invariant — 비-localhost base_url은 InvalidBaseUrl 에러.
+    #[test]
+    fn build_responder_rejects_non_localhost_base_url() {
+        let mut cfg = config();
+        cfg.responder_runtime = Some("ollama".into());
+        cfg.responder_base_url = Some("http://192.168.0.10:11434".into());
+        let err = build_responder(&cfg).unwrap_err();
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("주소가 올바르지 않아요") && msg.contains("내 PC 안에서"),
+            "expected korean InvalidBaseUrl message, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn build_responder_rejects_https_base_url() {
+        let mut cfg = config();
+        cfg.responder_runtime = Some("lm-studio".into());
+        cfg.responder_base_url = Some("https://localhost:1234".into());
+        let err = build_responder(&cfg).unwrap_err();
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("https는 외부"),
+            "expected korean error, got: {msg}"
+        );
     }
 
     #[test]
@@ -2481,7 +2520,7 @@ mod tests {
             cfg,
             registry.clone(),
             model_reg(),
-            Arc::new(build_responder(&config())),
+            Arc::new(build_responder(&config()).unwrap()),
             cancel,
             ch,
         )

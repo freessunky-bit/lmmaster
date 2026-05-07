@@ -33,6 +33,8 @@ tracing.workspace = true
 # Phase 1A.3.b: install action executor
 runtime-detector.workspace = true
 webbrowser.workspace = true
+# Phase R-H hotfix (ADR-0064 §H) — open_url host allowlist (capability scope과 동일).
+url = { workspace = true }
 
 # archive extraction (Phase 1A.3.b.2)
 zip.workspace = true
@@ -47,3 +49,10 @@ walkdir.workspace = true
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "test-util"] }
 wiremock = "0.6"
+
+[features]
+# Phase R-F+R-G hotfix (ADR-0064 §1) — `shell.curl_pipe_sh` 격리용.
+# default OFF — production/CI 빌드에서는 자동으로 거부 분기로 fall-through.
+# 향후 6개월 후 코드 자체 제거 시 본 feature도 삭제.
+default = []
+legacy-curl-install = []

@@ -17,6 +17,8 @@ async-trait.workspace = true
 # Phase 5'.e — real HTTP wiring for WorkbenchResponder.
 reqwest = { workspace = true, features = ["json"] }
 backon.workspace = true
+# Phase R-F+R-G hotfix (ADR-0064 §2) — base_url localhost-only allowlist.
+url = { workspace = true }
 
 [dev-dependencies]
 tempfile.workspace = true

@@ -28,7 +28,7 @@ ADR-0059 §결정 1~7에 모두 명시. 본 결정 노트는 cross-reference만:
 - **§4 가중치 + 임계** — score 공식 + license whitelist + Korean signal + 사이즈 게이트 (ADR-0059 §4).
 - **§5 GHA action** — `JasonEtco/create-an-issue` (ADR-0059 §5).
 - **§6 검토 흐름** — Issue → 큐레이터 → manifest PR (ADR-0059 §6).
-- **§7 본 repo 영향 0** — PR 받는 측만 (ADR-0059 §7).
+- **§7 본 repo 영향 범위** — desktop runtime 영향 0, workspace/CI 영향 있음 (prototype crate `crates/trending-watcher` 잔류 + deprecated workflow `trending-watcher.yml` 잔류). ADR-0059 v1.x prototype exception (Phase R-I.4 갱신, 2026-05-08).
 
 ---
 

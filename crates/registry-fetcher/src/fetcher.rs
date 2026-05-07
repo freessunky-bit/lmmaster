@@ -144,12 +144,28 @@ impl FetcherCore {
         Ok(verified)
     }
 
-    /// id에 대해 4-tier fallback 시도.
-    pub async fn fetch_one(&self, id: &str) -> Result<FetchedManifest, FetcherError> {
+    /// Phase R-H hotfix (ADR-0064 §H) — manifest id allowlist 검증.
+    ///
+    /// 허용: ASCII alpha-num + `-` + `_` (SourceConfig::resolve_url과 정합).
+    /// 거부: 빈 문자열 / 점 / 슬래시 / 공백 / 제어 문자.
+    fn validate_manifest_id(id: &str) -> Result<(), FetcherError> {
         if id.is_empty() {
             return Err(FetcherError::EmptyManifestId);
         }
-        // 입력 검증 — '..' 등 차단은 source.resolve_url가 처리.
+        let valid = id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+        if !valid {
+            return Err(FetcherError::InvalidManifestId { id: id.to_owned() });
+        }
+        Ok(())
+    }
+
+    /// id에 대해 4-tier fallback 시도.
+    pub async fn fetch_one(&self, id: &str) -> Result<FetchedManifest, FetcherError> {
+        // Phase R-H hotfix (ADR-0064 §H) — entry에서 id allowlist 검증.
+        // SourceConfig::resolve_url의 검증은 try_source 경로만 통과하므로 try_bundled 우회를 차단해요.
+        Self::validate_manifest_id(id)?;
         let mut tried: Vec<SourceTier> = Vec::new();
         let mut last_network_err: Option<FetcherError> = None;
 
@@ -313,11 +329,22 @@ impl FetcherCore {
 
     /// Bundled 디렉터리에서 `<id>.json` 파일 read.
     async fn try_bundled(&self, id: &str) -> Result<FetchedManifest, FetcherError> {
+        // Phase R-H hotfix (ADR-0064 §H) — defense-in-depth: id 검증 + canonical prefix check.
+        Self::validate_manifest_id(id)?;
         let dir = self
             .bundled_dir
             .as_ref()
             .ok_or_else(|| FetcherError::BundledMissing(format!("bundled_dir 미설정 (id={id})")))?;
         let path = dir.join(format!("{id}.json"));
+        // canonical prefix check — symlink/`..` escape 차단.
+        if let (Ok(canonical_dir), Ok(canonical_path)) = (dir.canonicalize(), path.canonicalize()) {
+            if !canonical_path.starts_with(&canonical_dir) {
+                return Err(FetcherError::BundledMissing(format!(
+                    "bundled path가 디렉터리 밖이에요: {}",
+                    path.display()
+                )));
+            }
+        }
         if !path.exists() {
             return Err(FetcherError::BundledMissing(path.display().to_string()));
         }
@@ -413,6 +440,58 @@ mod tests {
         let core = make_core(Vec::new(), None);
         let r = core.fetch_one("").await;
         assert!(matches!(r, Err(FetcherError::EmptyManifestId)));
+    }
+
+    // ── Phase R-H hotfix (ADR-0064 §H) — manifest id allowlist ───
+
+    #[test]
+    fn validate_manifest_id_accepts_safe_chars() {
+        assert!(FetcherCore::validate_manifest_id("ollama").is_ok());
+        assert!(FetcherCore::validate_manifest_id("lm-studio").is_ok());
+        assert!(FetcherCore::validate_manifest_id("LM_Studio_42").is_ok());
+    }
+
+    #[test]
+    fn validate_manifest_id_rejects_empty() {
+        assert!(matches!(
+            FetcherCore::validate_manifest_id(""),
+            Err(FetcherError::EmptyManifestId)
+        ));
+    }
+
+    #[test]
+    fn validate_manifest_id_rejects_traversal() {
+        assert!(matches!(
+            FetcherCore::validate_manifest_id("../etc"),
+            Err(FetcherError::InvalidManifestId { .. })
+        ));
+        assert!(matches!(
+            FetcherCore::validate_manifest_id("foo/bar"),
+            Err(FetcherError::InvalidManifestId { .. })
+        ));
+        assert!(matches!(
+            FetcherCore::validate_manifest_id("foo.json"),
+            Err(FetcherError::InvalidManifestId { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn fetch_one_rejects_traversal_id_before_bundled_lookup() {
+        // try_bundled를 우회해서라도 path traversal id가 file system에 닿지 않아야 해요.
+        // network sources 0개 + bundled_dir tempdir 설정으로 try_bundled 직행하지만
+        // entry validation에서 먼저 Err.
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = crate::cache::Cache::open_in_memory().await.expect("cache");
+        let core = FetcherCore {
+            http: reqwest::Client::new(),
+            cache,
+            sources: vec![],
+            bundled_dir: Some(tmp.path().to_path_buf()),
+            ttl: std::time::Duration::from_secs(60),
+            stale_grace: std::time::Duration::from_secs(60),
+        };
+        let r = core.fetch_one("../etc").await;
+        assert!(matches!(r, Err(FetcherError::InvalidManifestId { .. })));
     }
 
     #[tokio::test]

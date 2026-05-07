@@ -88,3 +88,10 @@ http-body-util = "0.1"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
+# Phase R-F+R-G hotfix (ADR-0064 §3) — release build SQLCipher forwarding.
+# desktop crate가 binary unification root이므로 한 번에 활성하면 두 sub-crate에 cargo가 자동 전파.
+# release.yml matrix `args: '--features sqlcipher'`로 주입 (ADR-0035 / ADR-0053).
+sqlcipher = [
+  "key-manager/sqlcipher",
+  "knowledge-stack/sqlcipher",
+]

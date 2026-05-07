@@ -69,8 +69,6 @@
     "allow-cancel-embedding-download",
     "allow-check-for-update",
     "allow-cancel-update-check",
-    "allow-start-auto-update-poller",
-    "allow-stop-auto-update-poller",
     "allow-get-auto-update-status",
     "allow-list-pipelines",
     "allow-set-pipeline-enabled",
@@ -88,7 +86,6 @@
     "allow-rename-workspace",
     "allow-delete-workspace",
     "allow-set-active-workspace",
-    "updater:default",
     {
       "identifier": "shell:allow-open",
       "allow": [

@@ -154,3 +154,62 @@ describe("matchSection", () => {
     expect(matchSection({ ...section, title: "Catalog" }, [], "CAT")).toBe(true);
   });
 });
+
+// ── Phase R-J.1 (ADR-0064 §J) — XSS payload 거부 invariant ───
+//
+// 정책: `_render-markdown`은 *내부 markdown* (EulaGate + Guide) 전용 — user-input 처리 X.
+// 그러나 escape invariant가 깨지면 미래 remote guide manifest 도입 시 즉시 XSS surface.
+// 본 invariant test가 escape 약속을 *기계적으로 보존*해요.
+
+describe("XSS payload 거부 (R-J.1)", () => {
+  it("escapeHtml — <script> 태그를 entity로 escape", () => {
+    const out = escapeHtml('<script>alert("xss")</script>');
+    expect(out).not.toContain("<script>");
+    expect(out).toContain("&lt;script&gt;");
+    expect(out).toContain("&quot;xss&quot;");
+  });
+
+  it("escapeHtml — <img onerror> payload를 escape", () => {
+    const out = escapeHtml('<img src=x onerror="alert(1)">');
+    expect(out).not.toContain("<img");
+    expect(out).toContain("&lt;img");
+    expect(out).toContain("&quot;alert(1)&quot;");
+  });
+
+  it("escapeHtml — javascript: URL은 angle bracket이 escape돼요", () => {
+    // escape 함수는 scheme 검증 안 함 — angle bracket만 entity 변환.
+    const out = escapeHtml('<a href="javascript:alert(1)">click</a>');
+    expect(out).not.toContain("<a ");
+    expect(out).not.toContain("</a>");
+    expect(out).toContain("&lt;a");
+  });
+
+  it("renderInline — **bold** 안 <script>도 escape", () => {
+    const out = renderInline("**<script>**");
+    expect(out).toContain("<strong>");
+    expect(out).toContain("&lt;script&gt;");
+    expect(out).not.toContain("<strong><script>");
+  });
+
+  it("renderInline — `code` 안 <img onerror>도 escape", () => {
+    const out = renderInline("`<img onerror=x>`");
+    expect(out).toContain("<code>");
+    expect(out).toContain("&lt;img");
+    expect(out).not.toContain("<code><img");
+  });
+
+  it("renderMarkdown — 본문 안 <script> escape", () => {
+    const out = renderMarkdown("# 제목\n\n<script>evil()</script>");
+    expect(out).toContain("<h1>제목</h1>");
+    expect(out).toContain("&lt;script&gt;");
+    expect(out).not.toContain("<script>evil");
+  });
+
+  it("renderMarkdown — 리스트 안 <img onerror> escape", () => {
+    const out = renderMarkdown("- <img src=x onerror=alert(1)>");
+    expect(out).toContain("<ul>");
+    expect(out).toContain("<li>");
+    expect(out).toContain("&lt;img");
+    expect(out).not.toContain("<li><img");
+  });
+});

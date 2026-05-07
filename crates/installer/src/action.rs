@@ -270,13 +270,22 @@ impl ActionExecutor {
     }
 
     /// `shell.curl_pipe_sh` — `bash -c "curl -fsSL <url> | sh"`. Linux 전용.
-    /// macOS에선 동일하게 동작 가능하나 v1에서는 Linux로 한정. Win은 Unsupported.
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    ///
+    /// Phase R-F+R-G hotfix (ADR-0064 §1): supply-chain RCE 표면이라 production 빌드에서 거부.
+    /// `legacy-curl-install` feature가 켜진 *Unix 빌드*에서만 실제 실행 — 향후 6개월 후 함수 자체 제거.
+    /// `manifests/apps/*.json`이 `shell.curl_pipe_sh`를 사용하면 manifest validator가 사전 거부.
+    #[cfg(all(
+        any(target_os = "linux", target_os = "macos"),
+        feature = "legacy-curl-install"
+    ))]
     async fn run_shell_curl_pipe_sh(
         &self,
         spec: &ShellCurlPipeShSpec,
         cancel: &CancellationToken,
     ) -> Result<ActionOutcome, ActionError> {
+        tracing::error!(
+            "legacy-curl-install feature가 활성화된 빌드예요 — production에 ship되면 안 돼요"
+        );
         validate_shell_safe_url(&spec.url_template)?;
         tracing::info!(
             url = %spec.url_template,
@@ -301,14 +310,19 @@ impl ActionExecutor {
         }
     }
 
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    /// Phase R-F+R-G hotfix (ADR-0064 §1) — production 빌드는 항상 이 분기.
+    /// Windows 빌드 + Unix without `legacy-curl-install` 모두 거부.
+    #[cfg(not(all(
+        any(target_os = "linux", target_os = "macos"),
+        feature = "legacy-curl-install"
+    )))]
     async fn run_shell_curl_pipe_sh(
         &self,
         _spec: &ShellCurlPipeShSpec,
         _cancel: &CancellationToken,
     ) -> Result<ActionOutcome, ActionError> {
         Err(ActionError::Unsupported(
-            "shell.curl_pipe_sh — Unix bash only",
+            "shell.curl_pipe_sh — supply-chain RCE 표면이라 v0.X부터 제거됐어요. open_url 또는 download_and_extract로 전환해 주세요.",
         ))
     }
 
@@ -406,7 +420,10 @@ impl ActionExecutor {
     }
 
     fn run_open_url(&self, spec: &OpenUrlSpec) -> Result<ActionOutcome, ActionError> {
-        // SAFETY 측면: webbrowser는 cmd /c start "" / open / xdg-open를 spawn. URL은 manifest 신뢰원.
+        // Phase R-H hotfix (ADR-0064 §H) — capability scope `shell:allow-open`과 동일 host allowlist.
+        // webbrowser::open은 Tauri shell ACL을 우회하므로 Rust action layer에서 defense-in-depth 검증.
+        validate_open_url_host(&spec.url)?;
+        // SAFETY: webbrowser는 cmd /c start "" / open / xdg-open를 spawn. URL은 host allowlist 통과한 신뢰원.
         webbrowser::open(&spec.url).map_err(|e| ActionError::OpenUrl {
             url: spec.url.clone(),
             source: e,
@@ -415,6 +432,40 @@ impl ActionExecutor {
             url: spec.url.clone(),
         })
     }
+}
+
+/// Phase R-H hotfix (ADR-0064 §H) — open_url host allowlist (capability scope과 정합).
+///
+/// `apps/desktop/src-tauri/capabilities/main.json::shell:allow-open`의 4 도메인과 동일 매치.
+/// suffix attack 차단 — `eq_ignore_ascii_case`로 정확 매치만.
+const OPEN_URL_HOST_ALLOWLIST: &[&str] = &[
+    "github.com",
+    "huggingface.co",
+    "cdn.jsdelivr.net",
+    "lmstudio.ai",
+];
+
+pub(crate) fn validate_open_url_host(raw: &str) -> Result<(), ActionError> {
+    let parsed = url::Url::parse(raw)
+        .map_err(|_| ActionError::InvalidSpec(format!("올바른 URL 형식이 아니에요: {raw}")))?;
+    if parsed.scheme() != "https" && parsed.scheme() != "http" {
+        return Err(ActionError::InvalidSpec(format!(
+            "open_url 스킴이 허용되지 않아요: {}",
+            parsed.scheme()
+        )));
+    }
+    let host = parsed
+        .host_str()
+        .ok_or_else(|| ActionError::InvalidSpec(format!("open_url에 host가 없어요: {raw}")))?;
+    if !OPEN_URL_HOST_ALLOWLIST
+        .iter()
+        .any(|allowed| host.eq_ignore_ascii_case(allowed))
+    {
+        return Err(ActionError::InvalidSpec(format!(
+            "open_url host가 화이트리스트 밖이에요: {host}"
+        )));
+    }
+    Ok(())
 }
 
 /// installer를 spawn하고 exit code 수집. cancel 시 start_kill + 5s wait.
@@ -546,6 +597,71 @@ fn validate_shell_safe_url(url: &str) -> Result<(), ActionError> {
         )));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod open_url_host_allowlist_tests {
+    use super::validate_open_url_host;
+
+    fn assert_ok(url: &str) {
+        validate_open_url_host(url).unwrap_or_else(|e| panic!("{url} should pass: {e}"));
+    }
+
+    fn assert_reject(url: &str) {
+        validate_open_url_host(url).expect_err(&format!("{url} should be rejected"));
+    }
+
+    #[test]
+    fn allowlist_github_https() {
+        assert_ok("https://github.com/ollama/ollama/releases/latest");
+    }
+
+    #[test]
+    fn allowlist_huggingface_https() {
+        assert_ok("https://huggingface.co/Qwen/Qwen2.5-7B");
+    }
+
+    #[test]
+    fn allowlist_jsdelivr_https() {
+        assert_ok("https://cdn.jsdelivr.net/gh/foo/bar@main/file");
+    }
+
+    #[test]
+    fn allowlist_lmstudio_https() {
+        assert_ok("https://lmstudio.ai/download");
+    }
+
+    #[test]
+    fn rejects_non_allowlist_host() {
+        assert_reject("https://attacker.example/payload");
+    }
+
+    #[test]
+    fn rejects_suffix_attack() {
+        // `github.com.evil.com`은 정확 매치 실패 — capability scope과 정합.
+        assert_reject("https://github.com.evil.com/payload");
+        assert_reject("https://evil.github.com/payload");
+    }
+
+    #[test]
+    fn rejects_non_http_scheme() {
+        assert_reject("file:///etc/passwd");
+        assert_reject("javascript:alert(1)");
+        assert_reject("ftp://github.com/file");
+    }
+
+    #[test]
+    fn rejects_invalid_url() {
+        assert_reject("not-a-url");
+        assert_reject("");
+    }
+
+    #[test]
+    fn http_localhost_rejected_too() {
+        // open_url은 외부 URL용이라 localhost도 거부 (ADR-0055 정책 — 외부 통신 화이트리스트).
+        assert_reject("http://localhost:1234/foo");
+        assert_reject("http://127.0.0.1:8080/api");
+    }
 }
 
 #[cfg(test)]

@@ -126,11 +126,11 @@ impl KeyStore {
         apply_stability_pragmas(&conn)?;
 
         // ATTACH plaintext.
+        // Phase R-F+R-G hotfix (ADR-0064 §5): SQL injection 방지 — `'`를 `''`로 escape.
+        // 사용자 경로에 `O'Brien` 같은 single quote가 있으면 ATTACH SQL이 깨져 마이그레이션 실패.
+        let escaped_plain = plain_path.display().to_string().replace('\'', "''");
         conn.execute(
-            &format!(
-                "ATTACH DATABASE '{}' AS plaintext KEY ''",
-                plain_path.display()
-            ),
+            &format!("ATTACH DATABASE '{escaped_plain}' AS plaintext KEY ''"),
             [],
         )
         .map_err(|e| StoreError::MigrationFailed(format!("평문 DB attach 실패: {e}")))?;
@@ -732,6 +732,34 @@ mod tests {
         assert!(
             r.revoked_at.is_some(),
             "revoked 상태는 scope 편집 후에도 유지"
+        );
+    }
+
+    // ── Phase R-F+R-G hotfix (ADR-0064 §3) — SQLCipher release-only invariant ───
+
+    /// release build에서 sqlcipher feature가 실제로 활성화됐는지 runtime 검증.
+    /// `PRAGMA cipher_version`은 SQLCipher 빌드에서만 non-empty 반환 (stock SQLite는 unknown pragma).
+    /// 본 invariant가 깨지면 release.yml `args: '--features sqlcipher'` 주입이 빠졌거나
+    /// rusqlite가 stock SQLite로 fall-back된 silent regression.
+    #[cfg(feature = "sqlcipher")]
+    #[test]
+    fn sqlcipher_runtime_active_in_release_feature() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("verify.db");
+        let passphrase = "deadbeef".repeat(8);
+        let store = KeyStore::open(&path, &passphrase).expect("open with sqlcipher passphrase");
+        let version: Option<String> = store
+            .conn
+            .query_row("PRAGMA cipher_version", [], |r| r.get(0))
+            .ok();
+        assert!(
+            version.as_deref().filter(|v| !v.is_empty()).is_some(),
+            "SQLCipher 빌드인데 cipher_version이 비어 있어요 — feature가 stock SQLite로 fall-back했어요"
+        );
+        let v = version.unwrap();
+        assert!(
+            v.starts_with('4') || v.starts_with('5'),
+            "예상치 못한 cipher_version: {v}"
         );
     }
 

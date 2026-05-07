@@ -950,4 +950,31 @@ mod tests {
         let path_ok = store.get_document_path(&ws_a.id, &doc_a.id).unwrap();
         assert_eq!(path_ok, Some(PathBuf::from("/a.md")));
     }
+
+    // ── Phase R-F+R-G hotfix (ADR-0064 §3) — SQLCipher release-only invariant ───
+
+    /// release build에서 sqlcipher feature가 실제로 활성화됐는지 runtime 검증.
+    /// `PRAGMA cipher_version`은 SQLCipher 빌드에서만 non-empty 반환.
+    /// 본 invariant가 깨지면 RAG 컬렉션이 디스크에 평문 저장되는 silent regression.
+    #[cfg(feature = "sqlcipher")]
+    #[test]
+    fn sqlcipher_runtime_active_in_release_feature() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("kdb-verify.db");
+        let store =
+            KnowledgeStore::open_with_passphrase(&path, "passphrase-aaaaaaaaaaaaaaaaa").unwrap();
+        let version: Option<String> = store
+            .conn
+            .query_row("PRAGMA cipher_version", [], |r| r.get(0))
+            .ok();
+        assert!(
+            version.as_deref().filter(|v| !v.is_empty()).is_some(),
+            "SQLCipher 빌드인데 cipher_version이 비어 있어요 — feature가 stock SQLite로 fall-back했어요"
+        );
+        let v = version.unwrap();
+        assert!(
+            v.starts_with('4') || v.starts_with('5'),
+            "예상치 못한 cipher_version: {v}"
+        );
+    }
 }

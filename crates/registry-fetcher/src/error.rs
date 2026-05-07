@@ -39,6 +39,11 @@ pub enum FetcherError {
     #[error("매니페스트 ID가 비어있어요")]
     EmptyManifestId,
 
+    /// Phase R-H hotfix (ADR-0064 §H) — fetch_one + try_bundled에서 path traversal 표면 차단.
+    /// alpha-num + `-` + `_` 외 문자가 들어오면 거부.
+    #[error("매니페스트 ID에 허용되지 않는 문자가 있어요: {id}")]
+    InvalidManifestId { id: String },
+
     #[error("URL 템플릿 치환 실패: {0}")]
     UrlTemplate(String),
 

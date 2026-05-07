@@ -40,6 +40,10 @@ pub enum InstallRunnerError {
 
     #[error("이벤트 채널이 닫혔어요 — 설치를 중단했습니다")]
     SinkClosed,
+
+    /// Phase R-F+R-G hotfix (ADR-0064 §1) — production manifest가 supply-chain RCE 표면을 가짐.
+    #[error("매니페스트 검증 실패: {0}")]
+    ManifestInvalid(#[from] runtime_detector::manifest::ManifestValidationError),
 }
 
 impl InstallRunnerError {
@@ -60,6 +64,7 @@ impl InstallRunnerError {
             Self::Action(ActionError::Unsupported(_)) => "unsupported",
             Self::Action(ActionError::InvalidSpec(_)) => "invalid-spec",
             Self::SinkClosed => "sink-closed",
+            Self::ManifestInvalid(_) => "manifest-invalid",
         }
     }
 }
@@ -81,6 +86,8 @@ pub async fn run_install<S: InstallSink + 'static>(
     sink: Arc<S>,
 ) -> Result<ActionOutcome, InstallRunnerError> {
     // 1. 매니페스트 검증 + platform 분기.
+    // Phase R-F+R-G hotfix (ADR-0064 §1): supply-chain RCE 표면(`shell.curl_pipe_sh`) 사전 거부.
+    manifest.validate_install_methods_safe()?;
     let install = manifest
         .install
         .as_ref()

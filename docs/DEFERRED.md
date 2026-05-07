@@ -254,28 +254,65 @@ frontend `LlamaCppSetupWizard`(13'.h.2.e)는 manifest의 빌드 버전/asset URL
 
 ## 우선순위 3 — 운영 / 인프라
 
-### Tauri Updater 호환 빌드 — 옵션 B (배포 빌드)
+### Phase R-K (v1.x 진입) — Tauri Updater 활성 (옵션 A 복귀)
 
-* **상태**: pending. 옵션 A (무서명 NSIS installer) 완료 후 정식 배포 흐름.
-* **선행 의존성**: 없음. 단 GitHub Releases 자동 업데이트를 원할 때만 필요.
-* **예상 작업량**: 1-2h (keypair 생성 + env + 빌드 + Releases 워크플로 step 검증).
+* **상태**: pending. 옵션 B-3 hybrid (active=false + ManualUpdatePanel)가 v0.0.x 운영 중 (ADR-0064 §4).
+* **선행 의존성**: 무서명 NSIS 빌드 1회 검증 + minisign keypair 보관 정책 확정.
+* **예상 작업량**: 2-3h (keypair 생성 + config 토글 + UI 분기 + e2e 1회).
 
 작업 스코프:
-1. **minisign keypair 생성** — `rsign generate -p ~/.lmmaster.pub -s ~/.lmmaster.key`. password는 강한 패스프레이즈.
-2. **`tauri.conf.json::plugins.updater.pubkey` 교체** — 현재 등록된 pubkey가 *짝이 맞는 secret*과 함께 보관 중인지 확인. 없으면 위에서 만든 새 pubkey로 교체.
-3. **`TAURI_SIGNING_PRIVATE_KEY` + `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` env 설정** — secret key 파일 내용 + password.
-4. **`createUpdaterArtifacts` 다시 `true`로 복귀** — 옵션 A 진행 시 임시로 `false`로 둠.
-5. **`pnpm tauri build` 재실행** — `.exe` + `.sig` + `latest.json` 산출.
-6. **GitHub Releases 자동화** — `.github/workflows/release.yml` 신규. tag push 트리거 → 빌드 → release 생성 → assets 업로드 (.exe, .sig, latest.json). updater endpoints가 GitHub Releases를 가리키므로 (tauri.conf.json::plugins.updater.endpoints) 사용자 PC에서 자동 업데이트 흐름 완성.
-7. **Phase 13'.g.2와 통합 결정** — catalog signing (ADR-0047)과 updater signing이 동일 keypair 사용? 분리? Tauri Updater pubkey는 minisign 형식 동일하므로 *같은 키 재사용 가능*하지만 "역할 분리" 관점에서 분리 권장.
+1. **minisign keypair 발급** — `rsign generate -p ./tauri-pubkey -s ./tauri-priv.key`. 강한 패스프레이즈 필수.
+2. **`tauri.conf.json::plugins.updater.pubkey` 교체** — 기존 임베드 키(`BF5C36D65E99C44F` 시작)는 짝 secret 미확인이므로 *반드시 새 keypair*. 옛 사용자 PC가 새 키로 서명된 빌드를 받지 못하므로 v1.0.0 release notes에 "이번 한 번만 수동 받아주세요" 필수 안내.
+3. **`tauri.conf.json::plugins.updater.active = true`** 토글 (현재 `false`).
+4. **`tauri.conf.json::bundle.createUpdaterArtifacts = true`** 토글 (현재 `false`).
+5. **GitHub Secret 등록** — `TAURI_SIGNING_PRIVATE_KEY`(secret 파일 본문) + `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+6. **`.github/workflows/release.yml` env 추가** — 위 두 secret을 빌드 step env로 주입.
+7. **capability 복구** — `apps/desktop/src-tauri/capabilities/main.json`에 다음 3개 다시 추가:
+   - `updater:default`
+   - `allow-start-auto-update-poller`
+   - `allow-stop-auto-update-poller`
+8. **`Settings.tsx` 분기 토글** — `const AUTO_UPDATE_ENABLED = true;`. `<AutoUpdatePanel />` 자동 복귀 + `<ManualUpdatePanel />` 자동 차단.
+9. **i18n 키 deprecation** — `screens.settings.autoUpdate.manualMode.*` 9키는 보존 (다음 v1.x ship 시 deletion sweep으로 정리).
+10. **첫 release tag로 e2e** — `latest.json` + `*.sig` 산출 + 사용자 PC가 기존 v0.0.x에서 자동 알림을 받을 수 있는지 검증 (단 첫 pubkey-bump 1회는 수동).
 
 진입 조건:
-- 옵션 A로 무서명 빌드가 한 번 성공해서 빌드 환경이 검증된 상태.
+- 옵션 B-3로 무서명 빌드가 충분히 안정 (release notes / Settings 카피 검증).
 - minisign keypair secret 보관 정책 결정 (1Password / GitHub Encrypted Secret).
 
 위험 노트:
-- pubkey 교체 시 *기존 사용자가 업데이트 못 받음* — 일단 v0.0.1 → v0.1 첫 정식 릴리즈 전에 확정해야 함.
+- pubkey 교체 시 *기존 사용자가 업데이트 못 받음* — Tauri trust-on-first-use라 옛 pubkey가 박힌 PC는 새 pubkey를 거부.
 - secret 유출 시 즉시 keypair 회전 + 새 pubkey 임베드한 hotfix 릴리즈 필수.
+
+---
+
+### Phase R-L (v1.x 진입) — Ollama Linux 자동화 (옵션 A: download_and_extract)
+
+* **상태**: deferred. 옵션 B (open_url + 공식 가이드)가 v0.3.x 운영 중 (ADR-0064 §1). supply-chain RCE 표면 제거 완료.
+* **옵션 A 의도**: `manifests/apps/ollama.json`의 linux 분기를 `download_and_extract`로 전환:
+  ```json
+  "linux": {
+    "method": "download_and_extract",
+    "url_template": "https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64.tar.zst",
+    "version_url": "https://api.github.com/repos/ollama/ollama/releases/latest",
+    "extract_to": "/usr",
+    "sha256": "auto-fetched-from-sha256sum-txt"
+  }
+  ```
+* **선행 의존성**:
+  1. `extract.rs::detect_format`이 `.tar.zst` 지원 — 현재 zip / tar.gz / dmg만. zstd crate 의존성 추가 필요.
+  2. **sha256 자동 갱신 cron** — Ollama Releases의 `sha256sum.txt` 1시간마다 fetch → manifest 자동 갱신 → minisign 재서명. catalog signing 인프라 (ADR-0047) 재사용 가능.
+  3. **CPU/GPU 변종 분기** — `hardware-probe`로 GPU detect 후 amd64/amd64-rocm/arm64/jetpack5/jetpack6 분기. manifest schema 확장 (`linux_variants`).
+  4. **sudo 우회** — `/usr` 쓰기는 root 필요. 사용자 홈에 풀고 `~/.local/bin`에 symlink하는 sudo-free path 권장.
+  5. **systemd unit 자동 작성** — Tauri가 `/etc/systemd/system/`에 쓸 권한 0. user-mode systemd (`~/.config/systemd/user/ollama.service` + `systemctl --user enable`)로 회피.
+  6. **AMD ROCm 추가 번들** — 사용자 GPU detect 후 자동 추가 다운로드. UX 동의 필요 (~990MB).
+* **언제 채택?**: Linux 사용자 점유율 > 15% + manual install 실패율 > 30% 텔레메트리 신호 충족 시. v1.0 ship 후 6주 모니터링.
+* **체크리스트**:
+  - [ ] zstd crate 추가 + extract.rs `.tar.zst` 지원 + 4개 invariant 테스트
+  - [ ] sha256sum.txt 자동 갱신 cron + minisign 재서명 GitHub Action
+  - [ ] hardware-probe GPU detect 결과 → variant 매핑 deterministic 함수
+  - [ ] user-mode systemd 통합 — 5개 배포판 매트릭스 (Ubuntu 22/24, Fedora 40/41, Arch)
+  - [ ] sudo-free 설치 path UX 결정 노트
+  - [ ] ADR 신설 (가칭 "ADR-0065 Ollama Linux 자동화 — sudo-free user-local install")
 
 ---
 

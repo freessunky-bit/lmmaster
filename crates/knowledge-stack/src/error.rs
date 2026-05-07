@@ -39,6 +39,15 @@ pub enum KnowledgeError {
 
     #[error("사용자가 작업을 취소했어요")]
     Cancelled,
+
+    /// Phase R-I.3 hotfix (ADR-0064 §I) — knowledge ingest file size cap.
+    /// 사용자 PC 메모리 보호 — `read_to_string`이 100MB+ 파일을 통째 메모리로 로드하면 OOM 위험.
+    #[error("파일이 너무 커서 인덱싱하지 못했어요 ({size_mb}MB > {cap_mb}MB 한도): {path}")]
+    FileTooLarge {
+        path: PathBuf,
+        size_mb: u64,
+        cap_mb: u64,
+    },
 }
 
 #[cfg(test)]
@@ -110,6 +119,20 @@ mod tests {
     }
 
     #[test]
+    fn file_too_large_message_korean_with_path_and_size() {
+        let err = KnowledgeError::FileTooLarge {
+            path: PathBuf::from("/tmp/huge.md"),
+            size_mb: 50,
+            cap_mb: 10,
+        };
+        let msg = format!("{err}");
+        assert!(msg.contains("파일이 너무 커서"));
+        assert!(msg.contains("50MB"));
+        assert!(msg.contains("10MB"));
+        assert!(msg.contains("huge.md") || msg.contains("/tmp/huge.md"));
+    }
+
+    #[test]
     fn debug_does_not_panic() {
         // 모든 variant에 대해 Debug 동작 확인.
         let path = PathBuf::from("/x");
@@ -136,6 +159,14 @@ mod tests {
             format!("{:?}", KnowledgeError::EmbeddingFailed("x".into())),
             format!("{:?}", KnowledgeError::WorkspaceNotFound("x".into())),
             format!("{:?}", KnowledgeError::Cancelled),
+            format!(
+                "{:?}",
+                KnowledgeError::FileTooLarge {
+                    path: PathBuf::from("/tmp/huge.md"),
+                    size_mb: 50,
+                    cap_mb: 10,
+                }
+            ),
         ];
         for s in dbg_list {
             assert!(!s.is_empty());

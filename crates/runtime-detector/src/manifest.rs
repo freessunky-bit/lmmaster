@@ -68,6 +68,42 @@ impl InstallSpec {
     }
 }
 
+/// Phase R-F+R-G hotfix (ADR-0064 §1) — manifest validation 에러.
+///
+/// production build에서 `shell.curl_pipe_sh`가 manifest에 발견되면 supply-chain RCE 표면이라
+/// 즉시 거부. installer crate가 install_runner 진입 시 검증.
+#[derive(Debug, thiserror::Error)]
+pub enum ManifestValidationError {
+    #[error("매니페스트 '{app_id}' ({os}): shell.curl_pipe_sh는 더 이상 허용되지 않아요. open_url 또는 download_and_extract로 전환해 주세요.")]
+    ForbiddenShellCurlPipeSh { app_id: String, os: &'static str },
+}
+
+impl AppManifest {
+    /// Phase R-F+R-G hotfix (ADR-0064 §1) — supply-chain RCE 표면을 차단하는 install method 검증.
+    ///
+    /// `shell.curl_pipe_sh`는 외부 화이트리스트(`huggingface.co`/`github.com`/`cdn.jsdelivr.net`)
+    /// 정책과 맞지 않고, 원격 스크립트 무결성 보장 0이라 production manifest에서 영구 거부.
+    pub fn validate_install_methods_safe(&self) -> Result<(), ManifestValidationError> {
+        let Some(ref install) = self.install else {
+            return Ok(());
+        };
+        let check = |branch: &Option<PlatformInstall>, os: &'static str| {
+            if let Some(PlatformInstall::ShellCurlPipeSh(_)) = branch {
+                Err(ManifestValidationError::ForbiddenShellCurlPipeSh {
+                    app_id: self.id.clone(),
+                    os,
+                })
+            } else {
+                Ok(())
+            }
+        };
+        check(&install.windows, "windows")?;
+        check(&install.macos, "macos")?;
+        check(&install.linux, "linux")?;
+        Ok(())
+    }
+}
+
 /// 4 method 분기. `serde(tag = "method", rename_all = "snake_case")`.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "method", rename_all = "snake_case")]
@@ -874,5 +910,71 @@ mod tests {
         let m = ManifestEvaluator::from_path(&p).expect("parse manifests/apps/ollama.json");
         assert_eq!(m.manifest.id, "ollama");
         assert!(!m.manifest.detect.is_empty());
+    }
+
+    // ── Phase R-F+R-G hotfix (ADR-0064 §1) — manifest validator ──────────
+
+    #[test]
+    fn validate_rejects_curl_pipe_sh_on_linux() {
+        let json = r#"{
+            "schema_version": 1, "id": "ollama", "display_name": "Ollama",
+            "license": "MIT", "detect": [],
+            "install": {
+                "linux": {
+                    "method": "shell.curl_pipe_sh",
+                    "url_template": "https://ollama.com/install.sh"
+                }
+            }
+        }"#;
+        let m: AppManifest = serde_json::from_str(json).unwrap();
+        let err = m.validate_install_methods_safe().unwrap_err();
+        assert!(matches!(
+            err,
+            ManifestValidationError::ForbiddenShellCurlPipeSh { os: "linux", .. }
+        ));
+        let msg = err.to_string();
+        assert!(msg.contains("shell.curl_pipe_sh"));
+        assert!(msg.contains("open_url"));
+    }
+
+    #[test]
+    fn validate_passes_for_open_url() {
+        let json = r#"{
+            "schema_version": 1, "id": "ollama", "display_name": "Ollama",
+            "license": "MIT", "detect": [],
+            "install": {
+                "linux": {
+                    "method": "open_url",
+                    "url": "https://github.com/ollama/ollama/blob/main/docs/linux.mdx"
+                }
+            }
+        }"#;
+        let m: AppManifest = serde_json::from_str(json).unwrap();
+        assert!(m.validate_install_methods_safe().is_ok());
+    }
+
+    /// 회귀 가드 — 실제 manifests/apps/ollama.json이 validation 통과해야 함.
+    #[test]
+    fn real_ollama_manifest_passes_validation() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("manifests/apps/ollama.json");
+        if !p.exists() {
+            return;
+        }
+        let m = ManifestEvaluator::from_path(&p).expect("parse");
+        m.manifest
+            .validate_install_methods_safe()
+            .expect("real ollama manifest must use open_url on linux");
+    }
+
+    #[test]
+    fn validate_passes_when_no_install_section() {
+        let json = r#"{
+            "schema_version": 1, "id": "test", "display_name": "Test",
+            "license": "MIT", "detect": []
+        }"#;
+        let m: AppManifest = serde_json::from_str(json).unwrap();
+        assert!(m.validate_install_methods_safe().is_ok());
     }
 }

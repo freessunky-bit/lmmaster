@@ -41,6 +41,22 @@ pub enum InstallApiError {
 
     #[error("설치 실행 중 오류 [{code}]: {message}")]
     Runner { code: String, message: String },
+
+    /// Phase R-H hotfix (ADR-0064 §H) — install_app(id) IPC entry에 path traversal 차단.
+    /// alpha-num + `-` + `_` 외 문자가 들어오거나 빈 문자열이면 거부.
+    #[error("앱 식별자가 올바르지 않아요 (id={id})")]
+    InvalidId { id: String },
+}
+
+/// Phase R-H hotfix (ADR-0064 §H) — install_app(id)의 안전한 식별자 검증.
+///
+/// 허용: ASCII alpha-num + `-` + `_` (현재 manifests/apps/*.json 명명 규칙과 정합).
+/// 거부: 빈 문자열 / 점 / 슬래시 / 공백 / 제어 문자 / non-ASCII.
+fn is_valid_app_id(id: &str) -> bool {
+    !id.is_empty()
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
 impl InstallApiError {
@@ -141,6 +157,12 @@ pub async fn install_app(
 ) -> Result<installer::ActionOutcome, InstallApiError> {
     let registry: Arc<InstallRegistry> = (*registry).clone();
 
+    // 0. Phase R-H hotfix (ADR-0064 §H) — id 검증을 가장 먼저.
+    //    `../etc` 같은 traversal id가 try_start나 InstallGuard에 흘러들어가지 않도록.
+    if !is_valid_app_id(&id) {
+        return Err(InstallApiError::InvalidId { id: id.clone() });
+    }
+
     // 1. 중복 검증 + cancel token 발급.
     let cancel = registry
         .try_start(&id)
@@ -152,21 +174,34 @@ pub async fn install_app(
         id: id.clone(),
     };
 
-    // 3. 매니페스트 로드.
+    // 3. 매니페스트 로드 — canonicalize prefix check (Phase R-H, ADR-0064 §H).
+    //    exists() + read 분리 패턴은 TOCTOU 표면이라 단일 read fail path로 단순화.
     let manifests = manifests_dir(&app)?;
     let manifest_file = manifests.join(format!("{id}.json"));
-    if !manifest_file.exists() {
-        return Err(InstallApiError::ManifestNotFound {
-            message: format!("manifest 파일 없음: {}", manifest_file.display()),
-        });
+    let canonical_manifests =
+        manifests
+            .canonicalize()
+            .map_err(|e| InstallApiError::ManifestNotFound {
+                message: format!("manifests_dir canonicalize 실패: {e}"),
+            })?;
+    let canonical_file =
+        manifest_file
+            .canonicalize()
+            .map_err(|e| InstallApiError::ManifestNotFound {
+                message: format!("manifest 파일 없음: {} ({e})", manifest_file.display()),
+            })?;
+    if !canonical_file.starts_with(&canonical_manifests) {
+        // 정상 id 검증이 통과했어도 symlink escape 등을 마지막 방어선으로 차단.
+        return Err(InstallApiError::InvalidId { id: id.clone() });
     }
-    let manifest_text =
-        std::fs::read_to_string(&manifest_file).map_err(|e| InstallApiError::ManifestNotFound {
-            message: format!("read {}: {e}", manifest_file.display()),
-        })?;
+    let manifest_text = std::fs::read_to_string(&canonical_file).map_err(|e| {
+        InstallApiError::ManifestNotFound {
+            message: format!("read {}: {e}", canonical_file.display()),
+        }
+    })?;
     let manifest: AppManifest =
         serde_json::from_str(&manifest_text).map_err(|e| InstallApiError::ManifestParse {
-            message: format!("{}: {e}", manifest_file.display()),
+            message: format!("{}: {e}", canonical_file.display()),
         })?;
 
     // 4. 캐시 디렉터리.
@@ -225,5 +260,52 @@ mod tests {
             };
         } // Drop here.
         assert_eq!(registry.in_flight_count(), 0);
+    }
+
+    // ── Phase R-H hotfix (ADR-0064 §H) — install_app id validation ───
+
+    #[test]
+    fn is_valid_app_id_accepts_alpha_num_dash_underscore() {
+        assert!(is_valid_app_id("ollama"));
+        assert!(is_valid_app_id("lm-studio"));
+        assert!(is_valid_app_id("LM_Studio_42"));
+        assert!(is_valid_app_id("123"));
+    }
+
+    #[test]
+    fn is_valid_app_id_rejects_empty() {
+        assert!(!is_valid_app_id(""));
+    }
+
+    #[test]
+    fn is_valid_app_id_rejects_path_traversal() {
+        assert!(!is_valid_app_id("../etc"));
+        assert!(!is_valid_app_id("foo/bar"));
+        assert!(!is_valid_app_id("foo\\bar"));
+    }
+
+    #[test]
+    fn is_valid_app_id_rejects_dot_extension() {
+        // .json은 caller가 붙이므로 id에 .은 들어오면 안 됨.
+        assert!(!is_valid_app_id("ollama.json"));
+        assert!(!is_valid_app_id("foo.bar"));
+    }
+
+    #[test]
+    fn is_valid_app_id_rejects_control_and_unicode() {
+        assert!(!is_valid_app_id("ollama\0evil"));
+        assert!(!is_valid_app_id("ollama\nfoo"));
+        assert!(!is_valid_app_id("올라마")); // non-ASCII
+        assert!(!is_valid_app_id("ollama foo")); // 공백
+    }
+
+    #[test]
+    fn install_api_error_invalid_id_kebab_serialization() {
+        let e = InstallApiError::InvalidId {
+            id: "../etc".into(),
+        };
+        let v = serde_json::to_value(&e).unwrap();
+        assert_eq!(v["kind"], "invalid-id");
+        assert_eq!(v["id"], "../etc");
     }
 }

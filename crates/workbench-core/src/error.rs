@@ -29,6 +29,11 @@ pub enum WorkbenchError {
 
     #[error("내부 오류: {message}")]
     Internal { message: String },
+
+    /// Phase R-F+R-G hotfix (ADR-0064 §2) — Workbench responder base_url이 localhost-only allowlist를 벗어남.
+    /// 한국어 해요체 메시지를 caller가 그대로 사용자에게 노출.
+    #[error("주소가 올바르지 않아요: {message}")]
+    InvalidBaseUrl { message: String },
 }
 
 #[cfg(test)]
@@ -92,5 +97,15 @@ mod tests {
         let serde_err = parsed.unwrap_err();
         let e: WorkbenchError = serde_err.into();
         assert!(matches!(e, WorkbenchError::Json(_)));
+    }
+
+    #[test]
+    fn invalid_base_url_korean_message() {
+        let e = WorkbenchError::InvalidBaseUrl {
+            message: "내 PC 안에서 돌아가는 모델만 평가할 수 있어요. http://localhost 주소로 입력해 주세요.".into(),
+        };
+        let msg = format!("{e}");
+        assert!(msg.contains("주소가 올바르지 않아요"));
+        assert!(msg.contains("내 PC 안에서"));
     }
 }

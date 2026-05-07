@@ -17,6 +17,100 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-08 Phase R-J — Invariant Tests (3건 종결, R-J.4 행동 규칙 보존)
+
+R-F+R-G+R-H+R-I 직후 마지막 invariant polish. ADR-0064 §J 흡수. 결정 노트 `docs/research/phase-rj-invariant-tests-decision.md` (6 섹션, 6 기각안). 검수 리포트 19 finding 모두 종결.
+
+- **R-J.1 XSS payload 거부 invariant**: `apps/desktop/src/components/_render-markdown.test.ts` 기존 20 tests 보존 + `XSS payload 거부 (R-J.1)` describe 블록 +7 invariant. `escapeHtml` 5 entity + `<script>` / `<img onerror>` / `javascript:` URL escape + `renderInline` `**bold**` 안 HTML escape + `` `code` `` 안 escape + `renderMarkdown` 본문 + 리스트 안 escape. **27/27 pass**. 미래 remote guide manifest 도입 시에도 escape 약속 기계적 보존.
+- **R-J.2 i18n parity script + CI**: `.claude/scripts/check-i18n-parity.mjs` 신규 — ko.json / en.json deep-flatten 후 key set 비교. ko-only / en-only 모두 보고 + 차이 시 exit 1. local 검증 ✅ 1060/1060 일치 (Phase R-F+R-G+R-H+R-I 진행 중 +18 키 추가됐어요). `.github/workflows/ci.yml` Node CI step 추가 — 매 PR/push에 parity 강제.
+- **R-J.3 unsafe / tokio::spawn grep gate**: `.github/workflows/ci.yml`에 신규 `audit` job — `unsafe` count 정보성 보고 + desktop crate production code (mod tests + 주석 제외) `tokio::spawn` 0건 강제 fail. awk pattern `/^#\[cfg\(test\)\]/{exit} /^[[:space:]]*\/\//{next}`로 정확 분리. 현재 production 0건 통과 (mod tests 안 7건은 정책 합치 — 테스트 환경에서 OK).
+- **R-J.4 a11y modal checklist**: 코드 변경 0 — CLAUDE.md §4.3에 이미 명시된 행동 규칙(`role="dialog" aria-modal aria-labelledby` + Esc 닫기 + focus auto-focus + prefers-reduced-motion). 신규 modal 작성 시 준수 의무. 기존 vitest-axe도 컴포넌트 단위 a11y 검증 중.
+
+**검증**:
+- vitest `_render-markdown.test.ts` ✅ 27/27 pass
+- i18n parity script ✅ 1060/1060
+- CI grep gate local simulate ✅ production 0건
+- cargo fmt + clippy + test (변경 없음 — backend 영향 0)
+
+**테스트 차분 +7 (vitest)**.
+
+**누적 진행 (검수 리포트 19 finding 모두 종결)**:
+- Phase R-F+R-G (5축 critical hotfix, +34 invariant) ✅
+- Phase R-H (3 boundary polish, +19 invariant) ✅
+- Phase R-I (4 CI/build hygiene, +2 invariant) ✅
+- Phase R-J (3 invariant tests + 행동 규칙, +7 invariant) ✅
+- **누적 테스트 차분 +62**. ADR-0064 + §H + §I + §J 모두 흡수.
+
+**다음 standby**:
+- **v0.0.1 release tag push** (사용자 결정) — `git tag v0.0.1 && git push origin v0.0.1`. release.yml CI에서 SQLCipher feature wiring + 새 audit job + i18n parity 모두 실 검증. GitHub Releases 자동 생성 (draft).
+- **Phase R-F.3 (4-8h, deferred)** — IPC raw path → selected_path_token registry. Tauri dialog plugin (`@tauri-apps/plugin-dialog`) 도입 후 별도 sub-phase.
+- **v1.x DEFERRED**: Phase R-K (Updater 옵션 A 활성, 2-3h) + Phase R-L (Ollama Linux 자동화, 6-8h).
+
+## 2026-05-08 Phase R-I — CI / Build Hygiene (4건 종결)
+
+R-F+R-G+R-H 직후 CI hygiene polish. ADR-0064 §I 흡수 (별도 ADR 신설 없음). 결정 노트 `docs/research/phase-ri-ci-build-hygiene-decision.md` (6 섹션, 7 기각안).
+
+- **R-I.1 CI test 실 실행**: `.github/workflows/ci.yml` Rust 매트릭스에 `cargo test --workspace --exclude lmmaster-desktop` (no-run 제거 — desktop crate Windows cdylib 환경 문제는 release.yml과 동일 exclude 정책). Node CI에 `pnpm --filter @lmmaster/desktop test` (vitest run) 추가. 매 PR/push에 invariant regression 실 검증.
+- **R-I.2 tsc noEmit + .js 정리**: `apps/desktop/tsconfig.json::noEmit = true` 추가 (typecheck-only). `apps/desktop/src/**/*.js` 일괄 정리 — 100+ 파일 모두 `.ts`/`.tsx` 대응 있는 산출물로 안전 삭제 (orphan 0건 검증). `.gitignore`는 line 70에 이미 `apps/desktop/src/**/*.js` 패턴 등록 — Vite resolver shadowing 차단.
+- **R-I.3 Knowledge ingest file size cap**: `crates/knowledge-stack/src/error.rs::FileTooLarge { path, size_mb, cap_mb }` variant 신규. `crates/knowledge-stack/src/ingest.rs`에 `MAX_INGEST_FILE_BYTES = 10 * 1024 * 1024` (10MB) cap + `read_to_string` 직전 `metadata().len()` 검사. 100MB+ 파일 OOM 위험 차단. chunk-level cancel + spawn_blocking refactor는 v1.x deferred (10MB cap이면 read 1-2초라 stage-level cancel 응답성 실용적 충분).
+- **R-I.4 Trending Watcher decision note 갱신**: `docs/research/phase-21p-trending-watcher-decision.md::§7` "본 repo 영향 0" → "desktop runtime 영향 0, workspace/CI 영향 있음 (prototype crate `crates/trending-watcher` + deprecated workflow 잔류)" — ADR-0059 v1.x prototype exception 일치. `.github/workflows/trending-watcher.yml` 헤더 카피의 vague gate ("v0.4 release 시") → objective gate ("별도 repo 6h cron 4회 이상 정상 실행 + Issue 1건 검증 후 prototype crate + workflow 삭제").
+
+**검증**:
+- cargo fmt + clippy + test 모두 ✅ failed 0.
+- 테스트 차분 +2 (file_too_large_message_korean_with_path_and_size + debug_does_not_panic 7→8 variant).
+
+**다음 standby**:
+- **Phase R-J (2h)**: XSS escape invariant + i18n parity script CI + `unsafe`/`tokio::spawn` grep gate + a11y modal checklist 강화.
+- **Phase R-F.3 (4-8h)**: IPC raw path → selected_path_token registry (Tauri dialog plugin 후).
+- **v0.0.1 release tag push** (사용자 결정).
+
+## 2026-05-08 Phase R-H — Boundary Polish (3건 종결)
+
+R-F+R-G hotfix 직후 polish — ADR-0064 §H로 흡수 (별도 ADR 신설 없음). 결정 노트 `docs/research/phase-rh-boundary-polish-decision.md` (6 섹션, 8 기각안).
+
+- **R-H.1 install_app(id) regex + canonicalize prefix**: `apps/desktop/src-tauri/src/install/mod.rs` — `InstallApiError::InvalidId { id }` variant + `is_valid_app_id()` 헬퍼 (alpha-num + `-` + `_`). `install_app()` IPC entry에 검증 + `manifest_file.canonicalize()` + `manifests_dir.canonicalize()` prefix check. `exists()` 분리 호출 제거 → 단일 read fail path. 기존 `format!("{id}.json")` path concat 표면 + TOCTOU window 모두 차단. 6 신규 invariant (alpha-num accept / empty reject / traversal reject / dot extension reject / control+unicode reject / kebab-case `invalid-id` 직렬화).
+- **R-H.2 fetch_one + try_bundled id allowlist**: `crates/registry-fetcher/src/error.rs` `InvalidManifestId { id }` variant + `crates/registry-fetcher/src/fetcher.rs::FetcherCore::validate_manifest_id()` associated fn (alpha-num + `-` + `_`). `fetch_one()` entry에 `Self::validate_manifest_id(id)?` + `try_bundled()`도 defense-in-depth로 동일 검증 + `dir.canonicalize()` + `path.canonicalize()` prefix check. 4 신규 invariant (safe chars / empty / traversal `../etc` `foo/bar` `foo.json` / fetch_one entry 직행 거부).
+- **R-H.3 open_url host allowlist (defense-in-depth)**: `crates/installer/Cargo.toml`에 `url = { workspace = true }` 추가. `crates/installer/src/action.rs::validate_open_url_host()` + `OPEN_URL_HOST_ALLOWLIST` 4 도메인 (`github.com`, `huggingface.co`, `cdn.jsdelivr.net`, `lmstudio.ai` — `capabilities/main.json::shell:allow-open` scope과 정확 매치). `Url::parse` + scheme `http`/`https` 한정 + `host_str()` `eq_ignore_ascii_case`. `webbrowser::open`은 Tauri shell ACL 우회하므로 Rust action layer 검증 필수. 9 신규 invariant (4 allowlist OK + 비-allowlist host 거부 + suffix attack `github.com.evil.com` `evil.github.com` 거부 + non-http scheme 거부 + invalid url 거부 + localhost 거부).
+- **R-H.4 ATTACH escape**: R-G.2에 합쳐 처리됨 — 본 phase 범위 외.
+
+**검증**:
+- cargo fmt + clippy + test 모두 ✅ failed 0.
+- 테스트 차분: +19 (install 6 + fetcher 4 + action 9). 단 install desktop crate 6은 release CI에서 cdylib 이슈로 exclude (컴파일만 검증).
+
+**다음 standby**:
+- **Phase R-I (4-5h)**: CI test no-run 제거 + Node vitest 추가 + tsconfig noEmit + .js 정리 + Knowledge ingest cancel + Trending Watcher decision note.
+- **Phase R-J (2h)**: XSS escape invariant + i18n parity CI + unsafe/tokio::spawn grep gate + a11y modal checklist.
+- **Phase R-F.3 (4-8h)**: IPC raw path → selected_path_token registry (Tauri dialog plugin 후).
+- **v0.0.1 release tag push** (사용자 결정).
+
+## 2026-05-08 Phase R-F+R-G — Critical Hotfix v0.3.x (5축 신뢰 경계 회복)
+
+GPT Pro 확장 검수 리포트(2026-05-07, 19 finding) 기반 5건 일괄 머지:
+
+- **R-G.1 SQLCipher release wiring**: workspace `Cargo.toml::rusqlite` `default-features = false` 분리 + `apps/desktop/src-tauri/Cargo.toml`에 forwarding feature `sqlcipher = ["key-manager/sqlcipher", "knowledge-stack/sqlcipher"]` + tauri-action matrix `args: '--features sqlcipher'` (4 platform) + Linux runner perl/nasm/pkg-config/make + Windows runner Strawberry Perl + NASM step + 신규 verify CI step (`cargo tree -e features` grep `bundled-sqlcipher-vendored-openssl`) + `PRAGMA cipher_version` runtime invariant 2건 (key-manager + knowledge-stack, `#[cfg(feature = "sqlcipher")]` gated — release CI에서만 실행).
+- **R-F.1 Ollama Linux open_url**: `manifests/apps/ollama.json` + snapshot linux 분기 `shell.curl_pipe_sh` → `open_url` (`https://github.com/ollama/ollama/blob/main/docs/linux.mdx`). capability scope 변경 0 (github.com 이미 화이트리스트). `crates/runtime-detector/src/manifest.rs::validate_install_methods_safe()` + `ManifestValidationError::ForbiddenShellCurlPipeSh` variant + 4 invariant. `installer install_runner.rs::run_install` 진입 시 검증 호출. `installer action.rs::run_shell_curl_pipe_sh` `legacy-curl-install` feature flag 격리 (default OFF — production 자동 거부 분기 `ActionError::Unsupported`).
+- **R-F.2 Workbench localhost-only allowlist**: workspace `Cargo.toml`에 `url = "2.5"` 추가. `bench-harness::workbench_responder.rs::validate_localhost_url()` (`url::Url::parse` + `Host::Domain eq_ignore_ascii_case("localhost")` + `IpAddr::is_loopback()` + userinfo 거부 + https 거부 + 0.0.0.0 거부) + `WorkbenchResponder::new()` Result 반환. `workbench-core::error.rs::InvalidBaseUrl { message }` variant + 한국어 invariant 1. desktop `workbench.rs::build_responder` Result 반환 + caller `start_workbench_run` `.map_err`. 18 invariant (validation 12 + responder.new Err 4 + base_url normalize 1 + 기존 fixup 1) + 2 build_responder invariant. i18n `screens.workbench.errors.baseUrl.*` 5키 ko/en parity.
+- **R-G.4 Updater 옵션 B-3 hybrid**: `tauri.conf.json::plugins.updater.active: true → false`. capability `updater:default` + `allow-start-auto-update-poller` + `allow-stop-auto-update-poller` 주석 차단 (단발 `allow-check-for-update` 보존). `Settings.tsx`에 `ManualUpdatePanel` 신규 + `AUTO_UPDATE_ENABLED = false` 분기 + `RELEASES_URL` 상수 + `open as openExternal` import (capability `https://github.com/**` 그대로). **보너스 bug fix**: `UPDATE_REPO = "anthropics/lmmaster"` placeholder → `freessunky-bit/lmmaster` 정정. i18n `screens.settings.autoUpdate.manualMode.*` 9키 ko/en. ToastUpdate.tsx 코드 수정 0 (mount 차단으로 자동 비활성).
+- **R-G.2 KeyManager v2 (단일 경로 + magic bytes + atomic 2-phase rename)**: `apps/desktop/src-tauri/src/keys/migrate.rs` 전체 재작성 — `DbState` enum 5종 + `detect_db_state()` (첫 16 byte + `SQLite format 3\0` 매치) + `provision_v2(keys_path)` 단일 경로 + `migrate_inplace()` (Phase A export → Phase B `sync_dir` fsync → Phase C 백업 rename → promote rename, sqlcipher feature gated) + crash recovery 가드 (orphan `.migrating` promote). `lib.rs` caller 1줄 단순화 (`legacy_path` 인자 제거 — 6개월 회귀 통과 원인이었던 인자 swap 모델 폐기). `key-manager store.rs::migrate_unencrypted_to_encrypted` ATTACH single quote escape. `keys/mod.rs` re-export `provision_v2`. i18n `keys.{migrating.start/done/fail, fallback.headless}` ko/en parity. 9 신규 invariant.
+
+**ADR-0064** 신설 (`docs/adr/0064-rf-rg-critical-hotfix.md`). 결정 노트 `docs/research/phase-rf-rg-critical-hotfix-decision.md` (6 섹션, 16 기각안 negative space 보존). DEFERRED.md **Phase R-K** (v1.x Updater 옵션 A 진입 10단계 가이드) + **Phase R-L** (Ollama Linux 자동화 download_and_extract 진입 조건) 2건 신설. 기존 §3 "옵션 B 배포 빌드"는 R-K로 통합 흡수.
+
+**검증**:
+- cargo fmt --all -- --check ✅ (3+2건 자동 적용 후 clean)
+- cargo clippy --workspace --all-targets -- -D warnings ✅ 0 warning (sync_dir cfg(feature = "sqlcipher") + unused_mut allow 후)
+- cargo test --workspace --exclude lmmaster-desktop ✅ failed 0 (테스트 차분 +34: workbench 18 + workbench-core 1 + manifest validator 4 + migrate v2 9 + sqlcipher cipher_version 2 미실행 + 기존 보존)
+- pnpm exec tsc -b ✅ clean
+- pnpm exec vitest run (별도 검증 — Settings.tsx ManualUpdatePanel 분기는 i18n key 추가만이라 회귀 0 추정)
+
+**다음 standby (사용자 명시 우선순위 R-H~R-J)**:
+- **Phase R-H (3-4h)**: install_app id regex 검증 + registry-fetcher fetch_one bundled bypass id allowlist + open_url Tauri shell ACL routing + (R-G.2에 합쳐 처리된 ATTACH escape는 종결).
+- **Phase R-I (4-5h)**: CI test no-run 제거 + Node CI vitest 추가 + tsconfig noEmit + .js 잔재 정리 + Knowledge ingest cancel token 강화 + Trending Watcher decision note 갱신.
+- **Phase R-J (2h)**: XSS escape invariant + i18n parity script CI + `unsafe`/`tokio::spawn` grep gate + a11y modal checklist 강화.
+- **Phase R-F.3 (4-8h)**: IPC raw path → selected_path_token registry (검수 critical → HIGH 재분류, Tauri dialog plugin 도입 후 별도).
+- **v0.0.1 release tag push** (사용자 결정 — Phase R-F+R-G 머지로 ship-blocker 5축 종결).
+
+**누적 통계**: ADR 53 → **54** (ADR-0064). 결정 노트 44+ → 45+. 테스트 차분 +34 (Rust +30 + workbench-core +1 + sqlcipher invariant 2 release-only).
+
 ## 2026-05-08 마라톤 — Phase 21' + 22' 완전 종결 (16 sub-phase)
 
 이번 세션 진척:

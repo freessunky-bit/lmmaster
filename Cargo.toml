@@ -35,7 +35,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 rust-version = "1.78"
 license = "MIT OR Apache-2.0"
@@ -49,6 +49,10 @@ tokio-stream = "0.1"
 futures = "0.3"
 async-trait = "0.1"
 
+# url parsing — Workbench responder localhost-only allowlist (Phase R-F+R-G, ADR-0064 §2).
+# reqwest가 transitive로 들고 있지만 명시 의도. RFC 3986 정확 처리 (host/userinfo 분리).
+url = "2.5"
+
 # http / serialization
 axum = "0.8"
 axum-extra = { version = "0.10", features = ["typed-header"] }
@@ -60,7 +64,10 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # storage
-rusqlite = { version = "0.31", features = ["bundled"] }
+# default-features=false 명시: workspace 차원에서 `bundled`가 잠기면 sub-crate가 sqlcipher feature
+# (`bundled-sqlcipher-vendored-openssl`)로 전환할 수 없어요. dev/test는 `bundled` 그대로,
+# release CI는 `--features sqlcipher`로 sqlcipher 쪽이 우위 분기 (rusqlite README 참조).
+rusqlite = { version = "0.31", default-features = false, features = ["bundled"] }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "macros"] }
 
 # crypto / hash

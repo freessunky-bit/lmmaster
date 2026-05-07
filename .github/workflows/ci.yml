@@ -28,7 +28,9 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo build --workspace
-      - run: cargo test --workspace --no-run
+      # Phase R-I.1 (ADR-0064 §I) — 실 실행으로 invariant regression 검증.
+      # desktop crate는 Windows cdylib test entrypoint 환경 문제로 release.yml과 동일 exclude.
+      - run: cargo test --workspace --exclude lmmaster-desktop
 
   node:
     name: Node check
@@ -41,3 +43,39 @@ jobs:
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install --frozen-lockfile=false
       - run: pnpm -r build
+      # Phase R-I.1 (ADR-0064 §I) — frontend vitest 실 실행 (jsdom + a11y).
+      - run: pnpm --filter @lmmaster/desktop test
+      # Phase R-J.2 (ADR-0064 §J) — i18n ko/en parity 검증.
+      # 한쪽에만 있는 키는 한국어 화면에 영어 fallback 노출 또는 영어 화면에 키 path 노출.
+      - run: node .claude/scripts/check-i18n-parity.mjs
+
+  audit:
+    name: Audit (unsafe / tokio::spawn)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Phase R-J.3 (ADR-0064 §J) — Rust soundness grep gate.
+      # unsafe count는 정보성 (hardware-probe FFI 의존). desktop crate production tokio::spawn은
+      # 강제 fail — Tauri는 자체 runtime 소유라 tauri::async_runtime::spawn만 사용해야 해요 (CLAUDE.md §1).
+      # awk가 `#[cfg(test)]` 마커까지만 처리해 mod tests 안의 tokio::spawn은 정책 합치 (테스트 환경에서는 OK).
+      - name: Audit unsafe / tokio::spawn
+        shell: bash
+        run: |
+          set +e
+          echo "=== unsafe blocks (정보성) ==="
+          UNSAFE_COUNT=$(grep -rn "unsafe " --include="*.rs" crates apps 2>/dev/null | wc -l)
+          SAFETY_COUNT=$(grep -rn "// SAFETY:" --include="*.rs" crates apps 2>/dev/null | wc -l)
+          echo "unsafe occurrences: $UNSAFE_COUNT (with // SAFETY: $SAFETY_COUNT)"
+
+          echo ""
+          echo "=== desktop crate production tokio::spawn 검사 (mod tests + 주석 제외) ==="
+          violations=$(find apps/desktop/src-tauri/src -name "*.rs" \
+            -exec awk '/^#\[cfg\(test\)\]/{exit} /^[[:space:]]*\/\//{next} /tokio::spawn/{print FILENAME":"NR}' {} \;)
+          if [ -n "$violations" ]; then
+            echo "::error::desktop crate production code에서 tokio::spawn 발견"
+            echo "$violations"
+            echo ""
+            echo "tauri::async_runtime::spawn으로 교체해 주세요 (CLAUDE.md §1, Tauri 자체 runtime 소유)"
+            exit 1
+          fi
+          echo "✅ desktop crate production tokio::spawn 0건 (테스트 코드 제외)"

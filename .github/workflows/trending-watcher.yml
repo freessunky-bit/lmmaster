@@ -4,7 +4,9 @@
 # (Phase 21'.a 신설, 2026-05-08). 본 prototype workflow는 *이중 실행 / Issue 중복 생성*
 # 방지 위해 schedule 제거 + workflow_dispatch만 유지 (manual debug용).
 #
-# 별도 repo 운영 안정화 후 본 file 자체를 삭제 권장 (1~2개월 운영 후 v0.4 release 시).
+# 별도 repo 운영 안정화 후 본 file 자체를 삭제. Phase R-I.4 (ADR-0064 §I, 2026-05-08) 갱신:
+# objective gate — 별도 repo `freessunky-bit/lmmaster-trending-watcher`이 6h cron으로 4회 이상
+# 정상 실행 + Issue 생성 1건 이상 검증되면 본 workflow + `crates/trending-watcher` prototype crate 삭제.
 #
 # 정책 (ADR-0059 §5) — 별도 repo로 이동:
 # https://github.com/freessunky-bit/lmmaster-trending-watcher/.github/workflows/cron.yml

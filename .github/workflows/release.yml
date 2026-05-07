@@ -48,25 +48,26 @@ jobs:
       matrix:
         include:
           # Windows 필수 — NSIS .exe + latest.json + .sig.
+          # Phase R-F+R-G hotfix (ADR-0064 §3): --features sqlcipher 주입으로 release 빌드에 SQLCipher 활성.
           - platform: windows-x86_64
             os: windows-latest
             target: ''
-            args: ''
+            args: '--features sqlcipher'
           # macOS Apple Silicon (옵션) — .dmg unsigned.
           - platform: darwin-aarch64
             os: macos-latest
             target: aarch64-apple-darwin
-            args: '--target aarch64-apple-darwin'
+            args: '--target aarch64-apple-darwin --features sqlcipher'
           # macOS Intel (옵션).
           - platform: darwin-x86_64
             os: macos-latest
             target: x86_64-apple-darwin
-            args: '--target x86_64-apple-darwin'
+            args: '--target x86_64-apple-darwin --features sqlcipher'
           # Linux AppImage (옵션).
           - platform: linux-x86_64
             os: ubuntu-22.04
             target: ''
-            args: ''
+            args: '--features sqlcipher'
 
     steps:
       - name: Checkout
@@ -107,6 +108,20 @@ jobs:
             librsvg2-dev \
             libsoup-3.0-dev \
             patchelf
+          # Phase R-F+R-G hotfix (ADR-0064 §3) — SQLCipher vendored OpenSSL 빌드 의존성.
+          # perl + nasm + pkg-config + make는 openssl-src crate가 OpenSSL을 정적 컴파일할 때 필요해요.
+          sudo apt-get install -y perl pkg-config make nasm
+
+      # Phase R-F+R-G hotfix (ADR-0064 §3) — Windows runner의 SQLCipher vendored OpenSSL 빌드 의존성.
+      - name: Setup Strawberry Perl (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: '5.38'
+          distribution: strawberry
+      - name: Setup NASM (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: ilammy/setup-nasm@v1
 
       - name: Install JS dependencies
         run: pnpm install --frozen-lockfile
@@ -118,6 +133,20 @@ jobs:
           cargo clippy --workspace --all-targets -- -D warnings
           cargo test --workspace --exclude lmmaster-desktop
         shell: bash
+
+      # Phase R-F+R-G hotfix (ADR-0064 §3) — release-only SQLCipher feature wiring 검증.
+      # cargo tree로 rusqlite의 활성 features에 bundled-sqlcipher-vendored-openssl이 포함되는지 grep.
+      # 본 step이 fail하면 tauri-action `args: '--features sqlcipher'` 주입이 끊겼거나 forwarding 깨진 거예요.
+      - name: Verify SQLCipher feature wiring
+        shell: bash
+        run: |
+          cargo tree -e features -p key-manager --features sqlcipher \
+            | grep -E "rusqlite v0\.31\.[0-9]+ .*bundled-sqlcipher-vendored-openssl" \
+            || (echo "::error::sqlcipher feature가 key-manager에 전파되지 않았어요"; exit 1)
+          cargo tree -e features -p knowledge-stack --features sqlcipher \
+            | grep -E "bundled-sqlcipher-vendored-openssl" \
+            || (echo "::error::sqlcipher feature가 knowledge-stack에 전파되지 않았어요"; exit 1)
+          echo "✅ SQLCipher feature 정상 전파"
 
       - name: Frontend type-check
         run: pnpm --filter @lmmaster/desktop exec tsc -b

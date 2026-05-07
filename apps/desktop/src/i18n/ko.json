@@ -451,6 +451,17 @@
           "statusOn": "베타 채널에 참여하고 있어요",
           "statusOff": "정식 채널만 받고 있어요",
           "description": "베타 채널은 새 기능을 먼저 받지만 안정성이 떨어질 수 있어요. 언제든 끄고 정식 채널로 돌아올 수 있어요."
+        },
+        "manualMode": {
+          "title": "수동으로 받아주세요",
+          "description": "v0.0.x에서는 자동 업데이트를 잠시 끄고 있어요. GitHub Releases 페이지에서 새 버전을 직접 받아 실행해 주세요. 정식 배포 빌드부터 자동으로 받게 해드릴게요.",
+          "openReleases": "릴리즈 페이지 열기",
+          "currentVersion": "현재 버전 v{{version}}",
+          "checkLatest": "최신 버전 확인할게요",
+          "checking": "확인하고 있어요",
+          "isLatest": "최신 버전을 쓰고 있어요",
+          "newVersionAvailable": "v{{latest}}이 나왔어요. GitHub에서 받아주세요.",
+          "checkFailed": "확인에 실패했어요. 인터넷 연결을 확인해 주세요."
         }
       },
       "pipelines": {
@@ -861,7 +872,14 @@
       "errors": {
         "startFailed": "시작에 실패했어요. 다시 시도해 볼래요?",
         "default": "알 수 없는 오류가 났어요. 다시 시도해 볼까요?",
-        "missingBaseModel": "기본 모델 이름을 적어 주세요"
+        "missingBaseModel": "기본 모델 이름을 적어 주세요",
+        "baseUrl": {
+          "nonLocalhost": "내 PC 안에서 돌아가는 모델만 평가할 수 있어요. http://localhost 주소로 입력해 주세요.",
+          "httpsBlocked": "http만 사용할 수 있어요. https는 외부 서비스라 차단했어요.",
+          "empty": "주소를 입력해 주세요.",
+          "malformed": "주소 형식이 올바르지 않아요. 예: http://localhost:11434",
+          "userinfo": "주소에 사용자명/비밀번호를 넣을 수 없어요."
+        }
       },
       "steps": {
         "1": {
@@ -1216,6 +1234,14 @@
     }
   },
   "keys": {
+    "migrating": {
+      "start": "키 저장소를 안전하게 옮기고 있어요.",
+      "done": "키 저장소를 안전하게 옮겼어요.",
+      "fail": "키 저장소를 옮기지 못했어요. 백업이 안전하게 보관돼 있어요: {{path}}"
+    },
+    "fallback": {
+      "headless": "키체인을 못 써서 평문으로 저장하고 있어요. 데스크톱 환경에서는 자동으로 암호화돼요."
+    },
     "title": "로컬 API 키",
     "subtitle": "기존 웹앱이 이 PC의 모델을 호출할 때 쓰는 인증 토큰이에요",
     "create": "새 키 만들기",

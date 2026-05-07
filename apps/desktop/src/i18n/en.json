@@ -451,6 +451,17 @@
           "statusOn": "On the beta channel",
           "statusOff": "Stable channel only",
           "description": "The beta channel ships new features earlier but may be less stable. You can switch back to stable any time."
+        },
+        "manualMode": {
+          "title": "Manual updates only",
+          "description": "Auto-updates are paused for v0.0.x. Please grab the latest installer from GitHub Releases. We'll turn auto-updates back on starting with the production build.",
+          "openReleases": "Open Releases page",
+          "currentVersion": "Current version v{{version}}",
+          "checkLatest": "Check latest version",
+          "checking": "Checking…",
+          "isLatest": "You're on the latest version",
+          "newVersionAvailable": "v{{latest}} is out. Please grab it from GitHub.",
+          "checkFailed": "Check failed. Please verify your network connection."
         }
       },
       "pipelines": {
@@ -861,7 +872,14 @@
       "errors": {
         "startFailed": "Couldn't start. Retry?",
         "default": "Something went wrong. Retry?",
-        "missingBaseModel": "Enter a base model id"
+        "missingBaseModel": "Enter a base model id",
+        "baseUrl": {
+          "nonLocalhost": "Only models running on this PC can be evaluated. Use a http://localhost URL.",
+          "httpsBlocked": "Only http is supported. https targets external services and is blocked.",
+          "empty": "Enter a URL.",
+          "malformed": "URL format invalid. Example: http://localhost:11434",
+          "userinfo": "URL cannot include username/password."
+        }
       },
       "steps": {
         "1": {
@@ -1216,6 +1234,14 @@
     }
   },
   "keys": {
+    "migrating": {
+      "start": "Securing your key vault…",
+      "done": "Key vault is now encrypted.",
+      "fail": "Could not encrypt the key vault. A backup is safe at: {{path}}"
+    },
+    "fallback": {
+      "headless": "Keychain unavailable — using plaintext storage. Desktop sessions will encrypt automatically."
+    },
     "title": "Local API Keys",
     "subtitle": "Auth tokens for web apps calling this machine's models.",
     "create": "New key",

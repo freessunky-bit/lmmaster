@@ -63,11 +63,10 @@
       "min_ram_mb": 2048
     },
     "linux": {
-      "method": "shell.curl_pipe_sh",
-      "url_template": "https://ollama.com/install.sh",
-      "min_disk_mb": 800,
-      "min_ram_mb": 2048,
-      "warning_ko": "리눅스에서는 sudo 권한이 필요할 수 있어요."
+      "method": "open_url",
+      "url": "https://github.com/ollama/ollama/blob/main/docs/linux.mdx",
+      "reason_ko": "리눅스는 배포판마다 패키지 매니저가 달라요. 공식 가이드를 열어드릴게요.",
+      "reason_en": "Linux distros differ by package manager. Opening the official manual install guide."
     }
   },
 

@@ -18,6 +18,7 @@ use backon::{ExponentialBuilder, Retryable};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use shared_types::RuntimeKind as SharedRuntimeKind;
+use url::{Host, Url};
 use workbench_core::{MockResponder, Responder, WorkbenchError};
 
 /// Workbench Validate stage가 dispatch할 런타임 종류.
@@ -105,32 +106,39 @@ pub struct WorkbenchResponder {
 }
 
 impl WorkbenchResponder {
-    /// 새 어댑터. base_url은 trailing slash 없이 정규화.
+    /// 새 어댑터. base_url은 localhost-only allowlist 검증 + trailing slash 정규화.
+    ///
+    /// Phase R-F+R-G hotfix (ADR-0064 §2): cloud-zero 정체성 보존.
+    /// 비-localhost host / `https` / userinfo / 잘못된 포맷은 `WorkbenchError::InvalidBaseUrl`로 거부.
     pub fn new(
         runtime_kind: RuntimeKind,
         model_id: impl Into<String>,
         base_url: impl Into<String>,
-    ) -> Self {
+    ) -> Result<Self, WorkbenchError> {
         let base = base_url.into();
-        let trimmed = base.trim_end_matches('/').to_string();
+        let url = validate_localhost_url(&base)?;
+        // url::Url을 다시 직렬화하면 trailing slash가 path에 추가될 수 있어 명시 trim.
+        let normalized = url.as_str().trim_end_matches('/').to_string();
         let client = default_client();
-        Self {
+        Ok(Self {
             runtime_kind,
             model_id: model_id.into(),
-            base_url: trimmed,
+            base_url: normalized,
             client,
             config: ResponderConfig::default(),
-        }
+        })
     }
 
-    /// Ollama 기본값 — 가장 흔한 경로.
+    /// Ollama 기본값 — default URL은 localhost라 항상 안전.
     pub fn ollama(model_id: impl Into<String>) -> Self {
         Self::new(RuntimeKind::Ollama, model_id, "http://localhost:11434")
+            .expect("default Ollama base_url is localhost — cannot fail")
     }
 
-    /// LM Studio 기본값.
+    /// LM Studio 기본값 — default URL은 localhost라 항상 안전.
     pub fn lm_studio(model_id: impl Into<String>) -> Self {
         Self::new(RuntimeKind::LmStudio, model_id, "http://localhost:1234")
+            .expect("default LM Studio base_url is localhost — cannot fail")
     }
 
     /// 테스트/UI 데모용 mock — 외부 통신 0.
@@ -167,6 +175,64 @@ impl WorkbenchResponder {
 
     pub fn base_url(&self) -> &str {
         &self.base_url
+    }
+}
+
+/// Phase R-F+R-G hotfix (ADR-0064 §2) — base_url localhost-only allowlist.
+///
+/// 허용:
+/// - `http` 스킴 한정 (https는 외부 강제 의미라 거부).
+/// - host: hostname `localhost` (대소문자 무시 정확 매치), IPv4 loopback (127.0.0.0/8 전체),
+///   IPv6 loopback `::1`.
+/// - port 자유 (사용자 PC 안이라).
+///
+/// 거부:
+/// - https / public IP / private LAN (10/192.168/172.16-31) / link-local (169.254 cloud metadata)
+/// - `localhost.evil.com` suffix attack (정확 매치만).
+/// - userinfo embedded (`http://attacker@127.0.0.1`).
+/// - 0.0.0.0 / `[::]` (server bind-sentinel — client dial 대상 아님).
+/// - 빈 host / parse 실패.
+pub(crate) fn validate_localhost_url(input: &str) -> Result<Url, WorkbenchError> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return Err(invalid_base_url("주소를 입력해 주세요."));
+    }
+    let url = Url::parse(trimmed)
+        .map_err(|_| invalid_base_url("주소 형식이 올바르지 않아요. 예: http://localhost:11434"))?;
+
+    if url.scheme() != "http" {
+        return Err(invalid_base_url(
+            "http만 사용할 수 있어요. https는 외부 서비스라 차단했어요.",
+        ));
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(invalid_base_url(
+            "주소에 사용자명/비밀번호를 넣을 수 없어요.",
+        ));
+    }
+
+    let host = url
+        .host()
+        .ok_or_else(|| invalid_base_url("주소를 입력해 주세요."))?;
+    let allowed = match host {
+        // 정확 매치 — `localhost.evil.com` suffix attack 차단.
+        Host::Domain(name) => name.eq_ignore_ascii_case("localhost"),
+        // 127.0.0.0/8 전체 허용. 0.0.0.0 (unspec) 차단.
+        Host::Ipv4(ip) => ip.is_loopback(),
+        // ::1 만 허용. ::, link-local fe80::/10 등 차단.
+        Host::Ipv6(ip) => ip.is_loopback(),
+    };
+    if !allowed {
+        return Err(invalid_base_url(
+            "내 PC 안에서 돌아가는 모델만 평가할 수 있어요. http://localhost 주소로 입력해 주세요.",
+        ));
+    }
+    Ok(url)
+}
+
+fn invalid_base_url(msg: &str) -> WorkbenchError {
+    WorkbenchError::InvalidBaseUrl {
+        message: msg.into(),
     }
 }
 
@@ -609,7 +675,8 @@ mod tests {
 
     #[test]
     fn base_url_trims_trailing_slash() {
-        let r = WorkbenchResponder::new(RuntimeKind::Ollama, "model", "http://localhost:11434/");
+        let r = WorkbenchResponder::new(RuntimeKind::Ollama, "model", "http://localhost:11434/")
+            .unwrap();
         assert_eq!(r.base_url(), "http://localhost:11434");
     }
 
@@ -661,6 +728,7 @@ mod tests {
             .mount(&server)
             .await;
         let r = WorkbenchResponder::new(RuntimeKind::Ollama, "exaone:7b", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(fast_client());
         let resp = r.respond("한국의 수도는?").await.unwrap();
@@ -683,6 +751,7 @@ mod tests {
             .mount(&server)
             .await;
         let r = WorkbenchResponder::new(RuntimeKind::Ollama, "m", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(fast_client());
         let resp = r.respond("hi").await.unwrap();
@@ -700,6 +769,7 @@ mod tests {
             .mount(&server)
             .await;
         let r = WorkbenchResponder::new(RuntimeKind::Ollama, "m", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(fast_client());
         let err = r.respond("hi").await.unwrap_err();
@@ -721,6 +791,7 @@ mod tests {
             .mount(&server)
             .await;
         let r = WorkbenchResponder::new(RuntimeKind::Ollama, "m", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(fast_client());
         let err = r.respond("hi").await.unwrap_err();
@@ -744,6 +815,7 @@ mod tests {
             .mount(&server)
             .await;
         let r = WorkbenchResponder::new(RuntimeKind::Ollama, "m", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(fast_client());
         let err = r.respond("hi").await.unwrap_err();
@@ -765,6 +837,7 @@ mod tests {
             .mount(&server)
             .await;
         let r = WorkbenchResponder::new(RuntimeKind::Ollama, "m", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(fast_client());
         let err = r.respond("hi").await.unwrap_err();
@@ -792,6 +865,7 @@ mod tests {
             .mount(&server)
             .await;
         let r = WorkbenchResponder::new(RuntimeKind::LmStudio, "hermes-3", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(fast_client());
         let resp = r.respond("안녕").await.unwrap();
@@ -807,6 +881,7 @@ mod tests {
             .mount(&server)
             .await;
         let r = WorkbenchResponder::new(RuntimeKind::LmStudio, "any", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(fast_client());
         let err = r.respond("hi").await.unwrap_err();
@@ -826,6 +901,7 @@ mod tests {
             .mount(&server)
             .await;
         let r = WorkbenchResponder::new(RuntimeKind::LmStudio, "missing-model", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(fast_client());
         let err = r.respond("hi").await.unwrap_err();
@@ -854,6 +930,7 @@ mod tests {
             .mount(&server)
             .await;
         let r = WorkbenchResponder::new(RuntimeKind::LmStudio, "x", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(fast_client());
         let err = r.respond("hi").await.unwrap_err();
@@ -887,6 +964,7 @@ mod tests {
             .mount(&server)
             .await;
         let r = WorkbenchResponder::new(RuntimeKind::LmStudio, "x", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(fast_client());
         let resp = r.respond("hi").await.unwrap();
@@ -903,6 +981,7 @@ mod tests {
             .mount(&server)
             .await;
         let r = WorkbenchResponder::new(RuntimeKind::LmStudio, "x", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(fast_client());
         let err = r.respond("hi").await.unwrap_err();
@@ -927,6 +1006,7 @@ mod tests {
             .build()
             .unwrap();
         let r = WorkbenchResponder::new(RuntimeKind::Ollama, "m", server.uri())
+            .unwrap()
             .with_config(fast_config())
             .with_client(custom);
         let resp = r.respond("p").await.unwrap();
@@ -935,15 +1015,16 @@ mod tests {
 
     #[test]
     fn with_config_overrides_defaults() {
-        let r = WorkbenchResponder::new(RuntimeKind::Ollama, "m", "http://x").with_config(
-            ResponderConfig {
+        // Phase R-F+R-G hotfix: 비-localhost host("http://x")는 거부되므로 localhost 사용.
+        let r = WorkbenchResponder::new(RuntimeKind::Ollama, "m", "http://localhost:11434")
+            .unwrap()
+            .with_config(ResponderConfig {
                 timeout: Duration::from_secs(10),
                 max_retries: 0,
                 temperature: 0.7,
                 num_ctx: 4096,
                 max_tokens: 1024,
-            },
-        );
+            });
         assert_eq!(r.config.max_retries, 0);
         assert_eq!(r.config.temperature, 0.7);
         assert_eq!(r.config.num_ctx, 4096);
@@ -961,5 +1042,126 @@ mod tests {
             RuntimeKind::LmStudio
         );
         assert_eq!(WorkbenchResponder::mock().runtime_kind(), RuntimeKind::Mock);
+    }
+
+    // ── Phase R-F+R-G hotfix (ADR-0064 §2) — base_url localhost-only allowlist ───
+
+    fn assert_ok(input: &str) {
+        let r = validate_localhost_url(input);
+        assert!(r.is_ok(), "expected OK for {input:?}, got {:?}", r.err());
+    }
+
+    fn assert_reject(input: &str, korean_substr: &str) {
+        let err = validate_localhost_url(input).unwrap_err();
+        let msg = format!("{err}");
+        assert!(
+            msg.contains(korean_substr),
+            "expected '{korean_substr}' in error for {input:?}, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn base_url_ok_localhost_default_port() {
+        assert_ok("http://localhost:11434");
+    }
+    #[test]
+    fn base_url_ok_127_loopback() {
+        assert_ok("http://127.0.0.1:11434");
+    }
+    #[test]
+    fn base_url_ok_127_loopback_high() {
+        // 127.0.0.0/8 전체 허용 (RFC 1122 loopback).
+        assert_ok("http://127.5.5.5:11434");
+    }
+    #[test]
+    fn base_url_ok_ipv6_loopback() {
+        assert_ok("http://[::1]:11434");
+    }
+    #[test]
+    fn base_url_ok_lm_studio_port() {
+        assert_ok("http://localhost:1234");
+    }
+    #[test]
+    fn base_url_ok_localhost_uppercase() {
+        assert_ok("http://LOCALHOST:11434");
+    }
+
+    #[test]
+    fn base_url_reject_https() {
+        assert_reject("https://localhost:11434", "https는 외부");
+    }
+    #[test]
+    fn base_url_reject_private_lan_192() {
+        assert_reject("http://192.168.0.10:11434", "내 PC 안에서");
+    }
+    #[test]
+    fn base_url_reject_private_lan_10() {
+        assert_reject("http://10.0.0.1:11434", "내 PC 안에서");
+    }
+    #[test]
+    fn base_url_reject_link_local_cloud_metadata() {
+        // 169.254/16 — AWS/GCP cloud metadata range. SSRF 방지.
+        assert_reject("http://169.254.169.254/latest/meta-data", "내 PC 안에서");
+    }
+    #[test]
+    fn base_url_reject_suffix_attack() {
+        // `host_str().contains("localhost")` 식 검증의 즉시 우회. 정확 매치로 차단.
+        assert_reject("http://localhost.evil.com:11434", "내 PC 안에서");
+    }
+    #[test]
+    fn base_url_reject_userinfo_bypass() {
+        // url crate가 username과 host를 분리해 주므로 검증 가능.
+        assert_reject("http://attacker@127.0.0.1:11434", "사용자명");
+    }
+    #[test]
+    fn base_url_reject_public_host() {
+        assert_reject("http://example.com", "내 PC 안에서");
+    }
+    #[test]
+    fn base_url_reject_empty() {
+        assert_reject("", "입력");
+    }
+    #[test]
+    fn base_url_reject_malformed() {
+        assert_reject("not-a-url", "형식");
+    }
+    #[test]
+    fn base_url_reject_unspec_v4() {
+        // 0.0.0.0은 server bind-sentinel — client dial 대상 아님. Windows winsock 거부.
+        assert_reject("http://0.0.0.0:11434", "내 PC 안에서");
+    }
+    #[test]
+    fn base_url_reject_unspec_v6() {
+        assert_reject("http://[::]:11434", "내 PC 안에서");
+    }
+
+    #[test]
+    fn responder_new_returns_err_on_https() {
+        let r = WorkbenchResponder::new(RuntimeKind::Ollama, "m", "https://localhost:11434");
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn responder_new_returns_err_on_public_host() {
+        let r = WorkbenchResponder::new(RuntimeKind::Ollama, "m", "http://example.com");
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn responder_new_normalizes_trailing_slash_via_url() {
+        let r =
+            WorkbenchResponder::new(RuntimeKind::Ollama, "m", "http://localhost:11434/").unwrap();
+        assert_eq!(r.base_url(), "http://localhost:11434");
+    }
+
+    #[test]
+    fn responder_default_helpers_are_safe_and_match_kind() {
+        // expect()가 정상 작동 — default URL은 항상 localhost.
+        let o = WorkbenchResponder::ollama("m");
+        assert_eq!(o.runtime_kind(), RuntimeKind::Ollama);
+        assert_eq!(o.base_url(), "http://localhost:11434");
+        let l = WorkbenchResponder::lm_studio("m");
+        assert_eq!(l.runtime_kind(), RuntimeKind::LmStudio);
+        assert_eq!(l.base_url(), "http://localhost:1234");
     }
 }
