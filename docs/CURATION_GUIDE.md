@@ -23,6 +23,28 @@
 ### 1.4 임베딩
 - **MTEB** — embedding 종합
 
+### 1.5 ⚙️ 자동 발견 — Trending Watcher (Phase 21' 종결)
+
+수동 발굴 외에 **별도 repo `lmmaster-trending-watcher`가 6시간마다 자동 탐색**합니다.
+
+- 호스팅: <https://github.com/freessunky-bit/lmmaster-trending-watcher> (public, MIT)
+- 흐름: GHA cron → HF Trending(gguf) + Open LLM Leaderboard 2 + 모델 카드 → score → review issue
+- score 공식 (ADR-0059 §4): `0.35·Open_LLM + 0.20·log10(downloads) + 0.20·korean_signal + 0.15·license + 0.10·gguf`. **LLM judge 0** — 100% deterministic.
+- 자동 PR ❌. **사람 검토 의무** — sister repo의 자동 issue를 큐레이터가 보고 본 repo에 manifest PR을 직접 작성합니다.
+- 검토 체크리스트는 sister repo의 [`CURATION_GUIDE.md`](https://github.com/freessunky-bit/lmmaster-trending-watcher/blob/main/CURATION_GUIDE.md) 참고.
+- 거부 시 issue 코멘트로 사유 명시 후 close — *기각안 negative space* 보존 (CLAUDE.md §8).
+
+**1주 운영 모니터링 항목** (Phase 21'.e — 첫 cron 시작 후 1주):
+
+- [ ] cron이 6h 간격으로 안정 동작 (Actions 탭에서 fail rate 0%)
+- [ ] Issue dedupe 정상 — 동일 title issue가 갱신만, 중복 생성 X
+- [ ] Korean signal regex false-positive 비율 < 10% (검토 시 체감)
+- [ ] license 화이트리스트 무관한 거부 1건 이상 발생 (filter 동작 검증)
+- [ ] 사이즈 게이트가 외이 모델을 info-only로 분리 (큐레이터 부담 ↓)
+- [ ] 1주 후 review queue → 실 manifest PR 머지 0건이 아닐 것 (가치 검증)
+
+위 항목 중 2개 이상 실패면 ADR-0059 가중치 또는 임계 튜닝 필요. 결과는 `docs/research/phase-21p-trending-watcher-decision.md`에 1주차 운영 노트로 기록.
+
 ## 2. 후보 필터 (이걸 통과해야 카탈로그 등재)
 
 | 항목 | 기준 |
