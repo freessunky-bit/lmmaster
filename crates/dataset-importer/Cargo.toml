@@ -29,3 +29,7 @@ tokenizers = { workspace = true }
 # 내부 의존성.
 shared-types = { workspace = true }
 dataset-catalog = { path = "../dataset-catalog" }
+
+[dev-dependencies]
+wiremock = { workspace = true }
+tokio = { workspace = true, features = ["full", "test-util"] }
