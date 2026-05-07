@@ -17,6 +17,7 @@ use std::sync::Arc;
 
 use arrow_array::{Array, RecordBatch, StringArray};
 use futures::StreamExt;
+use knowledge_stack::Embedder;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -25,11 +26,26 @@ use crate::error::{DatasetImportError, DatasetImportResult};
 use crate::parquet_stream::{make_client, open_stream, HfParquetReader, ParquetUrlResolver};
 use crate::pipeline::{DatasetIngestStage, IngestProgress, SampleStrategy};
 
+/// 임베딩 batch 기본 — KURE-v1 / bge-m3 ONNX 그래프에 맞춰 32 (메모리/throughput 절충).
+pub const DEFAULT_EMBEDDING_BATCH_SIZE: usize = 32;
+
+/// 청크 + 임베딩 결과 — `.d.2` SQLCipher chunks 테이블 INSERT용.
+#[derive(Debug, Clone)]
+pub struct EmbeddedChunk {
+    pub row_index: u64,
+    pub chunk_index: u32,
+    pub text: String,
+    pub embedding: Vec<f32>,
+}
+
 /// Service 결과 통계.
+///
+/// `chunks_generated` ≥ `chunks_embedded`. 둘이 다르면 마지막 buffer flush 전에 cancel/실패.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct IngestStats {
     pub rows_processed: u64,
-    pub chunks_emitted: u64,
+    pub chunks_generated: u64,
+    pub chunks_embedded: u64,
     pub urls_fetched: u32,
 }
 
@@ -48,33 +64,41 @@ pub struct IngestRequest {
     pub sample: SampleStrategy,
 }
 
-/// Dataset ingest orchestrator. .c.2.d에서 Tauri command가 이 service를 hold.
+/// Dataset ingest orchestrator. `.d.3`에서 Tauri command가 이 service를 hold.
 pub struct DatasetIngestService {
     resolver: ParquetUrlResolver,
     client: reqwest::Client,
     chunker: DatasetChunker,
+    /// `knowledge_stack::Embedder` — production은 OnnxEmbedder cascade,
+    /// 테스트/fallback은 MockEmbedder. caller (`.d.3` Tauri setup)에서 주입.
+    embedder: Arc<dyn Embedder>,
     /// HF base URL — production은 `https://huggingface.co/api/datasets`, 테스트는 wiremock base.
     base_url: String,
-    /// Chunk 누적 buffer size (정기 progress emit interval). 기본 100 row.
+    /// 정기 progress emit interval (단위: row). 기본 100.
     progress_emit_interval: u64,
+    /// 임베딩 batch 크기 (단위: chunk). 기본 32.
+    embedding_batch_size: usize,
 }
 
 impl DatasetIngestService {
-    /// Production constructor — HF endpoint + 기본 chunker.
-    pub fn new(chunker: DatasetChunker) -> DatasetImportResult<Self> {
+    /// Production constructor — HF endpoint + chunker + embedder 주입.
+    pub fn new(chunker: DatasetChunker, embedder: Arc<dyn Embedder>) -> DatasetImportResult<Self> {
         let client = make_client().map_err(|e| DatasetImportError::Internal(e.to_string()))?;
         Ok(Self {
             resolver: ParquetUrlResolver::new(client.clone()),
             client,
             chunker,
+            embedder,
             base_url: "https://huggingface.co/api/datasets".into(),
             progress_emit_interval: 100,
+            embedding_batch_size: DEFAULT_EMBEDDING_BATCH_SIZE,
         })
     }
 
     /// 테스트용 — wiremock base URL 주입.
     pub fn with_base_url(
         chunker: DatasetChunker,
+        embedder: Arc<dyn Embedder>,
         client: reqwest::Client,
         base_url: String,
     ) -> Self {
@@ -82,18 +106,21 @@ impl DatasetIngestService {
             resolver: ParquetUrlResolver::new(client.clone()),
             client,
             chunker,
+            embedder,
             base_url,
             progress_emit_interval: 1, // 테스트는 매 row emit.
+            embedding_batch_size: 4,   // 테스트는 작은 batch로 flush 다중 호출 검증.
         }
     }
 
-    /// 메인 흐름 — Manifest / Downloading / Chunking 단계 emit.
+    /// 메인 흐름 — Manifest / Downloading / Chunking / Embedding 단계 emit.
+    /// Writing(SQLCipher INSERT) 단계는 호출자(`.d.2`)가 `embedded_out` 채널에서 consume.
     pub async fn run(
         &self,
         request: IngestRequest,
         progress: mpsc::Sender<IngestProgress>,
         cancel: Arc<AtomicBool>,
-        chunks_out: mpsc::Sender<DatasetChunk>,
+        embedded_out: mpsc::Sender<EmbeddedChunk>,
     ) -> DatasetImportResult<IngestStats> {
         if cancel.load(Ordering::Relaxed) {
             return Err(DatasetImportError::Cancelled);
@@ -123,7 +150,7 @@ impl DatasetIngestService {
             ));
         }
 
-        // ---- Stage 2 + 3: Downloading + Chunking ----
+        // ---- Stage 2 + 3 + 4: Downloading + Chunking + Embedding ----
         let max_rows = match &request.sample {
             SampleStrategy::Full => u64::MAX,
             SampleStrategy::First { n } => *n,
@@ -131,6 +158,7 @@ impl DatasetIngestService {
         };
 
         let mut stats = IngestStats::default();
+        let mut chunk_buffer: Vec<DatasetChunk> = Vec::with_capacity(self.embedding_batch_size);
 
         'outer: for url in &urls {
             if cancel.load(Ordering::Relaxed) {
@@ -144,7 +172,7 @@ impl DatasetIngestService {
                     current: stats.rows_processed,
                     total: max_rows,
                     eta_secs: None,
-                    chunks_written: stats.chunks_emitted,
+                    chunks_written: stats.chunks_embedded,
                     message_ko: format!(
                         "parquet 받고 있어요 ({}/{})",
                         stats.urls_fetched,
@@ -180,11 +208,20 @@ impl DatasetIngestService {
                     }
                     let chunks = self.chunker.chunks(stats.rows_processed, &text);
                     for chunk in chunks {
-                        // 채널 닫혀 있으면 receiver drop — Cancelled 등가 처리.
-                        if chunks_out.send(chunk).await.is_err() {
-                            return Err(DatasetImportError::Cancelled);
+                        chunk_buffer.push(chunk);
+                        stats.chunks_generated += 1;
+
+                        if chunk_buffer.len() >= self.embedding_batch_size {
+                            flush_embed_buffer(
+                                &self.embedder,
+                                &mut chunk_buffer,
+                                &embedded_out,
+                                &progress,
+                                &mut stats,
+                                &cancel,
+                            )
+                            .await?;
                         }
-                        stats.chunks_emitted += 1;
                     }
                     stats.rows_processed += 1;
 
@@ -195,10 +232,12 @@ impl DatasetIngestService {
                                 current: stats.rows_processed,
                                 total: max_rows,
                                 eta_secs: None,
-                                chunks_written: stats.chunks_emitted,
+                                chunks_written: stats.chunks_embedded,
                                 message_ko: format!(
-                                    "{} row / {} chunk 처리했어요",
-                                    stats.rows_processed, stats.chunks_emitted
+                                    "{} row / {} chunk 생성 / {} chunk 임베딩 완료",
+                                    stats.rows_processed,
+                                    stats.chunks_generated,
+                                    stats.chunks_embedded
                                 ),
                             })
                             .await;
@@ -207,23 +246,96 @@ impl DatasetIngestService {
             }
         }
 
-        // ---- Stage Done (Embedding/Writing은 .c.2.d) ----
+        // 마지막 buffer flush.
+        if !chunk_buffer.is_empty() {
+            flush_embed_buffer(
+                &self.embedder,
+                &mut chunk_buffer,
+                &embedded_out,
+                &progress,
+                &mut stats,
+                &cancel,
+            )
+            .await?;
+        }
+
+        // ---- Stage Done ----
         let _ = progress
             .send(IngestProgress {
                 stage: DatasetIngestStage::Done,
                 current: stats.rows_processed,
                 total: stats.rows_processed,
                 eta_secs: Some(0),
-                chunks_written: stats.chunks_emitted,
+                chunks_written: stats.chunks_embedded,
                 message_ko: format!(
-                    "{} row → {} chunk 처리 완료했어요",
-                    stats.rows_processed, stats.chunks_emitted
+                    "{} row → {} chunk 임베딩 완료했어요",
+                    stats.rows_processed, stats.chunks_embedded
                 ),
             })
             .await;
 
         Ok(stats)
     }
+}
+
+/// chunk buffer → embed → EmbeddedChunk emit + Embedding stage progress emit.
+async fn flush_embed_buffer(
+    embedder: &Arc<dyn Embedder>,
+    buffer: &mut Vec<DatasetChunk>,
+    embedded_out: &mpsc::Sender<EmbeddedChunk>,
+    progress: &mpsc::Sender<IngestProgress>,
+    stats: &mut IngestStats,
+    cancel: &Arc<AtomicBool>,
+) -> DatasetImportResult<()> {
+    if cancel.load(Ordering::Relaxed) {
+        return Err(DatasetImportError::Cancelled);
+    }
+    if buffer.is_empty() {
+        return Ok(());
+    }
+
+    let texts: Vec<String> = buffer.iter().map(|c| c.text.clone()).collect();
+    let embeddings = embedder
+        .embed(&texts)
+        .await
+        .map_err(|e| DatasetImportError::EmbeddingFailed(e.to_string()))?;
+
+    if embeddings.len() != texts.len() {
+        return Err(DatasetImportError::EmbeddingFailed(format!(
+            "embedder가 {} chunk를 받아 {} embedding을 반환했어요",
+            texts.len(),
+            embeddings.len()
+        )));
+    }
+
+    let _ = progress
+        .send(IngestProgress {
+            stage: DatasetIngestStage::Embedding,
+            current: stats.chunks_embedded + texts.len() as u64,
+            total: stats.chunks_generated,
+            eta_secs: None,
+            chunks_written: stats.chunks_embedded + texts.len() as u64,
+            message_ko: format!(
+                "임베딩 처리 중 — {} chunk 누적",
+                stats.chunks_embedded + texts.len() as u64
+            ),
+        })
+        .await;
+
+    for (chunk, embedding) in buffer.drain(..).zip(embeddings) {
+        let embedded = EmbeddedChunk {
+            row_index: chunk.row_index,
+            chunk_index: chunk.chunk_index,
+            text: chunk.text,
+            embedding,
+        };
+        if embedded_out.send(embedded).await.is_err() {
+            return Err(DatasetImportError::Cancelled);
+        }
+        stats.chunks_embedded += 1;
+    }
+
+    Ok(())
 }
 
 /// RecordBatch의 row를 N개 컬럼 string concat으로 합성.
@@ -365,7 +477,11 @@ mod tests {
         }
     }
 
-    /// 통합 — 전체 pipeline (Manifest → Downloading → Chunking → Done) wiremock + parquet writer로 검증.
+    fn test_embedder() -> Arc<dyn Embedder> {
+        Arc::new(knowledge_stack::MockEmbedder::default()) // dim = 384.
+    }
+
+    /// 통합 — 전체 pipeline (Manifest → Downloading → Chunking → Embedding → Done) wiremock + parquet writer로 검증.
     #[tokio::test]
     async fn service_runs_full_pipeline() {
         let server = MockServer::start().await;
@@ -390,6 +506,7 @@ mod tests {
         let client = reqwest::Client::builder().no_proxy().build().unwrap();
         let service = DatasetIngestService::with_base_url(
             chunker,
+            test_embedder(),
             client,
             format!("{}/datasets", server.uri()),
         );
@@ -403,16 +520,17 @@ mod tests {
         };
 
         let (progress_tx, mut progress_rx) = mpsc::channel(64);
-        let (chunks_tx, mut chunks_rx) = mpsc::channel(64);
+        let (embedded_tx, mut embedded_rx) = mpsc::channel(64);
         let cancel = Arc::new(AtomicBool::new(false));
 
         let stats = service
-            .run(request, progress_tx, cancel, chunks_tx)
+            .run(request, progress_tx, cancel, embedded_tx)
             .await
             .expect("service.run");
 
         assert_eq!(stats.rows_processed, 3);
-        assert!(stats.chunks_emitted >= 3, "min 1 chunk per row");
+        assert!(stats.chunks_generated >= 3);
+        assert_eq!(stats.chunks_embedded, stats.chunks_generated);
         assert_eq!(stats.urls_fetched, 1);
 
         let mut stages = Vec::new();
@@ -421,14 +539,23 @@ mod tests {
         }
         assert!(stages.contains(&DatasetIngestStage::Manifest));
         assert!(stages.contains(&DatasetIngestStage::Downloading));
+        assert!(stages.contains(&DatasetIngestStage::Embedding));
         assert!(stages.contains(&DatasetIngestStage::Done));
 
-        let mut chunks = Vec::new();
-        while let Some(c) = chunks_rx.recv().await {
-            chunks.push(c);
+        let mut embedded = Vec::new();
+        while let Some(c) = embedded_rx.recv().await {
+            embedded.push(c);
         }
-        assert!(chunks.len() >= 3);
-        assert!(chunks.iter().any(|c| c.text.contains("페르소나")));
+        assert!(embedded.len() >= 3);
+        assert!(embedded.iter().any(|c| c.text.contains("페르소나")));
+        // Embedder dim 보존 (MockEmbedder default = 384).
+        for c in &embedded {
+            assert_eq!(
+                c.embedding.len(),
+                384,
+                "embedding dim must match Mock default"
+            );
+        }
     }
 
     #[tokio::test]
@@ -450,6 +577,7 @@ mod tests {
         let client = reqwest::Client::builder().no_proxy().build().unwrap();
         let service = DatasetIngestService::with_base_url(
             chunker,
+            test_embedder(),
             client,
             format!("{}/datasets", server.uri()),
         );
@@ -463,22 +591,21 @@ mod tests {
         };
 
         let (progress_tx, _progress_rx) = mpsc::channel(64);
-        let (chunks_tx, _chunks_rx) = mpsc::channel(64);
+        let (embedded_tx, _embedded_rx) = mpsc::channel(64);
         let cancel = Arc::new(AtomicBool::new(false));
 
         let stats = service
-            .run(request, progress_tx, cancel, chunks_tx)
+            .run(request, progress_tx, cancel, embedded_tx)
             .await
             .expect("service.run");
 
         assert_eq!(stats.rows_processed, 2, "First {{n: 2}} → exactly 2 rows");
+        assert_eq!(stats.chunks_embedded, stats.chunks_generated);
     }
 
     #[tokio::test]
     async fn service_cancels_before_run() {
         let server = MockServer::start().await;
-        // URL fetch도 실행되기 전 cancel 플래그 → 첫 url 처리 시점에 Cancelled 반환.
-        // resolver 응답은 mount 안 함 — Manifest 전 cancel 검증은 url loop 진입 시점에서.
         let parquet_url = format!("{}/files/0000.parquet", server.uri());
         let url_list = serde_json::to_string(&vec![parquet_url]).unwrap();
         Mock::given(method("GET"))
@@ -492,6 +619,7 @@ mod tests {
         let client = reqwest::Client::builder().no_proxy().build().unwrap();
         let service = DatasetIngestService::with_base_url(
             chunker,
+            test_embedder(),
             client,
             format!("{}/datasets", server.uri()),
         );
@@ -505,10 +633,10 @@ mod tests {
         };
 
         let (progress_tx, _progress_rx) = mpsc::channel(64);
-        let (chunks_tx, _chunks_rx) = mpsc::channel(64);
+        let (embedded_tx, _embedded_rx) = mpsc::channel(64);
         let cancel = Arc::new(AtomicBool::new(true)); // pre-cancel.
 
-        let result = service.run(request, progress_tx, cancel, chunks_tx).await;
+        let result = service.run(request, progress_tx, cancel, embedded_tx).await;
         assert!(matches!(result, Err(DatasetImportError::Cancelled)));
     }
 }

@@ -26,6 +26,9 @@ pub enum DatasetImportError {
     #[error("청크 분할에 실패했어요: {0}")]
     ChunkingFailed(String),
 
+    #[error("임베딩에 실패했어요: {0}")]
+    EmbeddingFailed(String),
+
     #[error("사용자가 import를 취소했어요")]
     Cancelled,
 

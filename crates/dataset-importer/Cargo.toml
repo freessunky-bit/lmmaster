@@ -29,6 +29,8 @@ tokenizers = { workspace = true }
 # 내부 의존성.
 shared-types = { workspace = true }
 dataset-catalog = { path = "../dataset-catalog" }
+# Embedder trait + MockEmbedder + OnnxEmbedder cascade 재사용 (Phase 23'.c.2.d.1).
+knowledge-stack = { workspace = true }
 
 [dev-dependencies]
 wiremock = { workspace = true }
