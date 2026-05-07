@@ -31,6 +31,7 @@ members = [
   "crates/dataset-catalog",
   "crates/trends-bundle-curator",
   "crates/dataset-importer",
+  "crates/trend-summarizer",
 ]
 
 [workspace.package]
@@ -169,6 +170,7 @@ auto-updater = { path = "crates/auto-updater" }
 knowledge-stack = { path = "crates/knowledge-stack" }
 pipelines = { path = "crates/pipelines" }
 dataset-importer = { path = "crates/dataset-importer" }
+trend-summarizer = { path = "crates/trend-summarizer" }
 
 [profile.release]
 opt-level = 3
