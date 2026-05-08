@@ -1,7 +1,7 @@
 {
   "name": "lmmaster",
   "private": true,
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "Local AI Companion for existing web apps — desktop orchestrator (Tauri 2 + Rust + React)",
   "packageManager": "pnpm@9.15.9",
   "engines": {
