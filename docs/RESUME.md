@@ -17,6 +17,54 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-08 v0.3.4 — R-F.3 후속 token-flow 회귀 가드 minimal
+
+검수 finding 3 (IPC raw filesystem path) 후속 가드. R-F.3 (v0.3.3)에서 일시 skip한 Workspace/Workbench test의 token-based ingest 흐름을 minimal 신규 test로 복구. legacy describe.skip + it.skip은 v0.4.0에서 dialog mock 풀 적용 + 통합 unskip 예정.
+
+신규 test (4 invariant):
+- `Workspace.test.tsx::"Workspace Phase R-F.3 — token-based ingest"` 3 it (button click + pickDirectory mock + button text 갱신 / 선택 + start → startIngest({path: token}) 검증 / dialog cancel(null) → state 변경 없음 + start disabled).
+- `Workbench.test.tsx::"Step 1 — 파일 선택 button click → pickJsonlFile mock → previewJsonl"` 1 it (token이 path 매개변수로 전달).
+
+mock: `vi.mock("../ipc/path-tokens")` + pickJsonlFile/pickDirectory + beforeEach reset.
+
+검증: tsc clean / production code 변경 0. commit `93d030b`.
+
+## 2026-05-08 v0.3.3 — Phase R-F.3 IPC selected_path_token registry
+
+GPT Pro 검수 critical로 분류된 raw filesystem path IPC 표면을 token registry로 교체. R-F+R-G hotfix에서 HIGH 재분류 + deferred 항목 종결.
+
+채택안:
+- `tauri-plugin-dialog 2.7` 도입 (Cargo + package + capability + `permissions/path-tokens.toml`)
+- `path_tokens.rs` 신규 — `Arc<RwLock<HashMap>>` + UUID v4 + 24h soft TTL + 8 invariant test
+- `issue_path_token` IPC + lib.rs plugin + State 등록
+- IPC 3개 token resolve 진입점 추가:
+  - `knowledge::ingest_path`: `config.path`는 selected_path_token, backend가 resolve 후 mutate
+  - `workbench::workbench_preview_jsonl`: `path_token` + State + helper 추출 (`read_preview_jsonl_inner` test 호환)
+  - `workbench::start_workbench_run`: `data_jsonl_path`가 token (빈 string은 mock pass-through)
+- frontend `ipc/path-tokens.ts` 신규 — `pickJsonlFile()` / `pickDirectory()` helper
+- `Workspace.tsx` + `Workbench.tsx` UI: text input → 파일 선택 button (selected_path_token 발급)
+- i18n `screens.common.pathPicker.*` 7키 ko/en (1063 → 1070)
+
+결정 노트: `docs/research/phase-rf3-ipc-token-registry-decision.md` (6 섹션, 10 기각안). ADR-0052 §S6 + ADR-0064 §F.3 deferred 종결.
+
+검증: cargo fmt + clippy 0 warning / workspace test failed 0 / tsc clean / i18n parity 1070/1070. commit `f104fd9`.
+
+## 2026-05-08 v0.3.2 — Phase 22'.c Trends.tsx display 통합
+
+`manifests/apps/trends-bundle.json` 실 큐레이션 5건(2026-05-08 첫 사이클 — When-to-Think / OpenSearch-VL / Diffusion Seg / Spatial Intelligence / Lightning Video Edit)을 `Trends.tsx` 카드 그리드로 표시. 이전 prototype은 placeholder만 노출 — bundleItems가 summarize input으로만 쓰이고 카드 미렌더였음.
+
+채택:
+- gate end + cards section 사이에 신규 "이번 주 큐레이션" 섹션 (`bundleItems.length > 0` 조건부 렌더)
+- `TrendBundleItem` type 신설 (`SummaryInput` + `attribution`/`published_at`/`tags`/`score`)
+- 각 item 카드: 카테고리 칩 / 제목 / 한국어 요약 / source / 발행일 / attribution / source_url plain `<code>`
+- `curator_note_ko` intro 카피
+- 기존 `MOCK_CARDS`는 "다음 주 출처 가이드"로 보존 (5건 모두 arXiv paper, 6 카테고리 다양화 후 retire)
+- i18n `trends.bundle.{heading,publishedAt,attribution}` ko/en parity
+
+미정 (v0.3.5+): source_url 클릭 가능 (capability scope arxiv.org 추가 부담), `expires_at` 만료 처리, 카테고리 필터, score-based 정렬.
+
+결정 노트: `docs/research/phase-22pc-trends-display-decision.md` (6 섹션, 6 기각안). ADR-0060 §C 흡수 (별도 ADR 없음). commit `2ea43ec`.
+
 ## 2026-05-08 Phase R-J — Invariant Tests (3건 종결, R-J.4 행동 규칙 보존)
 
 R-F+R-G+R-H+R-I 직후 마지막 invariant polish. ADR-0064 §J 흡수. 결정 노트 `docs/research/phase-rj-invariant-tests-decision.md` (6 섹션, 6 기각안). 검수 리포트 19 finding 모두 종결.
