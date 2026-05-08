@@ -1,0 +1,23 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 23'.c — Dataset Catalog + Import Pipeline.
+
+[[permission]]
+identifier = "allow-list-datasets"
+description = "사용자 dataset catalog 목록 read."
+commands.allow = ["list_datasets"]
+
+[[permission]]
+identifier = "allow-delete-dataset"
+description = "dataset catalog entry 삭제."
+commands.allow = ["delete_dataset"]
+
+[[permission]]
+identifier = "allow-dataset-import-start"
+description = "HF parquet → JSONL import 시작."
+commands.allow = ["dataset_import_start"]
+
+[[permission]]
+identifier = "allow-dataset-import-cancel"
+description = "진행 중 dataset import 취소."
+commands.allow = ["dataset_import_cancel"]

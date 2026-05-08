@@ -1,0 +1,6 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+[[permission]]
+identifier = "allow-summarize-trends"
+description = "주간 트렌드 번들 요약 (trend-summarizer)."
+commands.allow = ["summarize_trends"]

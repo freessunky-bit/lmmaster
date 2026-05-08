@@ -1,0 +1,23 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 13'.h.2.e.1 / 13'.h.2.f.1 — 사용자 settings persistence + LlamaCpp 자동 install.
+
+[[permission]]
+identifier = "allow-get-llama-server-path"
+description = "settings.json에서 llama-server 경로 read."
+commands.allow = ["get_llama_server_path"]
+
+[[permission]]
+identifier = "allow-set-llama-server-path"
+description = "사용자 file picker token resolve + 검증 + settings.json 저장 + env 주입."
+commands.allow = ["set_llama_server_path"]
+
+[[permission]]
+identifier = "allow-clear-llama-server-path"
+description = "settings.json llama_server_path 초기화 + env 제거."
+commands.allow = ["clear_llama_server_path"]
+
+[[permission]]
+identifier = "allow-install-llama-cpp-runtime"
+description = "GPU 자동 감지 + ggerganov/llama.cpp Release 자동 다운로드 + extract + settings 자동 등록."
+commands.allow = ["install_llama_cpp_runtime"]
