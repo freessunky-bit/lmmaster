@@ -342,4 +342,51 @@ frontend `LlamaCppSetupWizard`(13'.h.2.e)는 manifest의 빌드 버전/asset URL
 
 ---
 
-**문서 버전**: v1.0 (2026-04-30 — Phase 13'.c/13'.f/13'.g 완료 후 deferred 인덱스 신설).
+## 2026-05-08 세션 종료 — 차후 후보 (선택, 비필수)
+
+> 본 섹션은 사용자 요청 (2026-05-08, v0.5.1 직후) 으로 정리한 *차후 진행 후보*. **모두 비필수** — 사용자 측 e2e 검증 후 *진짜 막히는 부분*만 진입.
+> 기존 우선순위 1~3 섹션과 별도로, 본 세션에서 *내가 sub-phase 잘게 쪼개면서 만들어낸 미세 개선*을 정직하게 표시.
+
+### 핵심 종결 (2026-05-08)
+- ✅ GPT Pro 검수 19 finding 모두 종결 (v0.3.1~v0.3.4, ADR-0064)
+- ✅ Phase 13'.h.2.d Round 1~4 (v0.4.0) — chat IPC LlamaCpp 분기 wiring
+- ✅ Phase 13'.h.2.c.2 (v0.4.2) — LlamaCpp 모델 자동 다운로드 (catalog → cache_dir)
+- ✅ Phase 13'.h.2.e.1 (v0.5.0) — Settings UI + settings.json + startup env 주입
+- ✅ Phase 13'.h.2.e.2/e.3 (v0.5.1) — Catalog/Chat LlamaCpp 분기 + 한국어 banner
+
+**비전 chat = 클릭만으로 시작 가능 흐름 완결**.
+
+### 차후 후보 (선택, 진입 우선순위 낮음)
+
+| # | 항목 | Effort | 진입 권장도 | 진입 조건 |
+|---|---|---|---|---|
+| 1 | **Phase 13'.h.2.e.4** — cache_dir GGUF 존재 검사 + dropdown filter | 2-3h | 낮음 (현재도 한국어 안내) | 사용자가 "받지 않은 모델이 dropdown에 보여서 헷갈려요"라고 명시 보고 |
+| 2 | **Phase 13'.h.2.e.5** — quant 선택 UI (현재 default first quant) | 2-3h | 낮음 | 사용자가 Q4_K_M 외 다른 quant 명시 요청 |
+| 3 | **Phase 13'.h.5** — known_issues 카탈로그 마커 (mmproj 누락 등 사전 경고) | 2-3h | 낮음 | 큐레이터가 manifest 데이터 품질 점검 후 |
+| 4 | **Phase R-M** — vitest 환경 호환 fix (Workspace 12 it skipped) | 2-4h | 낮음 (CI는 통과) | 회귀 가드 보강이 *진짜 필요한* 시점 |
+| 5 | **Phase R-K** — Updater 옵션 A 활성 + 새 keypair | 4-6h | **중간 (v1.0 진입 시 필요)** | v0.x 동안은 수동 업데이트 안내로 OK |
+| 6 | **Phase R-L** — Ollama Linux 자동 설치 | 3-4h | 낮음 (Windows-first) | Linux 사용자 명시 요청 |
+
+### v1.x 후속 reinforce (검수 19 finding 종결 후 추가 강화)
+
+| # | 항목 | Effort | 진입 조건 |
+|---|---|---|---|
+| 7 | Knowledge chunk-level cancel + spawn_blocking refactor | 6-8h | 사용자가 *대용량 ingest 도중 cancel 응답 늦음*을 보고 |
+| 8 | Workbench DNS rebinding hardening (`reqwest::resolve()` 정적 매핑) | 3-4h | 보안 audit 시점 |
+| 9 | KeyStore passphrase rotation (`KeyStore::rekey()`) | 4-6h | 사용자가 비밀번호 회전 요구 (현재 0건) |
+| 10 | selected_path_token Mobile photopicker | — | Tauri Mobile v2.x 진입 |
+
+### 운영 위험 (조치 필요 시점에 진입)
+
+- **Updater pubkey 짝 secret 미확인**: `tauri.conf.json:122` 임베드 키 `BF5C36D65E99C44F` — Phase R-K (#5) 진입 시 *반드시 새 keypair 발급* (옛 사용자 PC가 새 키로 서명된 빌드를 못 받음 — Tauri trust-on-first-use).
+- **EmbeddingModelPanel.test.tsx Windows local flaky**: jsdom waitFor timing. Linux CI는 통과. 본 sub-phase 변경 무관.
+
+### 정직한 판정 요약
+
+오늘 세션의 *진짜 가치*: 검수 종결 + 비전 chat 활성. **이 외 모두 polish / 미래 시나리오 / 환경 이슈**.
+
+**다음 세션 진입 결정은 사용자 측 실 사용 피드백 기준** — 본 차후 후보 리스트는 *제안*일 뿐, *진짜 막히는 부분*이 보고되기 전까지 자율 진입 X.
+
+---
+
+**문서 버전**: v1.1 (2026-05-08 — 검수 19 finding 종결 + 비전 chat 흐름 완결 + 차후 후보 정리).
