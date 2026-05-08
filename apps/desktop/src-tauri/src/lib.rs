@@ -26,6 +26,8 @@ pub mod presets;
 pub mod registry_fetcher;
 pub mod registry_provider;
 pub mod runtimes;
+// Phase 13'.h.2.e.1 — 사용자 settings persistence + LlamaCpp binary path.
+pub mod settings;
 pub mod telemetry;
 pub mod trends;
 pub mod updater;
@@ -178,6 +180,10 @@ pub fn run() {
             crash::read_crash_log,
             hf_search::search_hf_models,
             hf_search::register_hf_model,
+            // Phase 13'.h.2.e.1 — LlamaCpp binary path settings.
+            settings::llama_server::get_llama_server_path,
+            settings::llama_server::set_llama_server_path,
+            settings::llama_server::clear_llama_server_path,
         ])
         .setup(|app| {
             // 1. Gateway supervisor.
@@ -194,6 +200,12 @@ pub fn run() {
             //      drop이 자동 SIGKILL — RunEvent::ExitRequested에서 명시 cleanup (Round 3).
             let llama_state = chat::llama_cpp::new_state();
             app.manage(llama_state);
+
+            // 1.c. Phase 13'.h.2.e.1 — settings.json 읽고 `LMMASTER_LLAMA_SERVER_PATH` env 주입.
+            //      사용자가 Settings 화면에서 등록한 경로를 다음 앱 시작 시 자동 적용.
+            if let Ok(dir) = app.path().app_local_data_dir() {
+                settings::apply_startup_env(&dir);
+            }
 
             // 1.b. GatewayMetrics — Phase 13'.b. middleware가 record, Diagnostics IPC가 read.
             //      Tauri state로 manage해서 gateway::run이 build_router 시 주입 + IPC도 동일 인스턴스 read.

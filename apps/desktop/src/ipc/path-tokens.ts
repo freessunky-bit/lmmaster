@@ -61,3 +61,30 @@ export async function pickDirectory(): Promise<{
   const name = selected.split(/[\\/]/).pop() ?? selected;
   return { token, name };
 }
+
+/**
+ * Phase 13'.h.2.e.1 — 임의의 단일 파일 선택 dialog + token 발급.
+ *
+ * binary (llama-server.exe 등) 선택용. filters는 caller가 제공.
+ *
+ * 반환:
+ * - `{ token, name }`: 사용자 선택 + token 발급 성공.
+ * - `null`: 취소 (graceful).
+ */
+export async function pickFile(filters?: {
+  name: string;
+  extensions: string[];
+}[]): Promise<{
+  token: string;
+  name: string;
+} | null> {
+  const selected = await open({
+    multiple: false,
+    directory: false,
+    filters,
+  });
+  if (!selected || typeof selected !== "string") return null;
+  const token = await issuePathToken(selected, "file");
+  const name = selected.split(/[\\/]/).pop() ?? selected;
+  return { token, name };
+}

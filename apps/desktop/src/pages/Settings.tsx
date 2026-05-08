@@ -57,6 +57,7 @@ import { WorkbenchArtifactPanel } from "../components/WorkbenchArtifactPanel";
 import { HelpButton } from "../components/HelpButton";
 import { PortableExportPanel } from "../components/portable/PortableExportPanel";
 import { PortableImportPanel } from "../components/portable/PortableImportPanel";
+import { LlamaServerPanel } from "../components/LlamaServerPanel";
 
 import "./settings.css";
 
@@ -1005,6 +1006,9 @@ function AdvancedPanel({ version, commit }: AdvancedPanelProps) {
 
       {/* Phase 8'.0.c — Workbench artifact retention */}
       <WorkbenchArtifactPanel />
+
+      {/* Phase 13'.h.2.e.1 — LlamaCpp binary path 등록 */}
+      <LlamaServerPanel />
 
       <fieldset className="settings-fieldset">
         <legend className="settings-legend">

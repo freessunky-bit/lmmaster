@@ -17,6 +17,30 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-08 v0.5.0 — Phase 13'.h.2.e.1 LlamaCpp Settings UI + startup env 주입
+
+비전 chat의 *마지막 사용자 마찰점* (수동 환경변수 등록)을 제거. Settings → 고급 → "LlamaCpp 서버 경로"에서 file picker로 binary 등록하면 settings.json에 영구 저장 + 다음 시작 시 `LMMASTER_LLAMA_SERVER_PATH` 자동 주입. v0.4.0 chat IPC + v0.4.2 자동 다운로드와 짝맞춰 비전 chat이 사용자 측 zero env 셋업으로 동작.
+
+채택안:
+- `apps/desktop/src-tauri/src/settings/mod.rs` 신규 — `UserSettings` 스키마 (serde + serde(default)) + atomic save (`.tmp` write + rename) + `apply_startup_env()` startup hook + `validate_binary_path()` (절대경로 + 존재 + file 검증).
+- `settings/llama_server.rs` 신규 — IPC 3종: `get_llama_server_path()` / `set_llama_server_path(path_token)` (R-F.3 token 패턴 — file picker → token resolve + 검증 + 저장 + env) / `clear_llama_server_path()` (env 제거 + settings.json null).
+- `lib.rs` setup hook에 `settings::apply_startup_env(&app_local_data_dir)` — 다음 시작 시 자동 env 주입.
+- `apps/desktop/src/components/LlamaServerPanel.tsx` 신규 — 등록/초기화 + 저장된 path 표시 + 한국어 에러 매핑 (invalid-token / validation / save).
+- `apps/desktop/src/ipc/path-tokens.ts`에 `pickFile(filters)` helper 추가 — binary 선택용 generic file picker.
+- `apps/desktop/src/ipc/llama-server-settings.ts` 신규 — Tauri invoke wrapper.
+- ko.json + en.json 동시 갱신 (5 신규 키 — llamaServer / hint / notSet / pick / clear). i18n parity check 1075 ↔ 1075.
+
+기각안:
+- *Tauri tauri-plugin-store 도입*: 단순 JSON read/write로 충분, plugin 도입 부담 회피.
+- *system 환경변수 영구 등록* (Windows registry): 사용자 PC에 부작용 + 권한 elevation 필요. settings.json + startup env 주입이 깔끔.
+- *binary `--version` 실행 검증*: 외부 프로세스 spawn risk + 시간. v0.5.x 사용자 피드백 후 도입.
+
+검증: cargo fmt + clippy 0 warning / settings 모듈 6 unit test (load/save/atomic/parse-fallback/validate 2종) — Linux CI에서 실행 / pnpm exec tsc -b clean / i18n parity OK.
+
+후속:
+- **Phase 13'.h.2.e.2** (v0.5.1) — Catalog "모델 받기" 버튼 분기 (model.runner_compatibility에 LlamaCpp이면 `start_model_pull(LlamaCpp)` 호출).
+- **Phase 13'.h.2.e.3** (v0.5.2) — Chat 진입 시 `LlamaServerNotConfigured` catch → Settings 이동 button + 한국어 안내.
+
 ## 2026-05-08 v0.4.2 — Phase 13'.h.2.c.2 LlamaCpp 모델 자동 다운로드 (catalog → cache_dir)
 
 LlamaCpp 사용자가 카탈로그에서 *모델 받기* 한 번 클릭하면 GGUF + mmproj가 cache_dir에 자동 배치되도록 backend 완성. v0.4.0의 chat IPC와 짝 — env만 등록하면 vision chat 즉시 가능.
