@@ -86,6 +86,8 @@
     "allow-rename-workspace",
     "allow-delete-workspace",
     "allow-set-active-workspace",
+    "allow-issue-path-token",
+    "dialog:allow-open",
     {
       "identifier": "shell:allow-open",
       "allow": [

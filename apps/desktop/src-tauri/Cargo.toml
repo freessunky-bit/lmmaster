@@ -22,6 +22,8 @@ reqwest.workspace = true
 tauri-plugin-single-instance = "2"
 # Phase 8'.b.2 — 외부 URL 오픈 (ToastUpdate 등). capability scope `https://**` 강제.
 tauri-plugin-shell = "2"
+# Phase R-F.3 — selected_path_token registry. 사용자 명시 파일 선택만 허용 (XSS 방어 + raw path 폐기).
+tauri-plugin-dialog = "2"
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

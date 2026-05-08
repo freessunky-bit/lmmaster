@@ -1,0 +1,10 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase R-F.3 (ADR-0064 §F.3) — selected_path_token registry.
+# capabilities/main.json에서 "allow-issue-path-token"로 참조.
+# IPC 흐름: frontend가 tauri-plugin-dialog::open 호출 → 사용자 선택 path → issue_path_token 발급 → 이후 IPC는 token만.
+
+[[permission]]
+identifier = "allow-issue-path-token"
+description = "Frontend가 dialog plugin 결과 path를 backend registry에 token으로 등록. canonicalize 후 24h soft TTL."
+commands.allow = ["issue_path_token"]

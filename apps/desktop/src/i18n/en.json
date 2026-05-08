@@ -243,6 +243,17 @@
         "evalSummary": "Eval pass {{passed}} / {{total}}"
       }
     },
+    "common": {
+      "pathPicker": {
+        "selectFile": "Select file",
+        "selectDirectory": "Select directory",
+        "noFileSelected": "No file selected",
+        "selectedFile": "Selected: {{name}}",
+        "tokenExpired": "Selection expired — please pick again.",
+        "tokenUnknown": "Selection not found — please pick again.",
+        "dialogFailed": "Could not open file picker"
+      }
+    },
     "workspace": {
       "title": "Workspace",
       "subtitle": "Teach your documents to the model and search them quickly.",

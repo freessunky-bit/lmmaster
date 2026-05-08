@@ -640,6 +640,7 @@ fn progress_to_event(ingest_id: &str, p: &IngestProgress) -> IngestEvent {
 /// Phase R-E.7 (ADR-0058) — cancel 토큰을 WorkspaceCancellationScope에 등록.
 /// 사용자가 다른 workspace로 전환하면 이 ingest가 자동 cancel cascade.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // Tauri command — State + Channel + config 9 인자 정상.
 pub async fn ingest_path(
     app: AppHandle,
     config: IngestConfig,
@@ -648,9 +649,25 @@ pub async fn ingest_path(
     embedding_state: State<'_, Arc<EmbeddingState>>,
     store_pool: State<'_, Arc<KnowledgeStorePool>>,
     cancel_scope: State<'_, Arc<crate::workspace::WorkspaceCancellationScope>>,
+    path_tokens: State<'_, Arc<crate::path_tokens::PathTokenRegistry>>,
 ) -> Result<String, KnowledgeApiError> {
-    // store_path 검증 — sandbox 밖 거부.
     let mut config = config;
+    // Phase R-F.3 (ADR-0064 §F.3) — config.path는 frontend가 보낸 selected_path_token.
+    // backend가 token resolve → PathBuf → string으로 mutate. 빈 string은 거부 (사용자 미선택).
+    if config.path.is_empty() {
+        return Err(KnowledgeApiError::PathDenied {
+            reason: "파일이나 폴더를 먼저 선택해 주세요".into(),
+        });
+    }
+    let resolved =
+        path_tokens
+            .resolve(&config.path)
+            .await
+            .map_err(|e| KnowledgeApiError::PathDenied {
+                reason: e.to_string(),
+            })?;
+    config.path = resolved.to_string_lossy().to_string();
+    // store_path 검증 — sandbox 밖 거부.
     config.store_path = validate_against_app_data_dir(&app, &config.store_path)?;
     let workspace_id = config.workspace_id.clone();
     let (ingest_id, cancel, atomic_cancel) = registry.register(&workspace_id).await?;

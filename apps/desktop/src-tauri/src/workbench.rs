@@ -1485,7 +1485,19 @@ pub async fn start_workbench_run(
     on_event: Channel<WorkbenchEvent>,
     registry: State<'_, Arc<WorkbenchRegistry>>,
     model_registry: State<'_, Arc<CustomModelRegistry>>,
+    path_tokens: State<'_, Arc<crate::path_tokens::PathTokenRegistry>>,
 ) -> Result<String, WorkbenchApiError> {
+    let mut config = config;
+    // Phase R-F.3 (ADR-0064 §F.3) — config.data_jsonl_path는 token. 빈 string은 mock pass-through.
+    if !config.data_jsonl_path.is_empty() {
+        let resolved = path_tokens
+            .resolve(&config.data_jsonl_path)
+            .await
+            .map_err(|e| WorkbenchApiError::StartFailed {
+                message: format!("파일 선택을 다시 해 주세요: {e}"),
+            })?;
+        config.data_jsonl_path = resolved.to_string_lossy().to_string();
+    }
     let run_id = Uuid::new_v4().to_string();
     let cancel = registry.register(&run_id).await?;
     let registry_arc: Arc<WorkbenchRegistry> = registry.inner().clone();
@@ -1619,13 +1631,31 @@ pub async fn cleanup_artifacts_now(
 // ───────────────────────────────────────────────────────────────────
 
 /// 첫 N개 line을 정규화해서 preview로 반환. 실패 line은 skip + warn.
+///
+/// Phase R-F.3 (ADR-0064 §F.3) — frontend가 path 대신 selected_path_token을 보냄.
+/// backend가 token resolve 후 PathBuf로 read.
 #[tauri::command]
 pub async fn workbench_preview_jsonl(
-    path: String,
+    path_token: String,
     limit: Option<usize>,
+    path_tokens: State<'_, Arc<crate::path_tokens::PathTokenRegistry>>,
 ) -> Result<Vec<ChatExample>, WorkbenchApiError> {
-    let limit = limit.unwrap_or(5);
-    let content = std::fs::read_to_string(&path).map_err(|e| WorkbenchApiError::StartFailed {
+    let path =
+        path_tokens
+            .resolve(&path_token)
+            .await
+            .map_err(|e| WorkbenchApiError::StartFailed {
+                message: format!("파일 선택을 다시 해 주세요: {e}"),
+            })?;
+    read_preview_jsonl_inner(&path, limit.unwrap_or(5))
+}
+
+/// preview 실 read 로직 — Tauri State 의존 없이 unit test 가능 (R-F.3 helper 추출).
+fn read_preview_jsonl_inner(
+    path: &std::path::Path,
+    limit: usize,
+) -> Result<Vec<ChatExample>, WorkbenchApiError> {
+    let content = std::fs::read_to_string(path).map_err(|e| WorkbenchApiError::StartFailed {
         message: format!("파일을 읽지 못했어요: {e}"),
     })?;
     let mut examples = parse_jsonl(&content).map_err(|e| WorkbenchApiError::StartFailed {
@@ -2223,8 +2253,8 @@ mod tests {
         ));
     }
 
-    #[tokio::test]
-    async fn workbench_preview_jsonl_reads_first_n_lines() {
+    #[test]
+    fn workbench_preview_jsonl_reads_first_n_lines() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("data.jsonl");
         let content = "\
@@ -2234,15 +2264,14 @@ mod tests {
 {\"instruction\":\"d\",\"output\":\"D\"}
 ";
         std::fs::write(&path, content).unwrap();
-        // command function을 직접 호출 — State 매개변수가 없어 단순.
-        let p = path.to_string_lossy().to_string();
-        let result = workbench_preview_jsonl(p, Some(2)).await.unwrap();
+        // Phase R-F.3 — Tauri State 의존 없이 helper로 직접 호출.
+        let result = read_preview_jsonl_inner(&path, 2).unwrap();
         assert_eq!(result.len(), 2);
     }
 
-    #[tokio::test]
-    async fn workbench_preview_jsonl_unknown_path_returns_error() {
-        let result = workbench_preview_jsonl("/nope/missing.jsonl".into(), None).await;
+    #[test]
+    fn workbench_preview_jsonl_unknown_path_returns_error() {
+        let result = read_preview_jsonl_inner(std::path::Path::new("/nope/missing.jsonl"), 5);
         assert!(result.is_err());
     }
 

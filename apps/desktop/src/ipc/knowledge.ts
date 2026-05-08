@@ -17,9 +17,15 @@ export type IngestStage =
   | "writing"
   | "done";
 
-/** Rust knowledge::IngestConfig 미러. backend 기본값과 일치. */
+/** Rust knowledge::IngestConfig 미러. backend 기본값과 일치.
+ *
+ * Phase R-F.3 (ADR-0064 §F.3): `path`는 raw filesystem path가 아닌 *selected_path_token*.
+ * 사용자가 dialog로 선택한 파일/폴더의 token (`pickJsonlFile()` / `pickDirectory()`에서 발급).
+ * backend가 ingest_path 진입 시 token resolve → PathBuf로 mutate.
+ */
 export interface IngestConfig {
   workspace_id: string;
+  /** Phase R-F.3 — selected_path_token (raw path 직접 입력 금지). 빈 string은 거부. */
   path: string;
   /** "file" 또는 "directory". v1 backend는 자동 판별하지만 UI 의도 보존용. */
   kind?: "file" | "directory";

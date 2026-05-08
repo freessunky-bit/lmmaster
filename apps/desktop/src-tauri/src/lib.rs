@@ -18,7 +18,9 @@ pub mod install;
 pub mod keys;
 pub mod knowledge;
 pub mod model_pull;
+// Phase R-F.3 (ADR-0064 §F.3) — selected_path_token registry.
 pub mod panic_hook;
+pub mod path_tokens;
 pub mod pipelines;
 pub mod presets;
 pub mod registry_fetcher;
@@ -84,8 +86,11 @@ pub fn run() {
         // Phase 8'.b.2 — 외부 링크 오픈 (ToastUpdate "업데이트 보기" 등).
         // capability scope: capabilities/main.json `shell:allow-open` + URL allow `https://**`.
         .plugin(tauri_plugin_shell::init())
+        // Phase R-F.3 — file/directory dialog plugin (selected_path_token IPC 흐름).
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commands::ping,
+            path_tokens::issue_path_token,
             commands::get_gateway_status,
             commands::get_gateway_latency_sparkline,
             commands::get_gateway_recent_requests,
@@ -178,6 +183,11 @@ pub fn run() {
             // 1. Gateway supervisor.
             let handle = gateway::GatewayHandle::new();
             app.manage(handle.clone());
+
+            // 1.a. Phase R-F.3 (ADR-0064 §F.3) — selected_path_token registry.
+            //      dialog plugin 결과 path → token 발급 + IPC가 token만 받아 PathBuf 복원.
+            let path_token_registry = path_tokens::PathTokenRegistry::new();
+            app.manage(path_token_registry);
 
             // 1.b. GatewayMetrics — Phase 13'.b. middleware가 record, Diagnostics IPC가 read.
             //      Tauri state로 manage해서 gateway::run이 build_router 시 주입 + IPC도 동일 인스턴스 read.

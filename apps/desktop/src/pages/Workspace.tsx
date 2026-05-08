@@ -21,6 +21,8 @@ import { useTranslation } from "react-i18next";
 import { HelpButton } from "../components/HelpButton";
 import { EmbeddingModelPanel } from "../components/workspace/EmbeddingModelPanel";
 import { useActiveWorkspaceOptional } from "../contexts/ActiveWorkspaceContext";
+// Phase R-F.3 (ADR-0064 §F.3) — selected_path_token helper.
+import { pickJsonlFile, pickDirectory } from "../ipc/path-tokens";
 import {
   cancelIngest,
   isTerminalIngestEvent,
@@ -263,7 +265,9 @@ function KnowledgeTab({ workspaceId, storePath }: KnowledgeTabProps) {
   const handleRef = useRef<StartIngestHandle | null>(null);
 
   // ingest config form state.
+  // Phase R-F.3 — path는 selected_path_token, pathName은 사용자에게 보일 파일명.
   const [path, setPath] = useState("");
+  const [pathName, setPathName] = useState("");
   const [kind, setKind] = useState<"file" | "directory">("directory");
 
   // search panel state.
@@ -455,17 +459,41 @@ function KnowledgeTab({ workspaceId, storePath }: KnowledgeTabProps) {
             <span className="workspace-field-label">
               {t("screens.workspace.knowledge.ingest.pathLabel")}
             </span>
-            <input
-              type="text"
-              value={path}
-              onChange={(e) => setPath(e.target.value)}
+            {/* Phase R-F.3 — text input → 파일/폴더 선택 button (selected_path_token 발급). */}
+            <button
+              type="button"
+              onClick={async () => {
+                const result =
+                  kind === "directory"
+                    ? await pickDirectory()
+                    : await pickJsonlFile();
+                if (result) {
+                  setPath(result.token);
+                  setPathName(result.name);
+                }
+              }}
               disabled={inputsDisabled}
-              className="workspace-input"
-              placeholder={t("screens.workspace.knowledge.ingest.pathPlaceholder")}
+              className="workspace-input workspace-button-pick"
               data-testid="workspace-ingest-path"
-            />
+            >
+              {pathName ||
+                (kind === "directory"
+                  ? t(
+                      "screens.common.pathPicker.selectDirectory",
+                      "폴더 선택할게요",
+                    )
+                  : t(
+                      "screens.common.pathPicker.selectFile",
+                      "파일 선택할게요",
+                    ))}
+            </button>
             <span className="workspace-field-hint">
-              {t("screens.workspace.knowledge.ingest.pathHint")}
+              {pathName
+                ? t("screens.common.pathPicker.selectedFile", {
+                    name: pathName,
+                    defaultValue: "선택한 파일: {{name}}",
+                  })
+                : t("screens.workspace.knowledge.ingest.pathHint")}
             </span>
           </label>
 

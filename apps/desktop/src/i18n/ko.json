@@ -243,6 +243,17 @@
         "evalSummary": "검증 통과 {{passed}} / {{total}}"
       }
     },
+    "common": {
+      "pathPicker": {
+        "selectFile": "파일 선택할게요",
+        "selectDirectory": "폴더 선택할게요",
+        "noFileSelected": "아직 선택한 파일이 없어요",
+        "selectedFile": "선택한 파일: {{name}}",
+        "tokenExpired": "파일 선택이 만료됐어요. 다시 선택해 주세요.",
+        "tokenUnknown": "선택한 파일을 찾을 수 없어요. 다시 선택해 주세요.",
+        "dialogFailed": "파일 선택 창을 열지 못했어요"
+      }
+    },
     "workspace": {
       "title": "워크스페이스",
       "subtitle": "내 자료를 모델에 가르쳐 두고, 빠르게 찾아볼 수 있어요",

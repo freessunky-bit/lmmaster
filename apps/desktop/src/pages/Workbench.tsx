@@ -24,6 +24,8 @@ import { useTranslation } from "react-i18next";
 import { HelpButton } from "../components/HelpButton";
 import { LoraBootstrapPanel } from "../components/workbench/LoraBootstrapPanel";
 import { PromptTemplateStep } from "../components/workbench/PromptTemplateStep";
+// Phase R-F.3 (ADR-0064 §F.3) — selected_path_token helper.
+import { pickJsonlFile } from "../ipc/path-tokens";
 import { RagSeedStep } from "../components/workbench/RagSeedStep";
 import { WorkbenchContextBar } from "../components/workbench/WorkbenchContextBar";
 import {
@@ -589,6 +591,8 @@ function DataStep({ config, dispatch, status, onStart, onNext }: DataStepProps) 
   const [preview, setPreview] = useState<ChatExample[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  // Phase R-F.3 — config.data_jsonl_path는 selected_path_token, 사용자에게는 파일명만 표시.
+  const [selectedJsonlName, setSelectedJsonlName] = useState("");
 
   // 경로 입력 → 디바운스로 preview 호출.
   useEffect(() => {
@@ -650,19 +654,33 @@ function DataStep({ config, dispatch, status, onStart, onNext }: DataStepProps) 
 
         <label className="workbench-field">
           <span className="workbench-field-label">{t("screens.workbench.config.datasetPath")}</span>
-          <input
-            type="text"
-            value={config.data_jsonl_path}
-            onChange={(e) =>
-              dispatch({ type: "SET_CONFIG", patch: { data_jsonl_path: e.target.value } })
-            }
+          {/* Phase R-F.3 — text input → 파일 선택 button (selected_path_token 발급). */}
+          <button
+            type="button"
+            onClick={async () => {
+              const result = await pickJsonlFile();
+              if (result) {
+                dispatch({
+                  type: "SET_CONFIG",
+                  patch: { data_jsonl_path: result.token },
+                });
+                setSelectedJsonlName(result.name);
+              }
+            }}
             disabled={status === "running"}
-            className="workbench-input"
-            placeholder="/path/to/train.jsonl"
+            className="workbench-input workbench-button-pick"
             data-testid="wb-input-dataset-path"
-          />
+          >
+            {selectedJsonlName ||
+              t("screens.common.pathPicker.selectFile", "파일 선택할게요")}
+          </button>
           <span className="workbench-field-hint">
-            {t("screens.workbench.config.datasetPathHint")}
+            {selectedJsonlName
+              ? t("screens.common.pathPicker.selectedFile", {
+                  name: selectedJsonlName,
+                  defaultValue: "선택한 파일: {{name}}",
+                })
+              : t("screens.workbench.config.datasetPathHint")}
           </span>
         </label>
       </div>

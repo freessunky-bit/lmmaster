@@ -173,12 +173,19 @@ export async function listWorkbenchRuns(): Promise<ActiveRunSnapshot[]> {
   return invoke<ActiveRunSnapshot[]>("list_workbench_runs");
 }
 
-/** JSONL 파일 첫 N개 line preview — Step 1에서 사용. */
+/** JSONL 파일 첫 N개 line preview — Step 1에서 사용.
+ *
+ * Phase R-F.3 (ADR-0064 §F.3): `pathToken`은 사용자가 dialog로 선택한 파일의
+ * selected_path_token (`pickJsonlFile()`에서 발급). backend가 token resolve 후 read.
+ */
 export async function previewJsonl(
-  path: string,
+  pathToken: string,
   limit?: number,
 ): Promise<ChatExample[]> {
-  return invoke<ChatExample[]>("workbench_preview_jsonl", { path, limit });
+  return invoke<ChatExample[]>("workbench_preview_jsonl", {
+    pathToken,
+    limit,
+  });
 }
 
 /** 정규화된 examples를 JSONL string으로 직렬화. */

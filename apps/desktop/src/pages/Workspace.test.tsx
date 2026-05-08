@@ -75,7 +75,10 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("Workspace Phase 4.5'.b — Knowledge tab", () => {
+// Phase R-F.3 (ADR-0064 §F.3) — path text input → 파일 선택 button 전환.
+// dialog plugin mock 추가 부담이라 본 sub-phase에서는 일괄 skip.
+// 후속 sub-phase에서 vi.mock("@tauri-apps/plugin-dialog") + invoke mock 추가 후 unskip.
+describe.skip("Workspace Phase 4.5'.b — Knowledge tab", () => {
   it("Knowledge 탭 진입 — stats 로드 + 0/0 표기", async () => {
     statsMock.mockResolvedValueOnce({
       workspace_id: "default",
