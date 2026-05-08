@@ -299,50 +299,8 @@ export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => voi
         </section>
       )}
 
-      <section
-        className="trends-section"
-        aria-labelledby="trends-cards-heading"
-        data-testid="trends-cards-section"
-      >
-        <h2 id="trends-cards-heading" className="trends-section-heading">
-          {t("trends.cards.heading", "이번 주 흐름")}
-        </h2>
-        <p className="trends-section-meta">
-          {t(
-            "trends.cards.meta",
-            "Phase 22' v2.0 진입 시점에 실 큐레이션 데이터(jsdelivr 매주 갱신)로 채워져요. 현재는 어떤 출처가 들어올지 미리 보여드려요.",
-          )}
-        </p>
-        <ul className="trends-grid" role="list">
-          {MOCK_CARDS.map((card) => {
-            const Icon = KIND_ICON[card.kind];
-            return (
-              <li
-                key={card.kind}
-                className={`trends-card trends-card-${card.kind}`}
-                role="listitem"
-              >
-                <div className="trends-card-head">
-                  <Icon size={16} aria-hidden="true" />
-                  <span className="trends-card-kind">
-                    {t(`trends.kind.${card.kind}`, card.kind)}
-                  </span>
-                </div>
-                <h3 className="trends-card-title">
-                  {t(card.titleKey, card.kind)}
-                </h3>
-                <p className="trends-card-hint">{t(card.hintKey, "")}</p>
-                <p className="trends-card-source">
-                  <span className="trends-card-source-label">
-                    {t("trends.cards.sourceLabel", "출처 후보")}:
-                  </span>{" "}
-                  {card.source}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      {/* Phase 22'.c v2.0 — 6 카테고리 mock cards 섹션은 v2.0 큐레이션으로 교체 예정. */}
+      {/* 사용자 요청 (2026-05-09): 진짜 데이터로 오해 방지 위해 v2.0 진입 전까지 숨김. */}
 
       <section
         className="trends-section"
