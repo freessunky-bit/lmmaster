@@ -17,6 +17,29 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-08 v0.5.1 — Phase 13'.h.2.e.2 + e.3 Catalog/Chat LlamaCpp wire-up
+
+v0.5.0 backend의 사용자 진입점을 frontend에 wire up. 비전 chat *클릭만으로 시작*까지의 사용자 흐름 완결.
+
+채택안:
+- **ModelDetailDrawer.tsx** — `runner_compatibility[0]`이 우선 runtime. `"llama-cpp"`이면 `start_model_pull(LlamaCpp, model.id)` 호출 + cancel/openChat도 동일 분기. preselect storage에 runtime hint도 함께 set (`lmmaster.chat.preselect.runtime`).
+- **Chat.tsx** — `selectedRuntime` useMemo로 `selectedEntry?.runner_compatibility[0]` 결정 + `startChat({runtimeKind: selectedRuntime})`로 호출. selectedEntry 매칭에 `e.id === selectedRuntimeId` LlamaCpp 분기 추가.
+- **availableModels** — LlamaCpp 모델은 Ollama list에 없어도 *항상 노출* (cache_dir 검사는 v1.x). chat 시도 시 미준비면 backend가 LlamaCppNotPrepared 한국어 안내.
+- **Chat banner** — `selectedRuntime === "llama-cpp" && llamaServerConfigured === false`이면 한국어 안내 + "설정으로 이동할게요" button (CustomEvent `lmmaster:navigate` `detail: "settings"`).
+- **chat.css** — `.chat-banner` + `.chat-banner-btn` 신규 스타일. 디자인 토큰만 (`--primary` / `--primary-a-2/3` / `--text` / `--fs-13` / `--radius-1/2`).
+
+기각안:
+- *runtime detection 결과 기반 우선순위 결정*: 현재 detection은 별도 IPC + 사용자 환경 다양 — 단순 manifest 정렬로 통제가 더 예측 가능.
+- *cache_dir GGUF 존재 검사*: backend `list_local_llama_cpp_models` IPC 신설 필요 + frontend dropdown filter 추가. v0.5.x sub-phase로 분할.
+- *errorKind에 따른 inline button*: DisplayMessage 타입 확장 + 메시지마다 button render 부담. 상단 banner 1곳이 사용자 인지 더 분명.
+
+검증: cargo clippy + fmt 변경 없음 (frontend only) / tsc clean / 디자인 토큰만 사용.
+
+후속:
+- **Phase 13'.h.2.e.4** — cache_dir GGUF 존재 검사 + dropdown filter (현재는 미수신 모델도 노출됨).
+- **Phase 13'.h.2.e.5** — quant 선택 UI (현재 default first quant).
+- **Phase 13'.h.5** — known_issues 카탈로그 마커 (vision_support && mmproj 누락 등 사전 경고).
+
 ## 2026-05-08 v0.5.0 — Phase 13'.h.2.e.1 LlamaCpp Settings UI + startup env 주입
 
 비전 chat의 *마지막 사용자 마찰점* (수동 환경변수 등록)을 제거. Settings → 고급 → "LlamaCpp 서버 경로"에서 file picker로 binary 등록하면 settings.json에 영구 저장 + 다음 시작 시 `LMMASTER_LLAMA_SERVER_PATH` 자동 주입. v0.4.0 chat IPC + v0.4.2 자동 다운로드와 짝맞춰 비전 chat이 사용자 측 zero env 셋업으로 동작.

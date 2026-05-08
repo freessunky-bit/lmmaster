@@ -30,6 +30,8 @@ import {
 } from "../ipc/catalog";
 import { processImageForVision } from "../lib/image";
 import { listRuntimeModels, type RuntimeModelView } from "../ipc/runtimes";
+// Phase 13'.h.2.e.2 — LlamaCpp 모델 chat 진입 시 binary 등록 여부 안내.
+import { getLlamaServerPath } from "../ipc/llama-server-settings";
 
 import "./chat.css";
 
@@ -66,6 +68,10 @@ export function ChatPage() {
   const [running, setRunning] = useState(false);
   const [attached, setAttached] = useState<AttachedImage[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
+  // Phase 13'.h.2.e.2 — LlamaCpp binary 등록 여부. null이면 로딩 중.
+  const [llamaServerConfigured, setLlamaServerConfigured] = useState<
+    boolean | null
+  >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -73,20 +79,29 @@ export function ChatPage() {
   // 사용자가 위로 스크롤해서 history 읽는 중이면 auto-scroll 잠금 — ChatGPT/Open WebUI 패턴.
   const [isPinnedToBottom, setIsPinnedToBottom] = useState(true);
 
-  // 1) 카탈로그 + Ollama에 받은 모델 목록 로드.
+  // 1) 카탈로그 + Ollama에 받은 모델 목록 + LlamaCpp 설정 로드.
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getCatalog(), listRuntimeModels("ollama")])
-      .then(([view, local]) => {
+    Promise.all([
+      getCatalog(),
+      listRuntimeModels("ollama"),
+      getLlamaServerPath(),
+    ])
+      .then(([view, local, llamaPath]) => {
         if (cancelled) return;
         setEntries(view.entries);
         setLocalModels(local);
+        setLlamaServerConfigured(llamaPath !== null && llamaPath.length > 0);
         // preselect: 사용자가 catalog drawer에서 보낸 모델 우선.
         let preselect: string | null = null;
         try {
           preselect = window.localStorage.getItem("lmmaster.chat.preselect");
           if (preselect) {
             window.localStorage.removeItem("lmmaster.chat.preselect");
+            // Phase 13'.h.2.e.2 — runtime hint도 함께 정리 (Drawer가 set한 값).
+            window.localStorage.removeItem(
+              "lmmaster.chat.preselect.runtime",
+            );
           }
         } catch {
           /* ignore */
@@ -148,14 +163,35 @@ export function ChatPage() {
     return map;
   }, [entries]);
 
-  /** 카탈로그 entry 중 사용자가 받은 (local에 있는) 것만 필터. */
+  /** 카탈로그 entry 중 사용자가 받은 (local에 있는) 것만 필터.
+   *  Phase 13'.h.2.e.2 — LlamaCpp 모델은 Ollama list에 없으므로 항상 노출.
+   *  cache_dir에 GGUF 미존재면 chat 시도 시 LlamaCppNotPrepared 한국어 안내. */
   const availableModels = useMemo(() => {
     const localNames = new Set(localModels.map((m) => m.id));
-    const list: { id: string; runtimeId: string; displayName: string }[] = [];
+    const list: {
+      id: string;
+      runtimeId: string;
+      displayName: string;
+      runtime: RuntimeKind;
+    }[] = [];
     for (const e of entries) {
+      if (e.runner_compatibility[0] === "llama-cpp") {
+        list.push({
+          id: e.id,
+          runtimeId: e.id,
+          displayName: e.display_name,
+          runtime: "llama-cpp",
+        });
+        continue;
+      }
       const rid = runtimeIdsByModelId.get(e.id);
       if (rid && localNames.has(rid)) {
-        list.push({ id: e.id, runtimeId: rid, displayName: e.display_name });
+        list.push({
+          id: e.id,
+          runtimeId: rid,
+          displayName: e.display_name,
+          runtime: "ollama",
+        });
       }
     }
     // 카탈로그에 없는 모델도 표시 — 사용자가 직접 받은 community 모델.
@@ -166,6 +202,7 @@ export function ChatPage() {
           id: m.id,
           runtimeId: m.id,
           displayName: m.id,
+          runtime: "ollama",
         });
       }
     }
@@ -173,17 +210,23 @@ export function ChatPage() {
   }, [entries, localModels, runtimeIdsByModelId]);
 
   // Phase 13'.h — 선택된 모델의 카탈로그 정보. vision_support 판정용.
+  // Phase 13'.h.2.e.2 — LlamaCpp 모델은 e.id로 직접 매칭.
   const selectedEntry = useMemo<ModelEntry | null>(() => {
     if (!selectedRuntimeId) return null;
     return (
       entries.find(
         (e) =>
+          e.id === selectedRuntimeId ||
           e.hub_id === selectedRuntimeId ||
           runtimeModelId(e, null, "ollama") === selectedRuntimeId,
       ) ?? null
     );
   }, [selectedRuntimeId, entries]);
   const visionEnabled = selectedEntry?.vision_support ?? false;
+  // Phase 13'.h.2.e.2 — 선택된 모델의 우선 runtime. Ollama 폴백.
+  const selectedRuntime: RuntimeKind = useMemo(() => {
+    return selectedEntry?.runner_compatibility[0] ?? DEFAULT_RUNTIME;
+  }, [selectedEntry]);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -226,7 +269,7 @@ export function ChatPage() {
 
     try {
       const outcome = await startChat({
-        runtimeKind: DEFAULT_RUNTIME,
+        runtimeKind: selectedRuntime,
         modelId: selectedRuntimeId,
         messages: turn,
         onEvent: (e: ChatEvent) => {
@@ -261,7 +304,7 @@ export function ChatPage() {
     } finally {
       setRunning(false);
     }
-  }, [input, selectedRuntimeId, running, messages, attached]);
+  }, [input, selectedRuntimeId, selectedRuntime, running, messages, attached]);
 
   const handleAttachFiles = useCallback(
     async (files: FileList | null) => {
@@ -326,6 +369,30 @@ export function ChatPage() {
           받아둔 모델로 바로 대화해 볼 수 있어요. 외부 웹앱은 로컬 API에서 따로 연결해 주세요.
         </p>
       </header>
+
+      {/* Phase 13'.h.2.e.2 — LlamaCpp 모델인데 binary 미등록 → Settings 이동 안내. */}
+      {selectedRuntime === "llama-cpp" && llamaServerConfigured === false && (
+        <div
+          className="chat-banner"
+          role="alert"
+          data-testid="chat-llama-not-configured"
+        >
+          <span>
+            LlamaCpp 모델로 채팅하려면 먼저 설정에서 llama-server 경로를 등록해 주세요.
+          </span>
+          <button
+            type="button"
+            className="chat-banner-btn"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent("lmmaster:navigate", { detail: "settings" }),
+              );
+            }}
+          >
+            설정으로 이동할게요
+          </button>
+        </div>
+      )}
 
       <div className="chat-toolbar" role="toolbar" aria-label="채팅 설정">
         <label className="chat-model-select">

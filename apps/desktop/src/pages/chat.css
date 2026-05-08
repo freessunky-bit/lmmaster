@@ -392,3 +392,43 @@
   border-radius: var(--radius-2);
   border: 1px solid var(--surface-3);
 }
+
+/* Phase 13'.h.2.e.2 — LlamaCpp 미설정 안내 banner. */
+.chat-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin: 0 var(--space-4) var(--space-3);
+  background: var(--primary-a-2);
+  border: 1px solid var(--primary-a-3);
+  border-radius: var(--radius-2);
+  color: var(--text);
+  font-size: var(--fs-13);
+}
+
+.chat-banner-btn {
+  appearance: none;
+  background: var(--primary);
+  color: var(--primary-on);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-1);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  width: auto;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chat-banner-btn:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 2px;
+}
+
+.chat-banner-btn:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}

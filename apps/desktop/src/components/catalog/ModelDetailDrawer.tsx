@@ -200,13 +200,15 @@ export function ModelDetailDrawer({
     }
   }, [model, runtime, selectedQuant]);
 
-  /** 모델 풀 시작 — Ollama 호환만 지원. LM Studio는 외부 링크. */
+  /** 모델 풀 시작 — Ollama / LlamaCpp 분기. LM Studio는 외부 링크. */
   const handleInstall = useCallback(async () => {
     if (!model) return;
 
-    // LM Studio-only 모델은 외부 안내. EULA 정책 (silent install 금지).
-    const isOllamaCompat = model.runner_compatibility.includes("ollama");
-    if (!isOllamaCompat) {
+    // Phase 13'.h.2.e.2 — runner_compatibility[0]이 우선 runtime.
+    // 큐레이터가 manifest에 정렬해둔 순서를 따름 (예: vision 모델은 ["llama-cpp", "ollama"]).
+    const preferred = model.runner_compatibility[0];
+
+    if (preferred === "lm-studio") {
       setPullState({
         kind: "failed",
         message:
@@ -215,9 +217,18 @@ export function ModelDetailDrawer({
       return;
     }
 
-    // 카탈로그 LMmaster id → Ollama Hub 형식 변환 (hf.co/{repo}:{quant}).
-    // 변환 없이 LMmaster id를 그대로 보내면 Ollama가 "찾지 못했어요" 응답.
-    const pullId = runtimeModelId(model, selectedQuant || null, "ollama");
+    let pullId: string | null;
+    let runtimeKind: RuntimeKind;
+    if (preferred === "llama-cpp") {
+      // LlamaCpp 분기 — backend가 catalog id로 ModelEntry lookup 후 cache_dir에 자동 다운로드.
+      pullId = model.id;
+      runtimeKind = "llama-cpp";
+    } else {
+      // 카탈로그 LMmaster id → Ollama Hub 형식 변환 (hf.co/{repo}:{quant}).
+      pullId = runtimeModelId(model, selectedQuant || null, "ollama");
+      runtimeKind = "ollama";
+    }
+
     if (!pullId) {
       setPullState({
         kind: "failed",
@@ -231,7 +242,7 @@ export function ModelDetailDrawer({
     try {
       const outcome = await startModelPull({
         modelId: pullId,
-        runtimeKind: "ollama",
+        runtimeKind,
         onEvent: (event: ModelPullEvent) => {
           setPullState((prev) => mergePullEvent(prev, event));
         },
@@ -254,9 +265,12 @@ export function ModelDetailDrawer({
 
   const handleCancelPull = useCallback(async () => {
     if (!model) return;
-    // cancel은 같은 pullId를 cancel 키로 사용 — 시작 시 사용한 변환된 이름 재계산.
+    // cancel은 시작 시 사용한 pullId — runtime별 형식 일치 필요.
+    const preferred = model.runner_compatibility[0];
     const pullId =
-      runtimeModelId(model, selectedQuant || null, "ollama") ?? model.id;
+      preferred === "llama-cpp"
+        ? model.id
+        : runtimeModelId(model, selectedQuant || null, "ollama") ?? model.id;
     try {
       await cancelModelPull(pullId);
     } catch (e) {
@@ -267,7 +281,11 @@ export function ModelDetailDrawer({
   /** "채팅으로 시험하기" — 채팅 페이지로 이동 + 현 모델을 preselect. */
   const handleOpenChat = useCallback(() => {
     if (!model) return;
-    const chatId = runtimeModelId(model, selectedQuant || null, "ollama");
+    const preferred = model.runner_compatibility[0];
+    const chatId =
+      preferred === "llama-cpp"
+        ? model.id
+        : runtimeModelId(model, selectedQuant || null, "ollama");
     if (!chatId) {
       // 직접 채팅 미지원 모델 — 받기 안내.
       setPullState({
@@ -279,6 +297,10 @@ export function ModelDetailDrawer({
     }
     try {
       window.localStorage.setItem("lmmaster.chat.preselect", chatId);
+      window.localStorage.setItem(
+        "lmmaster.chat.preselect.runtime",
+        preferred ?? "ollama",
+      );
     } catch {
       /* ignore */
     }
