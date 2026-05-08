@@ -115,6 +115,22 @@ pub async fn install_llama_cpp_runtime(
     std::fs::create_dir_all(&cache_dir).map_err(|e| LlamaInstallError::Internal {
         message: format!("디렉터리 생성 실패: {e}"),
     })?;
+    // Phase 13'.h.2.f.2 — 옛 .zip 잔여물 일괄 정리 (v0.6.0 cudart-* 등).
+    // 다음 install이 받을 zip과 충돌 위험 + 디스크 누적 회피.
+    if let Ok(entries) = std::fs::read_dir(&cache_dir) {
+        let mut cleaned = 0;
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.extension().map(|e| e == "zip").unwrap_or(false)
+                && std::fs::remove_file(&p).is_ok()
+            {
+                cleaned += 1;
+            }
+        }
+        if cleaned > 0 {
+            tracing::info!(cleaned, "옛 .zip 잔여물 정리 완료");
+        }
+    }
 
     // 3. GitHub API에서 최신 release fetch.
     let _ = channel.send(LlamaInstallEvent::Status {

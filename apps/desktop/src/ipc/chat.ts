@@ -8,6 +8,14 @@ import { invoke, Channel } from "@tauri-apps/api/core";
 
 import type { RuntimeKind } from "./catalog";
 
+/**
+ * Phase 13'.h.2.e.4 — 사용자 cache_dir에 받은 LlamaCpp 모델 catalog id 리스트.
+ * Chat dropdown filter용 — 받은 모델만 노출.
+ */
+export async function listLocalLlamaCppModels(): Promise<string[]> {
+  return invoke<string[]>("list_local_llama_cpp_models");
+}
+
 export interface ChatMessage {
   /** "system" / "user" / "assistant". */
   role: "system" | "user" | "assistant";

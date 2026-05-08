@@ -98,6 +98,7 @@
     "allow-set-llama-server-path",
     "allow-clear-llama-server-path",
     "allow-install-llama-cpp-runtime",
+    "allow-list-local-llama-cpp-models",
     "dialog:allow-open",
     {
       "identifier": "shell:allow-open",

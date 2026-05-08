@@ -1,0 +1,9 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# Phase 13'.h.2.e.4 — 사용자 cache_dir에 받은 LlamaCpp 모델 catalog id 리스트.
+# Chat dropdown filter — 받은 모델만 노출.
+
+[[permission]]
+identifier = "allow-list-local-llama-cpp-models"
+description = "사용자 app_local_data_dir/models에 GGUF 존재하는 LlamaCpp catalog entry id 반환."
+commands.allow = ["list_local_llama_cpp_models"]

@@ -18,6 +18,7 @@ import {
 
 import {
   cancelAllChats,
+  listLocalLlamaCppModels,
   startChat,
   type ChatEvent,
   type ChatMessage,
@@ -72,6 +73,8 @@ export function ChatPage() {
   const [llamaServerConfigured, setLlamaServerConfigured] = useState<
     boolean | null
   >(null);
+  // Phase 13'.h.2.e.4 — cache_dir에 받은 LlamaCpp catalog id Set.
+  const [llamaCppLocal, setLlamaCppLocal] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -86,12 +89,14 @@ export function ChatPage() {
       getCatalog(),
       listRuntimeModels("ollama"),
       getLlamaServerPath(),
+      listLocalLlamaCppModels(),
     ])
-      .then(([view, local, llamaPath]) => {
+      .then(([view, local, llamaPath, llamaCppIds]) => {
         if (cancelled) return;
         setEntries(view.entries);
         setLocalModels(local);
         setLlamaServerConfigured(llamaPath !== null && llamaPath.length > 0);
+        setLlamaCppLocal(new Set(llamaCppIds));
         // preselect: 사용자가 catalog drawer에서 보낸 모델 우선.
         let preselect: string | null = null;
         try {
@@ -176,6 +181,8 @@ export function ChatPage() {
     }[] = [];
     for (const e of entries) {
       if (e.runner_compatibility[0] === "llama-cpp") {
+        // Phase 13'.h.2.e.4 — cache_dir에 GGUF 받은 LlamaCpp 모델만 노출.
+        if (!llamaCppLocal.has(e.id)) continue;
         list.push({
           id: e.id,
           runtimeId: e.id,
@@ -207,7 +214,7 @@ export function ChatPage() {
       }
     }
     return list;
-  }, [entries, localModels, runtimeIdsByModelId]);
+  }, [entries, localModels, runtimeIdsByModelId, llamaCppLocal]);
 
   // Phase 13'.h — 선택된 모델의 카탈로그 정보. vision_support 판정용.
   // Phase 13'.h.2.e.2 — LlamaCpp 모델은 e.id로 직접 매칭.

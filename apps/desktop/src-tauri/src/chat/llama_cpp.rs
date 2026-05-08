@@ -130,6 +130,43 @@ pub fn mmproj_filename(spec: &MmprojSpec, fallback_id: &str) -> String {
     derive_mmproj_filename(spec, fallback_id)
 }
 
+/// Phase 13'.h.2.e.4 — 사용자 cache_dir에 *받은 LlamaCpp 모델 catalog id 리스트*.
+///
+/// 흐름: catalog → runner_compatibility에 LlamaCpp 포함된 entry만 → 각 entry의
+/// expected `model_filename`이 cache_dir에 존재하는지 검사 → catalog id 반환.
+///
+/// frontend Chat dropdown filter — *받은 모델만 보여주기* 정책. mmproj는 부가라 *메인 GGUF만 검사*.
+#[tauri::command]
+pub fn list_local_llama_cpp_models(
+    app: tauri::AppHandle,
+    catalog_state: tauri::State<'_, Arc<crate::commands::CatalogState>>,
+) -> Result<Vec<String>, String> {
+    use tauri::Manager;
+    let cache_dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("app_local_data_dir 실패: {e}"))?
+        .join("models");
+    if !cache_dir.exists() {
+        return Ok(vec![]);
+    }
+    let catalog = catalog_state.snapshot();
+    let mut ids: Vec<String> = Vec::new();
+    for entry in catalog.entries() {
+        if !entry
+            .runner_compatibility
+            .contains(&shared_types::RuntimeKind::LlamaCpp)
+        {
+            continue;
+        }
+        let filename = derive_model_filename(entry);
+        if cache_dir.join(&filename).exists() {
+            ids.push(entry.id.clone());
+        }
+    }
+    Ok(ids)
+}
+
 /// MmprojSpec → mmproj 파일명. URL의 basename 우선, 없으면 `<id>-mmproj.gguf`.
 fn derive_mmproj_filename(spec: &MmprojSpec, fallback_id: &str) -> String {
     spec.url

@@ -108,6 +108,7 @@ pub fn run() {
             model_pull::cancel_model_pull,
             chat::start_chat,
             chat::cancel_all_chats,
+            chat::llama_cpp::list_local_llama_cpp_models,
             bench::commands::start_bench,
             bench::commands::cancel_bench,
             bench::commands::get_last_bench_report,

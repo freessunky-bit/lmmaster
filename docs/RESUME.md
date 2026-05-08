@@ -17,6 +17,39 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-09 v0.7.0 — Phase 13'.h.2.e.4 dropdown filter + 13'.h.2.f.2 zip cleanup
+
+사용자 추가 요청:
+- (1) Chat 모델 dropdown은 *받은 모델만 노출* (현재 카탈로그 전체 노출은 혼란).
+- (2) 디스크 누적 — `cudart-llama-bin-win-cuda-12.4-x64.zip` (391MB) 등 옛 zip 잔여물 정리.
+
+채택안 (Phase 13'.h.2.e.4):
+- `chat::llama_cpp::list_local_llama_cpp_models` IPC 신규 — `app_local_data_dir/models`에 expected GGUF 파일 존재 entry id list 반환. mmproj는 부가라 메인 GGUF만 검사.
+- `apps/desktop/src/ipc/chat.ts::listLocalLlamaCppModels` helper.
+- `Chat.tsx`의 availableModels filter: LlamaCpp 모델은 `llamaCppLocal Set`에 *catalog id 포함*된 경우만 dropdown 노출. Ollama 모델은 기존 `localModels` 검사 그대로.
+- capabilities + permissions/chat-llama-cpp.toml 신규.
+
+채택안 (Phase 13'.h.2.f.2):
+- `install_llama_cpp_runtime` 시작 시 cache_dir 안 .zip 잔여물 일괄 삭제 (cudart-* 등). 디스크 누적 회피 + 다음 install zip과 충돌 방지.
+- 한 번 새 install 시 391MB 자동 회수.
+
+검증: cargo fmt + clippy 0 warning + tsc clean.
+
+휴먼 점검 종결 보고:
+- ✅ 인스톨러 설치 (dev 모드로 대체 검증)
+- ✅ 자동 셋업 (v0.6.3 fix 후 화면 갱신 OK)
+- ✅ 모델 받기 (gemma-3-4b vision)
+- ✅ vision chat 1회 (한국어 + 이미지 정상 응답)
+
+자동 검증 종결 보고:
+- ✅ manifest 21 fix (v0.6.3에 묶여 push, agent 자동)
+- ✅ catalog 번들 entries=42 + tests 23+5 통과 + clippy 0 warning
+- ⏳ 정기 health check 도구 (`.claude/scripts/check-urls.sh`) 보존 — 주기 점검 가능
+
+후순위 (사용자 요청 시):
+- HCX 시리즈 gated 메타 + UI 안내 (Phase 13'.h.2.g 가칭, v0.7.x).
+- "셋업 완료됨" badge — saved 상태에서 secondary text (사용자 first impression 명확화).
+
 ## 2026-05-08 v0.6.4 — Settings 재진입 idle 회귀 fix + manifest 21개 일괄 정정
 
 사용자 e2e 검증 결과:
