@@ -258,7 +258,10 @@ fn pick_asset(assets: &[Asset], vendor: GpuVendor) -> Option<&Asset> {
 
     for keyword in candidates {
         if let Some(a) = assets.iter().find(|a| {
-            a.name.contains(os_keyword)
+            // Phase 13'.h.2.f.1 fix — `cudart-...` zip은 CUDA 런타임 DLL만 담고 binary 없음.
+            // ggerganov/llama.cpp 정상 binary asset은 항상 `llama-b<버전>-` prefix.
+            a.name.starts_with("llama-b")
+                && a.name.contains(os_keyword)
                 && a.name.contains(keyword)
                 && (a.name.ends_with(".zip") || a.name.ends_with(".tar.gz"))
                 && (a.name.contains("x64") || a.name.contains("x86_64") || a.name.contains("arm64"))
@@ -338,5 +341,22 @@ mod tests {
         if cfg!(windows) {
             assert!(picked.is_none() || !picked.unwrap().name.contains("macos"));
         }
+    }
+
+    #[test]
+    fn pick_skips_cudart_runtime_zip() {
+        // 회귀 가드 — cudart-*.zip은 CUDA 런타임 DLL만 담고 llama-server.exe 없음.
+        // pick_asset은 항상 `llama-b<버전>-` prefix asset만 매칭해야 함.
+        let assets = vec![
+            asset("cudart-llama-bin-win-cuda-12.4-x64.zip"),
+            asset("llama-b9072-bin-win-cuda-12.4-x64.zip"),
+        ];
+        let picked = pick_asset(&assets, GpuVendor::Nvidia).unwrap();
+        assert!(
+            picked.name.starts_with("llama-b"),
+            "picked: {}",
+            picked.name
+        );
+        assert!(!picked.name.starts_with("cudart"));
     }
 }
