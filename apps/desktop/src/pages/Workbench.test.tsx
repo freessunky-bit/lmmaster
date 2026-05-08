@@ -34,12 +34,20 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+// Phase R-F.3 (ADR-0064 §F.3) — selected_path_token IPC helper mock.
+vi.mock("../ipc/path-tokens", () => ({
+  pickJsonlFile: vi.fn(),
+  pickDirectory: vi.fn(),
+}));
+
 import * as ipc from "../ipc/workbench";
+import * as pathTokens from "../ipc/path-tokens";
 import { Workbench } from "./Workbench";
 
 const startMock = vi.mocked(ipc.startWorkbenchRun);
 const cancelMock = vi.mocked(ipc.cancelWorkbenchRun);
 const previewMock = vi.mocked(ipc.previewJsonl);
+const pickFileMock = vi.mocked(pathTokens.pickJsonlFile);
 
 const AXE_OPTIONS = {
   rules: {
@@ -54,6 +62,7 @@ beforeEach(() => {
   startMock.mockReset();
   cancelMock.mockReset();
   previewMock.mockReset();
+  pickFileMock.mockReset();
   globalThis.localStorage.clear();
 });
 
@@ -69,7 +78,43 @@ describe("Workbench Phase 5'.b — 5단계 작업대", () => {
     expect(screen.getByTestId("workbench-start")).toBeInTheDocument();
   });
 
-  // Phase R-F.3 — text input → 파일 선택 button 전환. dialog plugin mock 추가 후 unskip.
+  // Phase R-F.3 — token-based 흐름 회귀 가드 (legacy text-input it는 skip 보존).
+  it("Step 1 — 파일 선택 button click → pickJsonlFile mock → previewJsonl 호출", async () => {
+    pickFileMock.mockResolvedValueOnce({
+      token: "test-jsonl-token",
+      name: "train.jsonl",
+    });
+    previewMock.mockResolvedValue([
+      {
+        messages: [
+          { role: "user", content: "hi" },
+          { role: "assistant", content: "hello" },
+        ],
+      },
+    ]);
+
+    const user = userEvent.setup();
+    render(<Workbench />);
+    const pathButton = screen.getByTestId("wb-input-dataset-path");
+    expect(pathButton.textContent).toBeTruthy();
+
+    await user.click(pathButton);
+    await waitFor(() => expect(pickFileMock).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(pathButton.textContent).toContain("train.jsonl"),
+    );
+
+    // 디바운스 250ms 후 previewJsonl 호출 — token이 path 매개변수로.
+    await waitFor(
+      () => {
+        expect(previewMock).toHaveBeenCalled();
+        expect(previewMock.mock.calls[0]?.[0]).toBe("test-jsonl-token");
+      },
+      { timeout: 1000 },
+    );
+  });
+
+  // Phase R-F.3 — text input → 파일 선택 button 전환. legacy 보존 (v0.4.0에서 unskip + 통합).
   it.skip("Step 1 — dataset path 입력 시 previewJsonl 호출 (디바운스 후)", async () => {
     previewMock.mockResolvedValue([
       {

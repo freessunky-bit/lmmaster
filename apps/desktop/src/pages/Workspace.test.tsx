@@ -33,6 +33,12 @@ vi.mock("../ipc/knowledge", () => {
   };
 });
 
+// Phase R-F.3 (ADR-0064 §F.3) — selected_path_token IPC helper mock.
+vi.mock("../ipc/path-tokens", () => ({
+  pickJsonlFile: vi.fn(),
+  pickDirectory: vi.fn(),
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) =>
@@ -42,12 +48,15 @@ vi.mock("react-i18next", () => ({
 }));
 
 import * as ipc from "../ipc/knowledge";
+import * as pathTokens from "../ipc/path-tokens";
 import { Workspace } from "./Workspace";
 
 const startMock = vi.mocked(ipc.startIngest);
 const cancelMock = vi.mocked(ipc.cancelIngest);
 const searchMock = vi.mocked(ipc.searchKnowledge);
 const statsMock = vi.mocked(ipc.workspaceStats);
+const pickFileMock = vi.mocked(pathTokens.pickJsonlFile);
+const pickDirMock = vi.mocked(pathTokens.pickDirectory);
 
 const AXE_OPTIONS = {
   rules: {
@@ -63,6 +72,8 @@ beforeEach(() => {
   cancelMock.mockReset();
   searchMock.mockReset();
   statsMock.mockReset();
+  pickFileMock.mockReset();
+  pickDirMock.mockReset();
   // 기본 stats — workspace가 비어있는 상태.
   statsMock.mockResolvedValue({
     workspace_id: "default",
@@ -403,5 +414,82 @@ describe.skip("Workspace Phase 4.5'.b — Knowledge tab", () => {
     await waitFor(() => expect(statsMock).toHaveBeenCalled());
     const results = await axe(container, AXE_OPTIONS);
     expect(results.violations).toEqual([]);
+  });
+});
+
+// Phase R-F.3 (ADR-0064 §F.3) — token-based ingest 흐름 회귀 가드.
+// legacy describe.skip은 보존 — v0.4.0에서 dialog mock 풀 적용 + unskip 후 본 신규 describe와 통합.
+describe("Workspace Phase R-F.3 — token-based ingest", () => {
+  it("폴더 선택 button click → pickDirectory mock → button text가 폴더명으로 갱신", async () => {
+    pickDirMock.mockResolvedValueOnce({
+      token: "test-dir-token",
+      name: "myfolder",
+    });
+
+    const user = userEvent.setup();
+    render(<Workspace workspaceId="ws-1" storePath="/tmp/store.db" />);
+    await waitFor(() => expect(statsMock).toHaveBeenCalled());
+
+    const pathButton = screen.getByTestId("workspace-ingest-path");
+    // 초기 button text는 i18n key 또는 fallback. 비어있지 않으면 OK.
+    expect(pathButton.textContent).toBeTruthy();
+
+    // dialog open + token 발급.
+    await user.click(pathButton);
+    await waitFor(() => expect(pickDirMock).toHaveBeenCalledTimes(1));
+
+    // 선택 후 button text가 파일명으로 갱신.
+    await waitFor(() =>
+      expect(pathButton.textContent).toContain("myfolder"),
+    );
+  });
+
+  it("폴더 선택 + start ingest → startIngest가 token을 path로 전달", async () => {
+    pickDirMock.mockResolvedValueOnce({
+      token: "test-dir-token",
+      name: "myfolder",
+    });
+    startMock.mockImplementation(async (_config, _onEvent) => ({
+      ingest_id: "uuid-test",
+      cancel: vi.fn().mockResolvedValue(undefined),
+    }));
+
+    const user = userEvent.setup();
+    render(<Workspace workspaceId="ws-1" storePath="/tmp/store.db" />);
+    await waitFor(() => expect(statsMock).toHaveBeenCalled());
+
+    await user.click(screen.getByTestId("workspace-ingest-path"));
+    await waitFor(() => expect(pickDirMock).toHaveBeenCalled());
+
+    await user.click(screen.getByTestId("workspace-ingest-start"));
+    await waitFor(() => expect(startMock).toHaveBeenCalledTimes(1));
+
+    const args = startMock.mock.calls[0]!;
+    // Phase R-F.3 — config.path 필드는 raw path가 아닌 selected_path_token.
+    expect(args[0]?.path).toBe("test-dir-token");
+    expect(args[0]?.workspace_id).toBe("ws-1");
+  });
+
+  it("dialog cancel (mock null) → state 변경 없음 + ingest 시작 disabled", async () => {
+    pickDirMock.mockResolvedValueOnce(null);
+
+    const user = userEvent.setup();
+    render(<Workspace workspaceId="ws-1" />);
+    await waitFor(() => expect(statsMock).toHaveBeenCalled());
+
+    const pathButton = screen.getByTestId("workspace-ingest-path");
+    const initialText = pathButton.textContent;
+
+    await user.click(pathButton);
+    await waitFor(() => expect(pickDirMock).toHaveBeenCalled());
+
+    // cancel이라 button text 변경 없음.
+    expect(pathButton.textContent).toBe(initialText);
+
+    // start 버튼은 path 비어있어 disabled.
+    const start = screen.getByTestId(
+      "workspace-ingest-start",
+    ) as HTMLButtonElement;
+    expect(start.disabled).toBe(true);
   });
 });
