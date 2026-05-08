@@ -189,6 +189,12 @@ pub fn run() {
             let path_token_registry = path_tokens::PathTokenRegistry::new();
             app.manage(path_token_registry);
 
+            // 1.b. Phase 13'.h.2.d (ADR-0051) — LlamaCpp 단일 instance hold.
+            //      chat::start_chat의 LlamaCpp 분기에서 lock acquire 후 reuse 또는 spawn.
+            //      drop이 자동 SIGKILL — RunEvent::ExitRequested에서 명시 cleanup (Round 3).
+            let llama_state = chat::llama_cpp::new_state();
+            app.manage(llama_state);
+
             // 1.b. GatewayMetrics — Phase 13'.b. middleware가 record, Diagnostics IPC가 read.
             //      Tauri state로 manage해서 gateway::run이 build_router 시 주입 + IPC도 동일 인스턴스 read.
             let gateway_metrics: Arc<core_gateway::GatewayMetrics> =

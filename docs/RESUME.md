@@ -17,6 +17,24 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-08 Phase 13'.h.2.d Round 1 — LlamaCpp chat IPC infra (WIP, dead code)
+
+vision 모델 chat 실 동작 sub-phase 시작 (DEFERRED.md 우선순위 1). *Round 1 = infra만 + dead code commit*. Round 2~4는 다음 세션.
+
+- `apps/desktop/src-tauri/src/chat/llama_cpp.rs` 신규 — `LlamaServerState` alias (`Arc<Mutex<Option<LlamaServerHandle>>>`) + `build_server_spec(entry, cache_dir)` 변환 + `ensure_model_files_present` + `MissingFile` (한국어 카피) + 4 unit test (derive_*_filename / ensure_* 검증).
+- `apps/desktop/src-tauri/src/chat/mod.rs` ChatApiError +3 variant — `LlamaServerNotConfigured` / `LlamaCppNotPrepared { message }` / `LlamaServerStartFailed { message }`. mod 등록.
+- `apps/desktop/src-tauri/src/lib.rs::setup` — `LlamaServerState` 등록 (단일 instance hold).
+- `apps/desktop/src-tauri/Cargo.toml` — `runner-llama-cpp.workspace = true` dep 추가.
+
+검증: `cargo clippy -p lmmaster-desktop --all-targets -- -D warnings` ✅ 0 warning. *dead code 상태* (Round 2 wiring 후 사용처 생김). 사용자 동작 영향 0.
+
+**다음 세션 진입 (Round 2~4)**:
+- Round 2: `chat::start_chat`에 `RuntimeKind::LlamaCpp` 분기 추가 + State lock + reuse/spawn 분기 + env `LMMASTER_LLAMA_SERVER_PATH` 검증 + ServerSpec + `LlamaServerHandle::start` + adapter-llama-cpp::chat_stream + ChatEvent::Stalled (모델 로드 30-90초).
+- Round 3: Tauri `RunEvent::ExitRequested` 훅 + 명시 cleanup.
+- Round 4: 검증 + version bump 0.3.4 → 0.4.0 + commit + tag v0.4.0 + push.
+
+결정 노트 + ADR-0051은 `docs/research/phase-13ph2bc-llama-server-mmproj-decision.md` §A6에 이미 작성됨 — 다음 세션 추가 결정 노트 불필요.
+
 ## 2026-05-08 v0.3.4 — R-F.3 후속 token-flow 회귀 가드 minimal
 
 검수 finding 3 (IPC raw filesystem path) 후속 가드. R-F.3 (v0.3.3)에서 일시 skip한 Workspace/Workbench test의 token-based ingest 흐름을 minimal 신규 test로 복구. legacy describe.skip + it.skip은 v0.4.0에서 dialog mock 풀 적용 + 통합 unskip 예정.

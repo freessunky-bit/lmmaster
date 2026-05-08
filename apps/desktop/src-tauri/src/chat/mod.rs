@@ -5,6 +5,7 @@
 //! - 외부 웹앱은 여전히 gateway `/v1/chat/completions` (with API key) 사용 — 별개.
 //! - 동일 model_id 다중 동시 채팅 허용. cancel은 token 기반.
 
+pub mod llama_cpp;
 pub mod registry;
 
 use std::sync::Arc;
@@ -29,6 +30,21 @@ pub enum ChatApiError {
 
     #[error("채팅 중 내부 오류: {message}")]
     Internal { message: String },
+
+    /// Phase 13'.h.2.d (ADR-0051) — `LMMASTER_LLAMA_SERVER_PATH` env 미설정.
+    /// 사용자에게 Settings로 이동 후 llama-server binary 경로 등록 안내.
+    #[error("llama-server 경로가 설정되지 않았어요. 설정 화면에서 LMMASTER_LLAMA_SERVER_PATH를 등록해 주세요.")]
+    LlamaServerNotConfigured,
+
+    /// Phase 13'.h.2.d — 모델 파일 또는 mmproj 미준비.
+    /// 사용자가 카탈로그에서 모델을 먼저 받아야 함.
+    #[error("LlamaCpp 모델이 아직 준비되지 않았어요: {message}")]
+    LlamaCppNotPrepared { message: String },
+
+    /// Phase 13'.h.2.d — llama-server spawn 또는 health 실패.
+    /// stderr 매핑 메시지 (한국어 8 variant — runner-llama-cpp::stderr_map).
+    #[error("LlamaCpp 서버를 시작하지 못했어요: {message}")]
+    LlamaServerStartFailed { message: String },
 }
 
 /// 채팅 시작 — 매 호출 신규 chat_id 발급. 같은 chat_id로 cancel 가능.
