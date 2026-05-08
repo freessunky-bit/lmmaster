@@ -17,6 +17,57 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-08 v0.6.4 — Settings 재진입 idle 회귀 fix + manifest 21개 일괄 정정
+
+사용자 e2e 검증 결과:
+- ✅ vision chat 흐름 완결 — gemma-3-4b 받기 + 이미지 첨부 + 한국어 응답 정상.
+- ⚠️ Settings 메뉴 재진입 시 path 표시가 idle로 회귀 (component re-mount 시 `getLlamaServerPath()` IPC가 어떤 race로 null 반환 가능성).
+
+채택안:
+- `settings::llama_server::get_llama_server_path` env 변수 fallback 추가. 우선순위:
+  1. `settings.json::llama_server_path` (영속).
+  2. `LMMASTER_LLAMA_SERVER_PATH` env 변수 (process lifetime).
+  3. 둘 다 없으면 None.
+- `apply_startup_env`가 startup 시 settings.json → env 주입하므로 *같은 process 내*에선 settings.json read fail해도 saved 상태 유지.
+
+manifest 21개 일괄 fix (이전 백그라운드 agent 결과 — v0.6.3 commit에 묶여 push됨):
+- A 그룹 10개: bartowski 미러 (aya-expanse-32b/8b, deepseek-r1-7b, mistral-small-24b, phi-4-14b, solar-10.7b, yi-1.5-34b/9b/6b, qwen-2.5-coder-7b)
+- B 그룹 2개: EXAONE 4.0 정확 repo (Instruct 제거)
+- C 그룹 3개: bge-m3 (F16 1104MB, 임베더 정확도), KURE-v1, Yi-Ko-6B
+- D 그룹 4개: nous-hermes / stheno-l3-8b / synatra / deepseek-coder-v2-16b
+- E 그룹 1개: nemotron-3-nano-4b unsloth
+- F 그룹 1개: KULLM3 QuantFactory
+- G 그룹 1개 삭제: polyglot-ko-12.8b (native GGUF 부재)
+- 모든 placeholder sha256 → HF API lfs.oid 추출한 실제 hash.
+- catalog 번들 entries 43 → 42.
+- model-registry 23 tests / preset-registry 5 tests / clippy 0 warning 모두 통과.
+
+후속 위험:
+- HCX 시리즈 (hcx-seed-1.5b/8b) — Naver 약관으로 모든 미러 401. 한국어 보호 모델이라 카탈로그 유지. *gated 메타 + UI 안내*는 Phase 13'.h.2.g (가칭) v0.7.x 후순위.
+- 사용자 dev 모드: backend `cargo run` file watcher가 .json 변경 watch 안 함. 새 manifest 적용 위해 dev 콘솔 Ctrl+C 후 재시작 필요.
+
+## 2026-05-08 v0.6.3 — 자동 셋업 후 화면 갱신 race fix
+
+사용자 e2e: 자동 셋업 backend 완료 (3번 모두 path 등록) + 화면 변화 X + button 다시 enabled. 두 결함:
+1. `autoState.kind === "done"` UI element 없음 → 사용자가 *변화 없음*만 봄.
+2. status 갱신을 `getLlamaServerPath()` 재호출에 의존 → settings.json read race.
+
+Fix:
+- `installLlamaCppRuntime` invoke return 값 (binary path) 직접 활용 → `setStatus({kind:"saved", path})` 즉시 set.
+- `autoState.kind === "done"` 분기에 한국어 success 안내 element 추가.
+
+## 2026-05-08 v0.6.2 — cudart-*.zip 매칭 회피
+
+사용자 e2e: 자동 셋업 다운로드 끝까지 갔지만 binary-not-found.
+원인: ggerganov/llama.cpp release에 두 cuda zip — `cudart-...zip` (런타임 DLL만) vs `llama-bXXXX-...zip` (정상 binary). pick_asset이 cudart-*를 먼저 매칭.
+Fix: `name.starts_with("llama-b")` 강제 + 회귀 가드 unit test.
+
+## 2026-05-08 v0.6.1 — Tauri capabilities 누락 일괄 보강
+
+사용자 e2e: "자동 셋업할게요" 클릭 시 `install_llama_cpp_runtime not allowed. Command not found`.
+원인: Tauri 2 capabilities/main.json + permissions/*.toml에 신규 IPC 미등록.
+Fix: settings/trends/datasets permission 파일 신규 + capabilities main.json 일괄 추가.
+
 ## 2026-05-08 v0.6.0 — Phase 13'.h.2.f.1 llama-server 자동 install (사용자 마찰 0)
 
 사용자 정직 피드백 — *비전 chat 검증을 위해 사용자가 llama-server를 수동으로 받아야 한다는 건 제품 비전 실패*. 6 pillar의 "zero-knowledge + 자동 셋업" 중 LlamaCpp만 빠져있었음. 인프라 (GPU detect / Downloader / extract) 이미 다 있어 **wiring만 추가**.
