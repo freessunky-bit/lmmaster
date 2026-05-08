@@ -15,6 +15,7 @@ import {
   updateApiKeyScope,
   type ApiKeyScope,
   type ApiKeyView,
+  type NetworkScope,
   type SeedPipelineId,
 } from "../../ipc/keys";
 
@@ -32,6 +33,11 @@ export function ApiKeyEditModal({ apiKey, onClose, onSaved }: ApiKeyEditModalPro
   const [models, setModels] = useState(apiKey.scope.models.join(", "));
   const [endpoints, setEndpoints] = useState(apiKey.scope.endpoints.join(", "));
   const [expiresAt, setExpiresAt] = useState(apiKey.scope.expires_at ?? "");
+  // Phase 8'.c.4 (ADR-0066) — 발급된 키도 network_scope 변경 가능.
+  // 기존 키(network_scope=null)는 'localhost'로 해석되므로 default도 동일.
+  const [networkScope, setNetworkScope] = useState<NetworkScope>(
+    apiKey.scope.network_scope ?? "localhost",
+  );
 
   const [useGlobalPipelines, setUseGlobalPipelines] = useState(
     apiKey.scope.enabled_pipelines == null,
@@ -101,6 +107,7 @@ export function ApiKeyEditModal({ apiKey, onClose, onSaved }: ApiKeyEditModalPro
       project_id: apiKey.scope.project_id ?? null,
       rate_limit: apiKey.scope.rate_limit ?? null,
       enabled_pipelines: computedEnabledPipelines,
+      network_scope: networkScope,
     };
     setSubmitting(true);
     try {
@@ -126,6 +133,7 @@ export function ApiKeyEditModal({ apiKey, onClose, onSaved }: ApiKeyEditModalPro
     models,
     endpoints,
     expiresAt,
+    networkScope,
     useGlobalPipelines,
     keyEnabledPipelines,
     onClose,
@@ -158,6 +166,50 @@ export function ApiKeyEditModal({ apiKey, onClose, onSaved }: ApiKeyEditModalPro
             <span className="keys-field-label">{t("keys.editModal.prefixLabel")}</span>
             <span className="keys-field-readonly num">{apiKey.key_prefix}</span>
           </div>
+
+          {/* Phase 8'.c.4 (ADR-0066) — network_scope 라디오. */}
+          <fieldset
+            className="keys-field"
+            data-testid="keys-edit-network-scope-fieldset"
+          >
+            <legend className="keys-field-label">
+              {t("keys.modal.network.legend")}
+            </legend>
+            <div role="radiogroup" className="keys-radio-group">
+              {(["localhost", "lan", "any"] as const).map((scope) => (
+                <label
+                  key={scope}
+                  className="keys-radio-card"
+                  data-testid={`keys-edit-network-scope-radio-${scope}`}
+                >
+                  <input
+                    type="radio"
+                    name="keys-edit-network-scope"
+                    value={scope}
+                    checked={networkScope === scope}
+                    onChange={() => setNetworkScope(scope)}
+                  />
+                  <div className="keys-radio-card-body">
+                    <span className="keys-radio-card-title">
+                      {t(`keys.modal.network.${scope}.title`)}
+                    </span>
+                    <span className="keys-radio-card-hint">
+                      {t(`keys.modal.network.${scope}.hint`)}
+                    </span>
+                  </div>
+                </label>
+              ))}
+            </div>
+            {networkScope === "any" && (
+              <p
+                className="keys-field-warning"
+                role="note"
+                data-testid="keys-edit-network-scope-any-warning"
+              >
+                {t("keys.modal.network.any.warning")}
+              </p>
+            )}
+          </fieldset>
 
           <fieldset className="keys-field">
             <legend className="keys-field-label">{t("keys.modal.originLabel")}</legend>

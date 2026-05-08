@@ -164,7 +164,8 @@
     "cancel": "취소",
     "confirm": "확인",
     "install": "설치하기",
-    "open": "열기"
+    "open": "열기",
+    "loading": "불러오고 있어요…"
   },
   "errors": {
     "path-denied": "workspace 밖 경로에는 가져올 수 없어요. 워크스페이스 안의 폴더를 골라 주세요.",
@@ -566,6 +567,24 @@
         "llamaServer.autoSetup": "자동 셋업할게요",
         "llamaServer.pick": "실행 파일 직접 선택",
         "llamaServer.clear": "초기화할게요",
+        "modelsExport": {
+          "legend": "모델 내보내기 + 클라우드 가이드",
+          "hint": "받아둔 GGUF 파일을 클라우드 GPU에 옮길 때 폴더를 한 번에 열어요. 외부 사용자(5G) 베타 테스트는 클라우드 GPU 분리 운용을 권장해요.",
+          "openFolder": "모델 폴더 열기",
+          "copyPath": "경로 복사",
+          "guideHint": "RunPod / Vast.ai 셋업 단계는 이 가이드에 정리돼 있어요:"
+        },
+        "lanGateway": {
+          "legend": "사내망 노출",
+          "hint": "끄면 이 PC의 브라우저만 호출 가능해요 (기본). 켜면 같은 사내망의 다른 기기에서도 호출 가능해요. 외부 인터넷 / 5G는 도달 못 해요.",
+          "toggleLabel": "사내망의 다른 기기가 이 LMmaster를 호출하게 할게요",
+          "companyPcWarning": "회사 PC면 보안팀에 먼저 상의해 주세요. 회사 네트워크 정책상 내부 자산 노출이 금지된 곳도 있어요.",
+          "pendingRestart": "변경 사항은 게이트웨이가 재시작된 다음에 적용돼요. 앱을 한 번 닫았다가 다시 열어 주세요.",
+          "urlsLabel": "사내망 호출 주소 (자동 감지)",
+          "urlsEmpty": "사내망 IP를 감지하지 못했어요. VPN 단독 환경이거나 가상 어댑터만 있을 때 그래요.",
+          "copy": "복사",
+          "copyUrl": "{{url}} 복사할게요"
+        },
         "buildInfo": "빌드 정보",
         "publisher": "제작",
         "copyright": "저작권",
@@ -1281,6 +1300,11 @@
       "revoked": "회수됨"
     },
     "neverUsed": "사용 기록 없음",
+    "networkScope": {
+      "localhost": "이 PC만",
+      "lan": "사내망",
+      "any": "어디서나"
+    },
     "actions": {
       "revoke": "회수할게요",
       "revokeConfirm": "이 키를 회수할게요. 회수된 키는 더 이상 호출할 수 없어요.",
@@ -1292,15 +1316,42 @@
     },
     "modal": {
       "createTitle": "새 키 발급",
-      "aliasLabel": "별칭 (어떤 사이트에서 쓸지 알아볼 수 있게요)",
+      "aliasLabel": "별칭 (어디서 쓸지 알아볼 수 있게 적어주세요)",
       "aliasPlaceholder": "예: 내 블로그",
+      "network": {
+        "legend": "어디서 호출할 거예요?",
+        "localhost": {
+          "title": "이 PC만",
+          "hint": "동일 PC의 브라우저/툴만 호출 가능해요. 가장 안전해요."
+        },
+        "lan": {
+          "title": "사내망 (같은 WiFi/유선)",
+          "hint": "동료 PC, 사내 WiFi 폰까지 호출 가능해요.",
+          "openSettings": "사내망 노출 켜러 가기"
+        },
+        "any": {
+          "title": "어디서나 (외부 터널 직접 셋업)",
+          "hint": "cloudflared/ngrok 등으로 사용자가 직접 노출. LMmaster는 키만 발급해요.",
+          "warning": "외부 터널 셋업과 키 노출 책임은 사용자에게 있어요. 회사 PC면 보안팀과 먼저 상의해 주세요."
+        }
+      },
       "originLabel": "허용할 사이트 주소 (Origin)",
       "originPlaceholder": "예: https://my-blog.com",
       "originHint": "이 키는 정확히 이 주소에서만 호출할 수 있어요. 여러 개를 추가할 수 있어요.",
       "addOrigin": "주소 추가",
       "removeOrigin": "지우기",
-      "modelsLabel": "허용할 모델 패턴",
+      "modelsLabel": "허용할 모델",
       "modelsHint": "* 는 모든 모델, exaone-* 는 EXAONE 계열만",
+      "models": {
+        "selectAll": "전체 — 앞으로 설치할 모델도 자동 허용",
+        "selectAllHint": "체크 해제하면 아래 설치된 모델 중 골라요.",
+        "loading": "설치된 모델 목록을 불러오고 있어요…",
+        "empty": "받아둔 모델이 아직 없어요. 모델 카탈로그에서 먼저 받아주세요."
+      },
+      "advanced": {
+        "legend": "고급 설정 (origin 직접 입력 / 키별 필터)",
+        "originHint": "비우면 어디서든 호출 가능해요. 정확한 사이트 주소를 적으면 그 주소에서만 호출돼요."
+      },
       "submit": "발급할게요",
       "cancel": "취소",
       "revealTitle": "이 키는 지금만 보여드려요",
@@ -1309,6 +1360,19 @@
       "revealCopied": "복사했어요",
       "revealClose": "닫을게요",
       "revealAutomask": "{{seconds}}초 뒤에 자동으로 가려요",
+      "guide": {
+        "title": "이렇게 쓰세요",
+        "baseUrlLocalhost": "이 PC URL",
+        "baseUrlLan": "사내망 URL",
+        "headerLabel": "헤더",
+        "modelLabel": "모델 ID 예시",
+        "curlLabel": "curl 예시",
+        "copy": "복사",
+        "copied": "복사했어요",
+        "copyAll": "전체 복사",
+        "anyNote": "외부 호출 URL은 사용자가 cloudflared / ngrok 등으로 직접 셋업한 뒤 그 URL을 사용하세요. LMmaster는 키만 발급해요.",
+        "maskedNote": "키가 가려진 뒤에는 curl 예시의 <키> 부분에 직접 붙여넣어야 해요. 미리 복사 후 붙여 넣어 주세요."
+      },
       "pipelines": {
         "legend": "이 키에만 적용할 필터",
         "useGlobal": "전역 설정 따르기",
@@ -1325,6 +1389,7 @@
     "errors": {
       "emptyAlias": "별칭을 입력해 주세요",
       "emptyOrigin": "허용할 사이트 주소를 1개 이상 추가해 주세요",
+      "emptyModels": "허용할 모델을 1개 이상 골라 주세요. '전체'를 켜면 자동으로 모두 허용돼요.",
       "createFailed": "키 발급에 실패했어요. 다시 시도해 볼래요?",
       "revokeFailed": "키 회수에 실패했어요",
       "updateFailed": "필터를 저장하지 못했어요. 다시 시도해 볼래요?",

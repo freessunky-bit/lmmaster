@@ -185,6 +185,13 @@ pub fn run() {
             settings::llama_server::get_llama_server_path,
             settings::llama_server::set_llama_server_path,
             settings::llama_server::clear_llama_server_path,
+            // Phase 8'.c.4 (ADR-0066) — 사내망 노출 + LAN IP 감지.
+            settings::gateway::get_gateway_allow_external,
+            settings::gateway::set_gateway_allow_external,
+            settings::gateway::list_lan_addresses,
+            // Phase 8'.c.4 (ADR-0066) Q1 helper — 모델 폴더 열기 + 클라우드 가이드.
+            settings::models::get_models_dir,
+            settings::models::open_models_dir,
             // Phase 13'.h.2.f.1 — llama-server 자동 install.
             install::llama_cpp_runtime::install_llama_cpp_runtime,
         ])

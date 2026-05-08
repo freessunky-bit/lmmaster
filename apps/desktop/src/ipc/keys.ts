@@ -8,6 +8,15 @@ export interface RateLimit {
   per_day?: number | null;
 }
 
+/**
+ * Phase 8'.c.4 (ADR-0066) — 이 키 호출의 네트워크 의도.
+ * Rust `NetworkScope` enum과 kebab-case로 매핑.
+ * - `localhost`: 127.0.0.1 only — 동일 PC만 (가장 안전).
+ * - `lan`: localhost + 사내망 (RFC 1918 private 범위).
+ * - `any`: origin 검증만 — 사용자가 외부 터널 직접 운용 시.
+ */
+export type NetworkScope = "localhost" | "lan" | "any";
+
 export interface ApiKeyScope {
   models: string[];
   endpoints: string[];
@@ -20,6 +29,11 @@ export interface ApiKeyScope {
    * `null`/undefined = 전역 설정 따름. `[]` = 모든 Pipeline 비활성. 명시 vec = 그 ID만 활성.
    */
   enabled_pipelines?: string[] | null;
+  /**
+   * Phase 8'.c.4 (ADR-0066) — 호출 출처 의도.
+   * `null`/undefined = 호환 모드 (기존 키는 localhost로 해석).
+   */
+  network_scope?: NetworkScope | null;
 }
 
 export interface ApiKeyView {
@@ -115,5 +129,23 @@ export function defaultWebScope(origin: string): ApiKeyScope {
     project_id: null,
     rate_limit: null,
     enabled_pipelines: null,
+    network_scope: null,
+  };
+}
+
+/**
+ * Phase 8'.c.4 (ADR-0066) — origin 입력 없이 라디오만으로 발급할 때 쓰는 default scope.
+ * Origin 검증이 필요한 사용자는 ApiKeyIssueModal "고급 설정" 안에서 직접 추가.
+ */
+export function defaultNoOriginScope(network: NetworkScope): ApiKeyScope {
+  return {
+    models: ["*"],
+    endpoints: ["/v1/*"],
+    allowed_origins: [],
+    expires_at: null,
+    project_id: null,
+    rate_limit: null,
+    enabled_pipelines: null,
+    network_scope: network,
   };
 }

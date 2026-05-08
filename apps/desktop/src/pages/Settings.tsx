@@ -58,6 +58,10 @@ import { HelpButton } from "../components/HelpButton";
 import { PortableExportPanel } from "../components/portable/PortableExportPanel";
 import { PortableImportPanel } from "../components/portable/PortableImportPanel";
 import { LlamaServerPanel } from "../components/LlamaServerPanel";
+// Phase 8'.c.4 (ADR-0066) — 사내망 노출 토글 + LAN URL 자동 표시.
+import { GatewayLanPanel } from "../components/GatewayLanPanel";
+// Phase 8'.c.4 (ADR-0066) Q1 helper — 모델 폴더 열기 + 클라우드 내보내기 가이드.
+import { ModelsExportPanel } from "../components/ModelsExportPanel";
 
 import "./settings.css";
 
@@ -1009,6 +1013,12 @@ function AdvancedPanel({ version, commit }: AdvancedPanelProps) {
 
       {/* Phase 13'.h.2.e.1 — LlamaCpp binary path 등록 */}
       <LlamaServerPanel />
+
+      {/* Phase 8'.c.4 (ADR-0066) — 사내망 노출 토글 + LAN URL */}
+      <GatewayLanPanel />
+
+      {/* Phase 8'.c.4 (ADR-0066) Q1 helper — 모델 폴더 열기 + 클라우드 가이드 */}
+      <ModelsExportPanel />
 
       <fieldset className="settings-fieldset">
         <legend className="settings-legend">

@@ -69,6 +69,9 @@ registry-fetcher.workspace = true
 # Phase 8'.c.2 — Pipelines hot-reload chain swap handle.
 arc-swap.workspace = true
 
+# Phase 8'.c.4 (ADR-0066) — LAN IP 감지. settings::gateway::list_lan_addresses IPC.
+local-ip-address.workspace = true
+
 # scheduler — registry-fetcher 6h cron + scanner 6h cron 공용.
 tokio-cron-scheduler.workspace = true
 

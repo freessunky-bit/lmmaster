@@ -28,6 +28,18 @@ vi.mock("../../ipc/keys", () => ({
     project_id: null,
     rate_limit: null,
     enabled_pipelines: null,
+    network_scope: null,
+  }),
+  // Phase 8'.c.4 (ADR-0066) — origin 없이 발급할 때 쓰는 default scope.
+  defaultNoOriginScope: (network: "localhost" | "lan" | "any") => ({
+    models: ["*"],
+    endpoints: ["/v1/*"],
+    allowed_origins: [],
+    expires_at: null,
+    project_id: null,
+    rate_limit: null,
+    enabled_pipelines: null,
+    network_scope: network,
   }),
   SEED_PIPELINE_IDS: [
     "pii-redact",
@@ -35,6 +47,29 @@ vi.mock("../../ipc/keys", () => ({
     "observability",
     "prompt-sanitize",
   ],
+}));
+
+// Phase 8'.c.4 — ApiKeyIssueModal이 useEffect에서 호출하는 IPC들.
+vi.mock("../../ipc/chat", () => ({
+  listLocalLlamaCppModels: vi.fn(async () => [] as string[]),
+}));
+
+vi.mock("../../ipc/runtimes", () => ({
+  listRuntimeModels: vi.fn(async () => []),
+}));
+
+vi.mock("../../ipc/gateway-settings", () => ({
+  getGatewayAllowExternal: vi.fn(async () => false),
+  listLanAddresses: vi.fn(async () => [] as string[]),
+  setGatewayAllowExternal: vi.fn(),
+}));
+
+vi.mock("../../ipc/gateway", () => ({
+  getGatewayStatus: vi.fn(async () => ({
+    port: 8788,
+    status: "listening",
+    error: null,
+  })),
 }));
 
 import {
@@ -45,7 +80,12 @@ import {
 } from "../../ipc/keys";
 import { ApiKeysPanel } from "./ApiKeysPanel";
 
-function makeKey(id: string, alias: string, revoked = false): ApiKeyView {
+function makeKey(
+  id: string,
+  alias: string,
+  revoked = false,
+  scopeOverrides: Partial<ApiKeyView["scope"]> = {},
+): ApiKeyView {
   return {
     id,
     alias,
@@ -57,6 +97,7 @@ function makeKey(id: string, alias: string, revoked = false): ApiKeyView {
       expires_at: null,
       project_id: null,
       rate_limit: null,
+      ...scopeOverrides,
     },
     created_at: "2026-04-27T00:00:00Z",
     last_used_at: null,
@@ -155,7 +196,7 @@ describe("ApiKeysPanel", () => {
     expect(createApiKey).not.toHaveBeenCalled();
   });
 
-  it("alias + origin 채우면 발급 + reveal step 노출", async () => {
+  it("alias만 입력하면 origin 없이도 발급 + reveal step 노출 (Phase 8'.c.4)", async () => {
     const user = userEvent.setup();
     vi.mocked(createApiKey).mockResolvedValueOnce({
       id: "new-id",
@@ -169,38 +210,165 @@ describe("ApiKeysPanel", () => {
     await user.click(screen.getByRole("button", { name: "keys.create" }));
 
     const dialog = screen.getByRole("dialog");
-    const aliasInput = within(dialog).getAllByRole("textbox")[0]!;
+    const aliasInput = within(dialog).getByTestId("keys-modal-alias");
     await user.type(aliasInput, "blog");
-    const originInput = within(dialog).getAllByRole("textbox")[1]!;
-    await user.type(originInput, "https://my-blog.com");
+    // Origin 입력 없이 — default radio = "localhost" + "전체" 모델로 발급.
 
     await user.click(screen.getByRole("button", { name: "keys.modal.submit" }));
 
     await waitFor(() => {
-      // reveal step — 평문 노출.
       expect(screen.getByTestId("keys-reveal-key")).toBeTruthy();
     });
     expect(createApiKey).toHaveBeenCalledWith({
       alias: "blog",
       scope: expect.objectContaining({
-        allowed_origins: ["https://my-blog.com"],
+        allowed_origins: [],
         models: ["*"],
+        network_scope: "localhost",
       }),
     });
   });
 
-  // ── Phase 8'.c.3 — per-key Pipelines override fieldset ─────────
+  // ── Phase 8'.c.4 — network_scope radio + advanced collapse ─────
 
-  it("modal — pipelines fieldset 노출 + 'use global' 기본 체크", async () => {
+  it("network scope 라디오 — default localhost", async () => {
     const user = userEvent.setup();
     render(<ApiKeysPanel />);
     await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
     await user.click(screen.getByRole("button", { name: "keys.create" }));
 
+    const localhostRadio = screen.getByTestId(
+      "keys-network-scope-radio-localhost",
+    ) as HTMLLabelElement;
+    const radioInput = localhostRadio.querySelector(
+      "input[type='radio']",
+    ) as HTMLInputElement;
+    expect(radioInput.checked).toBe(true);
+  });
+
+  it("network scope 'lan' 선택 + allow_external false → 'lan' scope로 발급", async () => {
+    const user = userEvent.setup();
+    vi.mocked(createApiKey).mockResolvedValueOnce({
+      id: "lan-id",
+      alias: "x",
+      key_prefix: "lm-lan",
+      plaintext_once: "lm-lan000000000000000000000",
+      created_at: "2026-05-09T00:00:00Z",
+    });
+    render(<ApiKeysPanel />);
+    await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
+    await user.click(screen.getByRole("button", { name: "keys.create" }));
+
+    await user.type(screen.getByTestId("keys-modal-alias"), "x");
+    const lanLabel = screen.getByTestId(
+      "keys-network-scope-radio-lan",
+    ) as HTMLLabelElement;
+    const lanInput = lanLabel.querySelector(
+      "input[type='radio']",
+    ) as HTMLInputElement;
+    await user.click(lanInput);
+
+    await user.click(screen.getByRole("button", { name: "keys.modal.submit" }));
+    await waitFor(() => {
+      expect(createApiKey).toHaveBeenCalled();
+    });
+    const callArg = vi.mocked(createApiKey).mock.calls[0]?.[0];
+    expect(callArg?.scope.network_scope).toBe("lan");
+  });
+
+  it("network scope 'any' 선택 시 경고 카피 노출", async () => {
+    const user = userEvent.setup();
+    render(<ApiKeysPanel />);
+    await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
+    await user.click(screen.getByRole("button", { name: "keys.create" }));
+
+    const anyLabel = screen.getByTestId(
+      "keys-network-scope-radio-any",
+    ) as HTMLLabelElement;
+    const anyInput = anyLabel.querySelector(
+      "input[type='radio']",
+    ) as HTMLInputElement;
+    await user.click(anyInput);
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("keys-network-scope-any-warning"),
+      ).toBeTruthy();
+    });
+  });
+
+  it("'전체' 모델 sentinel — default ON + 발급 시 models = ['*']", async () => {
+    const user = userEvent.setup();
+    vi.mocked(createApiKey).mockResolvedValueOnce({
+      id: "all-id",
+      alias: "x",
+      key_prefix: "lm-all",
+      plaintext_once: "lm-all000000000000000000000",
+      created_at: "2026-05-09T00:00:00Z",
+    });
+    render(<ApiKeysPanel />);
+    await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
+    await user.click(screen.getByRole("button", { name: "keys.create" }));
+
+    const selectAll = screen.getByTestId("keys-models-select-all") as HTMLInputElement;
+    expect(selectAll.checked).toBe(true);
+
+    await user.type(screen.getByTestId("keys-modal-alias"), "x");
+    await user.click(screen.getByRole("button", { name: "keys.modal.submit" }));
+
+    await waitFor(() => {
+      expect(createApiKey).toHaveBeenCalled();
+    });
+    const callArg = vi.mocked(createApiKey).mock.calls[0]?.[0];
+    expect(callArg?.scope.models).toEqual(["*"]);
+  });
+
+  it("'전체' 해제 + 모델 0개 선택 시 발급 거부 (emptyModels error)", async () => {
+    const user = userEvent.setup();
+    render(<ApiKeysPanel />);
+    await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
+    await user.click(screen.getByRole("button", { name: "keys.create" }));
+
+    await user.type(screen.getByTestId("keys-modal-alias"), "x");
+    await user.click(screen.getByTestId("keys-models-select-all")); // 해제
+
+    await user.click(screen.getByRole("button", { name: "keys.modal.submit" }));
+    await waitFor(() => {
+      expect(screen.getByText("keys.errors.emptyModels")).toBeTruthy();
+    });
+    expect(createApiKey).not.toHaveBeenCalled();
+  });
+
+  it("고급 설정 collapse — default 접힘 + 클릭 시 origin 입력 노출", async () => {
+    const user = userEvent.setup();
+    render(<ApiKeysPanel />);
+    await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
+    await user.click(screen.getByRole("button", { name: "keys.create" }));
+
+    // default 접힘 — body 보이지 않음.
+    expect(screen.queryByTestId("keys-advanced-body")).toBeNull();
+
+    await user.click(screen.getByTestId("keys-advanced-toggle"));
+    expect(screen.getByTestId("keys-advanced-body")).toBeTruthy();
+    // 펼친 후 origin / pipelines 모두 등장.
+    expect(screen.getByTestId("keys-pipelines-fieldset")).toBeTruthy();
+  });
+
+  // ── Phase 8'.c.3 — per-key Pipelines override fieldset (now in 고급 설정) ─
+
+  it("modal — pipelines fieldset은 고급 설정 안에서만 노출", async () => {
+    const user = userEvent.setup();
+    render(<ApiKeysPanel />);
+    await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
+    await user.click(screen.getByRole("button", { name: "keys.create" }));
+
+    // 고급 펼치기 전엔 보이지 않음.
+    expect(screen.queryByTestId("keys-pipelines-fieldset")).toBeNull();
+
+    await user.click(screen.getByTestId("keys-advanced-toggle"));
     expect(screen.getByTestId("keys-pipelines-fieldset")).toBeTruthy();
     const useGlobal = screen.getByTestId("keys-pipelines-use-global") as HTMLInputElement;
     expect(useGlobal.checked).toBe(true);
-    // 4종 시드 체크박스 모두 노출.
     expect(screen.getByTestId("keys-pipelines-cb-pii-redact")).toBeTruthy();
     expect(screen.getByTestId("keys-pipelines-cb-token-quota")).toBeTruthy();
     expect(screen.getByTestId("keys-pipelines-cb-observability")).toBeTruthy();
@@ -220,9 +388,8 @@ describe("ApiKeysPanel", () => {
     await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
     await user.click(screen.getByRole("button", { name: "keys.create" }));
 
-    const dialog = screen.getByRole("dialog");
-    await user.type(within(dialog).getAllByRole("textbox")[0]!, "x");
-    await user.type(within(dialog).getAllByRole("textbox")[1]!, "https://x.com");
+    await user.type(screen.getByTestId("keys-modal-alias"), "x");
+    // 고급 미펼친 상태에서도 default = useGlobal=true → null.
     await user.click(screen.getByRole("button", { name: "keys.modal.submit" }));
 
     await waitFor(() => {
@@ -245,10 +412,9 @@ describe("ApiKeysPanel", () => {
     await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
     await user.click(screen.getByRole("button", { name: "keys.create" }));
 
-    const dialog = screen.getByRole("dialog");
-    await user.type(within(dialog).getAllByRole("textbox")[0]!, "x");
-    await user.type(within(dialog).getAllByRole("textbox")[1]!, "https://x.com");
-
+    await user.type(screen.getByTestId("keys-modal-alias"), "x");
+    // 고급 펼치기.
+    await user.click(screen.getByTestId("keys-advanced-toggle"));
     // use-global 해제.
     await user.click(screen.getByTestId("keys-pipelines-use-global"));
     // observability 체크박스 해제 (default ON).
@@ -274,6 +440,8 @@ describe("ApiKeysPanel", () => {
     render(<ApiKeysPanel />);
     await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
     await user.click(screen.getByRole("button", { name: "keys.create" }));
+    // 고급 펼치기 (Phase 8'.c.4).
+    await user.click(screen.getByTestId("keys-advanced-toggle"));
     // use-global 해제.
     await user.click(screen.getByTestId("keys-pipelines-use-global"));
     // 4 체크박스 모두 해제.
@@ -288,6 +456,24 @@ describe("ApiKeysPanel", () => {
     expect(screen.getByTestId("keys-pipelines-warn-empty")).toBeTruthy();
   });
 
+  // ── Phase 8'.c.4 (ADR-0066) — network_scope 뱃지 ───────────────
+
+  it("network_scope 뱃지 — null/localhost는 '이 PC만'으로 노출", async () => {
+    vi.mocked(listApiKeys).mockResolvedValueOnce([
+      makeKey("k1", "blog"),
+      makeKey("k2", "lan-key", false, { network_scope: "lan" }),
+      makeKey("k3", "any-key", false, { network_scope: "any" }),
+    ]);
+    render(<ApiKeysPanel />);
+    await waitFor(() => {
+      expect(screen.getByText("blog")).toBeTruthy();
+    });
+    // k1 (network_scope null) → localhost 뱃지로 fallback.
+    expect(screen.getByTestId("keys-network-badge-localhost")).toBeTruthy();
+    expect(screen.getByTestId("keys-network-badge-lan")).toBeTruthy();
+    expect(screen.getByTestId("keys-network-badge-any")).toBeTruthy();
+  });
+
   it("발급 실패 시 에러 메시지 표시", async () => {
     const user = userEvent.setup();
     vi.mocked(createApiKey).mockRejectedValueOnce(new Error("boom"));
@@ -296,9 +482,8 @@ describe("ApiKeysPanel", () => {
     render(<ApiKeysPanel />);
     await waitFor(() => expect(screen.getByText("keys.empty.title")).toBeTruthy());
     await user.click(screen.getByRole("button", { name: "keys.create" }));
-    const dialog = screen.getByRole("dialog");
-    await user.type(within(dialog).getAllByRole("textbox")[0]!, "x");
-    await user.type(within(dialog).getAllByRole("textbox")[1]!, "https://x.com");
+    await user.type(screen.getByTestId("keys-modal-alias"), "x");
+    // origin 없이도 발급 시도 — Phase 8'.c.4 default 흐름.
     await user.click(screen.getByRole("button", { name: "keys.modal.submit" }));
     await waitFor(() => {
       expect(screen.getByText("keys.errors.createFailed")).toBeTruthy();

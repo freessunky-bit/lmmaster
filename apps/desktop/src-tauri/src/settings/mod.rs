@@ -6,8 +6,13 @@
 //! - App startup 시 read + `LMMASTER_LLAMA_SERVER_PATH` env 주입 (chat::start_chat 분기와 자동 호환).
 //! - 사용자 `Settings` UI에서 file picker → IPC `set_llama_server_path(path_token)` →
 //!   backend가 path_token resolve + raw path 저장 + 즉시 std::env::set_var.
+//!
+//! Phase 8'.c.4 (ADR-0066) — `gateway_allow_external` 추가. 게이트웨이가 0.0.0.0 바인딩하도록
+//! startup env 주입. 변경 후 게이트웨이 재시작 필요 (자동 hot-restart는 v1.x 이월).
 
+pub mod gateway;
 pub mod llama_server;
+pub mod models;
 
 use std::path::{Path, PathBuf};
 
@@ -22,6 +27,12 @@ pub struct UserSettings {
     /// None이면 chat::start_chat이 `LlamaServerNotConfigured`로 한국어 안내.
     #[serde(default)]
     pub llama_server_path: Option<String>,
+
+    /// 게이트웨이 0.0.0.0 바인딩 허용 — Phase 8'.c.4 (ADR-0066).
+    /// false (default) → 127.0.0.1 only. true → 사내망의 다른 기기에서도 호출 가능.
+    /// 변경 후 게이트웨이 재시작 필요 (자동 hot-restart는 v1.x).
+    #[serde(default)]
+    pub gateway_allow_external: bool,
 }
 
 impl UserSettings {
@@ -56,6 +67,10 @@ impl UserSettings {
 }
 
 /// startup hook — settings.json 읽고 env 주입. 실패해도 앱은 계속.
+///
+/// 주입하는 env:
+/// - `LMMASTER_LLAMA_SERVER_PATH` — Phase 13'.h.2.e.1.
+/// - `LMMASTER_GATEWAY_ALLOW_EXTERNAL` — Phase 8'.c.4 (ADR-0066). "1" / "0".
 pub fn apply_startup_env(app_local_data_dir: &Path) {
     let settings = UserSettings::load(app_local_data_dir);
     if let Some(path) = settings.llama_server_path.as_deref() {
@@ -64,6 +79,17 @@ pub fn apply_startup_env(app_local_data_dir: &Path) {
             tracing::info!(path = %path, "LMMASTER_LLAMA_SERVER_PATH env 주입 (settings.json)");
         }
     }
+    // Phase 8'.c.4 — bool → "1" / "0" 문자열로 표현. gateway::run이 read.
+    let allow_external_value = if settings.gateway_allow_external {
+        "1"
+    } else {
+        "0"
+    };
+    std::env::set_var("LMMASTER_GATEWAY_ALLOW_EXTERNAL", allow_external_value);
+    tracing::info!(
+        allow_external = settings.gateway_allow_external,
+        "LMMASTER_GATEWAY_ALLOW_EXTERNAL env 주입 (settings.json)"
+    );
 }
 
 /// path가 *파일이 존재*하는 절대 경로인지 검증. 검증만 — 실행 검증은 향후 sub-phase.
@@ -97,6 +123,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let s = UserSettings {
             llama_server_path: Some("C:\\bin\\llama-server.exe".into()),
+            ..Default::default()
         };
         s.save(tmp.path()).unwrap();
         let back = UserSettings::load(tmp.path());
@@ -104,6 +131,35 @@ mod tests {
             back.llama_server_path.as_deref(),
             Some("C:\\bin\\llama-server.exe")
         );
+        assert!(!back.gateway_allow_external);
+    }
+
+    /// Phase 8'.c.4 — gateway_allow_external 필드 round-trip + 기존 키 호환.
+    #[test]
+    fn gateway_allow_external_roundtrip() {
+        let tmp = TempDir::new().unwrap();
+        let s = UserSettings {
+            llama_server_path: None,
+            gateway_allow_external: true,
+        };
+        s.save(tmp.path()).unwrap();
+        let back = UserSettings::load(tmp.path());
+        assert!(back.gateway_allow_external);
+        assert!(back.llama_server_path.is_none());
+    }
+
+    /// 기존 settings.json (gateway_allow_external 필드 없음) 호환 — `serde(default)`로 false.
+    #[test]
+    fn legacy_settings_json_defaults_gateway_false() {
+        let tmp = TempDir::new().unwrap();
+        let p = tmp.path().join(SETTINGS_FILENAME);
+        std::fs::write(&p, r#"{"llama_server_path":"/usr/bin/llama-server"}"#).unwrap();
+        let back = UserSettings::load(tmp.path());
+        assert_eq!(
+            back.llama_server_path.as_deref(),
+            Some("/usr/bin/llama-server")
+        );
+        assert!(!back.gateway_allow_external);
     }
 
     #[test]
@@ -111,6 +167,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let s = UserSettings {
             llama_server_path: Some("/usr/bin/llama-server".into()),
+            ..Default::default()
         };
         s.save(tmp.path()).unwrap();
         let final_path = tmp.path().join(SETTINGS_FILENAME);

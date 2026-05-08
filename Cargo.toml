@@ -83,6 +83,10 @@ sysinfo = "0.31"
 keyring = "3"
 libc = "0.2"
 
+# Phase 8'.c.4 (ADR-0066) — LAN IP 감지. Win/Mac/Linux 동일 API + libc only.
+# 사내망 노출 토글 ON 시 사용자에게 호출 가능한 LAN URL을 자동 표시.
+local-ip-address = "0.6"
+
 # hardware probe (Phase 1A.2)
 nvml-wrapper = "0.11"
 libloading = "0.8"

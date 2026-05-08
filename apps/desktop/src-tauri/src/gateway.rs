@@ -116,11 +116,24 @@ pub async fn run(
     let cancel = handle.cancel_token();
 
     // 0. listener bind. 실패 시 이벤트 + 상태 기록.
-    let listener = match tokio::net::TcpListener::bind("127.0.0.1:0").await {
+    //
+    // Phase 8'.c.4 (ADR-0066) — `LMMASTER_GATEWAY_ALLOW_EXTERNAL=1`이면 0.0.0.0 바인딩.
+    // 사내망의 다른 기기가 호출 가능. settings::apply_startup_env가 startup 시 주입.
+    // false (default) → 127.0.0.1 only.
+    let allow_external = matches!(
+        std::env::var("LMMASTER_GATEWAY_ALLOW_EXTERNAL").as_deref(),
+        Ok("1")
+    );
+    let bind_addr = if allow_external {
+        "0.0.0.0:0"
+    } else {
+        "127.0.0.1:0"
+    };
+    let listener = match tokio::net::TcpListener::bind(bind_addr).await {
         Ok(l) => l,
         Err(e) => {
-            let msg = format!("bind 127.0.0.1:0 failed: {e}");
-            tracing::error!(error = %e, "gateway bind failed");
+            let msg = format!("bind {bind_addr} failed: {e}");
+            tracing::error!(error = %e, bind_addr, "gateway bind failed");
             handle.set_failed(&msg);
             let _ = app.emit("gateway://failed", &msg);
             return Err(e.into());
@@ -133,7 +146,7 @@ pub async fn run(
     if let Err(e) = app.emit("gateway://ready", port) {
         tracing::warn!(error = %e, "failed to emit gateway://ready");
     }
-    tracing::info!(port, "gateway listening");
+    tracing::info!(port, allow_external, "gateway listening");
 
     // 2. router build + serve.
     // Phase 3'.c+ — `LiveRegistryProvider`로 실제 라우팅 활성.

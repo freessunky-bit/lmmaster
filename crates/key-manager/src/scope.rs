@@ -9,11 +9,30 @@
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
+/// Phase 8'.c.4 (ADR-0066) — 이 키가 어디서 호출될 의도인지.
+///
+/// 의도 표현 + UI 가이드용. 실제 enforcement는:
+/// - `Localhost` / `Lan`: 게이트웨이 바인드 레벨 (`allow_external`)이 1차 방어.
+/// - `Any`: 사용자가 외부 터널을 직접 띄우는 시나리오, LMmaster는 노출 책임 X.
+///
+/// 기존 `allowed_origins`는 정확 매칭 layer로 직교 결합 (둘 다 통과해야 호출 OK).
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum NetworkScope {
+    /// 127.0.0.1 only — 동일 PC만. 가장 안전.
+    Localhost,
+    /// localhost + 사내망 (RFC 1918 private 범위). 동료 PC + 사내 폰.
+    Lan,
+    /// origin 검증만 — 사용자가 cloudflared 등 외부 터널을 직접 운용.
+    /// LMmaster는 이 모드에서 노출 책임을 지지 않음.
+    Any,
+}
+
 /// 권한 — `ApiKey.scope` 필드.
 ///
 /// Phase 8'.c.3 (ADR-0029): `enabled_pipelines`로 per-key Pipelines override를 추가했어요.
-/// `None` = 전역 토글을 그대로 따름. `Some(Vec)` = 명시 화이트리스트로 글로벌 토글을 덮어써요.
-/// `Some(빈 Vec)` = 모든 Pipeline 비활성 (이 키만 raw passthrough).
+/// Phase 8'.c.4 (ADR-0066): `network_scope`로 호출 출처 의도를 명시 저장해요.
+/// `None` = 호환 모드 (기존 키는 `Localhost`로 해석).
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Scope {
     /// glob 패턴. 빈 vec = 거부 (어떤 모델도 호출 불가).
@@ -33,6 +52,11 @@ pub struct Scope {
     /// `serde(default)`로 기존 직렬화된 키와 호환 — 누락된 필드는 None으로 deserialize.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enabled_pipelines: Option<Vec<String>>,
+    /// Phase 8'.c.4 (ADR-0066) — 이 키 호출의 네트워크 의도.
+    /// `None` (default) = 기존 키 호환 (`Localhost`로 해석).
+    /// `serde(default)` + `skip_serializing_if`로 기존 직렬화 키 마이그레이션 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub network_scope: Option<NetworkScope>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -276,6 +300,65 @@ mod tests {
         let json = serde_json::to_string(&s).unwrap();
         assert!(
             !json.contains("enabled_pipelines"),
+            "None은 직렬화에서 제외돼야 해요: {json}"
+        );
+    }
+
+    // ── Phase 8'.c.4 (ADR-0066) — network_scope ────────────────────────
+
+    #[test]
+    fn network_scope_default_is_none() {
+        let s = Scope::default();
+        assert!(s.network_scope.is_none());
+    }
+
+    #[test]
+    fn network_scope_serde_kebab_case() {
+        // Localhost / Lan / Any → "localhost" / "lan" / "any" (kebab-case).
+        let cases = [
+            (NetworkScope::Localhost, "\"localhost\""),
+            (NetworkScope::Lan, "\"lan\""),
+            (NetworkScope::Any, "\"any\""),
+        ];
+        for (variant, expected_json) in cases {
+            let json = serde_json::to_string(&variant).unwrap();
+            assert_eq!(json, expected_json);
+            let back: NetworkScope = serde_json::from_str(&json).unwrap();
+            assert_eq!(back, variant);
+        }
+    }
+
+    #[test]
+    fn network_scope_round_trip_in_scope() {
+        let s = Scope {
+            models: vec!["*".into()],
+            network_scope: Some(NetworkScope::Lan),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&s).unwrap();
+        assert!(json.contains("\"network_scope\":\"lan\""));
+        let back: Scope = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.network_scope, Some(NetworkScope::Lan));
+    }
+
+    #[test]
+    fn network_scope_omitted_in_legacy_json_deserializes_none() {
+        // 기존 v1 직렬화 키 호환 — JSON에 network_scope 없으면 None.
+        let legacy =
+            r#"{"models":["*"],"endpoints":["/v1/*"],"allowed_origins":["http://localhost:5173"]}"#;
+        let s: Scope = serde_json::from_str(legacy).unwrap();
+        assert!(s.network_scope.is_none());
+    }
+
+    #[test]
+    fn network_scope_none_skipped_in_serialize() {
+        let s = Scope {
+            models: vec!["*".into()],
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&s).unwrap();
+        assert!(
+            !json.contains("network_scope"),
             "None은 직렬화에서 제외돼야 해요: {json}"
         );
     }

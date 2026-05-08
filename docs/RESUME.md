@@ -17,6 +17,44 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-09 Phase 8'.c.4 — LAN 게이트웨이 노출 + API 키 UX 개편 (ADR-0066)
+
+사용자 시나리오: 본인 발급 API 키로 외부 사용자(5G) 베타 테스트 → 현재 localhost-only 정책 + Origin 강제 입력 + glob 모델 패턴 + 발급 후 호출 가이드 부재가 멘탈모델과 어긋남.
+
+채택안 (5가지):
+- `Scope.network_scope: Option<NetworkScope>` 신규 (`localhost` / `lan` / `any`). `serde(default)` + `skip_serializing_if`로 기존 키 호환 (마이그레이션 0).
+- `UserSettings.gateway_allow_external` persistence + Settings → "사내망 노출" 토글 + LAN IP 자동 감지 (`local-ip-address` crate).
+- ApiKeyIssueModal 4-part 재구성: 별칭 / "어디서 호출?" 라디오 / 모델 multi-select + "전체" sentinel / 고급 설정 collapse (Origin·필터·만료).
+- Reveal step 분리 (`ApiKeyRevealStep`) + "이렇게 쓰세요" 동적 가이드 (Base URL · 헤더 · 모델 ID · curl 예시 / network_scope 분기).
+- ApiKeysPanel 카드 `network_scope` 뱃지 + ApiKeyEditModal 라디오 통합.
+- Q1 helper: `settings::models::open_models_dir` IPC + Settings "모델 폴더 열기" 버튼 + `docs/guides-ko/cloud-export-guide.md` (RunPod / Vast.ai 셋업).
+
+기각안 (negative space, 결정 노트 §2):
+- 자동 cloudflared launcher → ADR-0055 "외부 통신 0" 위반.
+- Origin 필드 완전 삭제 → power user 정확 매칭 시나리오 보존 필요.
+- 자동 hot-restart → in-flight SSE / 진행 요청 graceful shutdown 복잡, v1.x 이월.
+- CIDR 화이트리스트 → 복잡도 대비 가치 적음, RFC 1918 전체 허용으로 충분.
+
+파일 변경 (5 sub-phase):
+- Backend: `crates/key-manager/src/scope.rs` (NetworkScope enum + 5 신규 테스트). `apps/desktop/src-tauri/src/{settings/{mod,gateway,models}.rs, gateway.rs, lib.rs}`. permissions/settings.toml + capabilities/main.json. `Cargo.toml` workspace에 `local-ip-address = "0.6"`.
+- Frontend: `ipc/{keys,gateway-settings,models-dir}.ts`. 신규 컴포넌트 `components/{GatewayLanPanel,ModelsExportPanel}.tsx` + `components/keys/ApiKeyRevealStep.tsx`. 개편 `components/keys/{ApiKeyIssueModal,ApiKeyEditModal,ApiKeysPanel}.tsx`. CSS `keys.css` + `pages/settings.css`. Settings.tsx 마운트.
+- i18n: `keys.modal.network.*` / `keys.modal.models.*` / `keys.modal.advanced.*` / `keys.modal.guide.*` / `keys.networkScope.*` / `screens.settings.advanced.{lanGateway,modelsExport}.*` ko/en 동시 갱신 (~50 키).
+- 문서: ADR-0066 + 결정노트 `docs/research/phase-8pc4-api-key-ux-lan-gateway-decision.md` + `docs/guides-ko/cloud-export-guide.md`.
+
+검증:
+- ✅ `cargo fmt --all -- --check` (clean)
+- ✅ `cargo clippy --workspace --all-targets -- -D warnings` (0 warnings)
+- ✅ `cargo test -p key-manager scope::` (24/24 pass — 5 new network_scope round-trip tests + 19 기존)
+- ✅ `pnpm exec tsc -b` (clean)
+- ✅ `pnpm exec vitest run` Phase 8'.c.4 suites (35/35 pass: GatewayLanPanel 7 + ApiKeyRevealStep 9 + ApiKeysPanel 19)
+- ⚠️ `cargo test -p lmmaster-desktop --lib` Windows STATUS_ENTRYPOINT_NOT_FOUND (pre-existing 환경 이슈 — 본 변경 무관, baseline에서도 동일 재현)
+
+후순위 (v1.x):
+- 게이트웨이 hot-restart (allow_external 토글 즉시 반영) — Phase 8'.c.5.
+- LAN audit log 분리 (현재 ring buffer 전역).
+- LAN URL QR 코드 (동료 폰 셋업 편의).
+- 모델 검색 가능 dropdown (카탈로그 100+ 도달 시).
+
 ## 2026-05-09 v0.7.0 — Phase 13'.h.2.e.4 dropdown filter + 13'.h.2.f.2 zip cleanup
 
 사용자 추가 요청:

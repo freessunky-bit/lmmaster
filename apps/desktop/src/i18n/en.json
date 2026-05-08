@@ -164,7 +164,8 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "install": "Install",
-    "open": "Open"
+    "open": "Open",
+    "loading": "Loading…"
   },
   "errors": {
     "path-denied": "Can't import a path outside the workspace. Please choose a folder inside the workspace.",
@@ -566,6 +567,24 @@
         "llamaServer.autoSetup": "Auto setup",
         "llamaServer.pick": "Pick binary manually",
         "llamaServer.clear": "Clear",
+        "modelsExport": {
+          "legend": "Export models + cloud guide",
+          "hint": "Open the GGUF folder when moving models to a cloud GPU. For external (cellular) beta testing, run inference on a cloud GPU separately.",
+          "openFolder": "Open models folder",
+          "copyPath": "Copy path",
+          "guideHint": "RunPod / Vast.ai setup steps are in this guide:"
+        },
+        "lanGateway": {
+          "legend": "LAN exposure",
+          "hint": "Off: only this PC's browser can call (default). On: other devices on the same LAN can call too. External internet / cellular cannot reach.",
+          "toggleLabel": "Let other devices on this LAN call this LMmaster",
+          "companyPcWarning": "On a company PC, check with your security team first. Some corporate network policies forbid exposing internal assets.",
+          "pendingRestart": "Changes apply after the gateway restarts. Please close and reopen the app.",
+          "urlsLabel": "LAN call URLs (auto-detected)",
+          "urlsEmpty": "No LAN IP detected. This happens on VPN-only environments or when only virtual adapters are present.",
+          "copy": "Copy",
+          "copyUrl": "Copy {{url}}"
+        },
         "buildInfo": "Build info",
         "publisher": "Publisher",
         "copyright": "Copyright",
@@ -1281,6 +1300,11 @@
       "revoked": "Revoked"
     },
     "neverUsed": "Never used",
+    "networkScope": {
+      "localhost": "This PC only",
+      "lan": "LAN",
+      "any": "Anywhere"
+    },
     "actions": {
       "revoke": "Revoke",
       "revokeConfirm": "Revoke this key? Revoked keys stop working immediately.",
@@ -1294,13 +1318,40 @@
       "createTitle": "Create new key",
       "aliasLabel": "Alias (so you can spot the use site)",
       "aliasPlaceholder": "e.g., My Blog",
+      "network": {
+        "legend": "Where will this key be called from?",
+        "localhost": {
+          "title": "This PC only",
+          "hint": "Only browsers/tools on this PC can call. Safest."
+        },
+        "lan": {
+          "title": "LAN (same WiFi/wired network)",
+          "hint": "Coworker PCs and phones on the same LAN can call.",
+          "openSettings": "Open LAN exposure settings"
+        },
+        "any": {
+          "title": "Anywhere (you set up an external tunnel)",
+          "hint": "Use cloudflared/ngrok yourself. LMmaster only issues the key.",
+          "warning": "Tunnel setup and key exposure are your responsibility. On a company PC, check with your security team first."
+        }
+      },
       "originLabel": "Allowed origin",
       "originPlaceholder": "e.g., https://my-blog.com",
       "originHint": "The key works only from this exact origin. Add as many as you need.",
       "addOrigin": "Add origin",
       "removeOrigin": "Remove",
-      "modelsLabel": "Allowed model pattern",
+      "modelsLabel": "Allowed models",
       "modelsHint": "* matches every model; exaone-* matches the EXAONE family only.",
+      "models": {
+        "selectAll": "All — also auto-allow models installed later",
+        "selectAllHint": "Uncheck to pick from installed models below.",
+        "loading": "Loading installed models…",
+        "empty": "No models downloaded yet. Pull one from the catalog first."
+      },
+      "advanced": {
+        "legend": "Advanced (origin / per-key filters)",
+        "originHint": "Empty: callable from any origin. Specify exact URLs to restrict."
+      },
       "submit": "Create",
       "cancel": "Cancel",
       "revealTitle": "Your key — shown once",
@@ -1309,6 +1360,19 @@
       "revealCopied": "Copied",
       "revealClose": "Close",
       "revealAutomask": "Auto-masking in {{seconds}}s",
+      "guide": {
+        "title": "How to use this key",
+        "baseUrlLocalhost": "This PC URL",
+        "baseUrlLan": "LAN URL",
+        "headerLabel": "Header",
+        "modelLabel": "Example model ID",
+        "curlLabel": "curl example",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyAll": "Copy all",
+        "anyNote": "Set up your own external tunnel (cloudflared/ngrok) and use that URL. LMmaster only issues the key.",
+        "maskedNote": "Once the key is masked, paste the original key into the <키> placeholder before running. Copy it before it masks."
+      },
       "pipelines": {
         "legend": "Filters for this key only",
         "useGlobal": "Follow global settings",
@@ -1325,6 +1389,7 @@
     "errors": {
       "emptyAlias": "Enter an alias.",
       "emptyOrigin": "Add at least one origin.",
+      "emptyModels": "Pick at least one model. Toggle 'All' to allow every model.",
       "createFailed": "Couldn't create key. Retry.",
       "revokeFailed": "Couldn't revoke key.",
       "updateFailed": "Couldn't save filters. Retry?",

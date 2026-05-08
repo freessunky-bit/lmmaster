@@ -13,6 +13,7 @@ import {
   revokeApiKey,
   type ApiKeyView,
   type CreatedKey,
+  type NetworkScope,
 } from "../../ipc/keys";
 
 import { HelpButton } from "../HelpButton";
@@ -123,7 +124,11 @@ export function ApiKeysPanel() {
                 <td>{k.alias}</td>
                 <td className="num">{k.key_prefix}</td>
                 <td className="keys-scope-cell">
-                  {k.scope.allowed_origins.join(", ") || "—"}
+                  {/* Phase 8'.c.4 (ADR-0066) — network_scope 뱃지 */}
+                  <NetworkScopeBadge scope={k.scope.network_scope ?? "localhost"} />
+                  <span className="keys-scope-origins">
+                    {k.scope.allowed_origins.join(", ") || "—"}
+                  </span>
                 </td>
                 <td>{formatDate(k.created_at)}</td>
                 <td>
@@ -188,4 +193,23 @@ export function ApiKeysPanel() {
 function formatDate(iso: string): string {
   // ISO 그대로 표시 — UI 단계 단순화. v1.x에 한국어 상대시각 (방금 / N분 전).
   return iso.slice(0, 10);
+}
+
+// Phase 8'.c.4 (ADR-0066) — network_scope 뱃지 (lucide-react 아이콘 + 텍스트).
+function NetworkScopeBadge({ scope }: { scope: NetworkScope }) {
+  const { t } = useTranslation();
+  const labelKey =
+    scope === "localhost"
+      ? "keys.networkScope.localhost"
+      : scope === "lan"
+        ? "keys.networkScope.lan"
+        : "keys.networkScope.any";
+  return (
+    <span
+      className={`keys-network-badge keys-network-badge-${scope}`}
+      data-testid={`keys-network-badge-${scope}`}
+    >
+      {t(labelKey)}
+    </span>
+  );
 }

@@ -168,6 +168,12 @@
 |---|---|---|
 | 0057 | Architecture cleanup + protocol decoupling — wiremock graceful 회귀 가드 + OpenAI compat DTO + chat-protocol crate + adapter-ollama 역의존 제거 + KnowledgeStorePool + Channel cancel cascade + WorkspaceCancellationScope (R-E 7 sub-phase 통합, T3+C2+A1+A2+P1+P4+R2) | Accepted (Phase R-E 머지 2026-05-04) |
 
+### Phase 8'.c.4 — LAN gateway exposure + API key UX overhaul (2026-05-09)
+
+| 번호 | 제목 | Status |
+|---|---|---|
+| 0066 | LAN 게이트웨이 노출 + API 키 UX 개편 — Scope.network_scope (localhost/lan/any) + "어디서 호출?" 라디오 + 모델 multi-select + Reveal step "이렇게 쓰세요" 가이드 + Settings 사내망 토글 (allow_external persistence + LAN IP 감지) | Accepted (사용자 명시 승인 2026-05-09) |
+
 ## Supersede / Modify 그래프
 
 ```
