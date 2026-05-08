@@ -72,42 +72,47 @@ export function LlamaServerPanel() {
       percent: null,
     });
     try {
-      await installLlamaCppRuntime((event: LlamaInstallEvent) => {
-        if (event.kind === "status") {
-          setAutoState({
-            kind: "running",
-            status: event.status,
-            percent: null,
-          });
-        } else if (event.kind === "progress") {
-          const percent =
-            event.total_bytes > 0
-              ? Math.round((event.completed_bytes / event.total_bytes) * 100)
-              : null;
-          const mb = (event.completed_bytes / 1_048_576).toFixed(0);
-          const totalMb = (event.total_bytes / 1_048_576).toFixed(0);
-          const speedMbps = (event.speed_bps / 1_048_576).toFixed(1);
-          setAutoState({
-            kind: "running",
-            status:
+      // invoke return 값 = binary path (backend가 settings.json 저장 + env 주입 후 반환).
+      // Channel onmessage 시점은 비결정적(message queue)이라 invoke return으로 status 직접 set이 안전.
+      const binaryPath = await installLlamaCppRuntime(
+        (event: LlamaInstallEvent) => {
+          if (event.kind === "status") {
+            setAutoState({
+              kind: "running",
+              status: event.status,
+              percent: null,
+            });
+          } else if (event.kind === "progress") {
+            const percent =
               event.total_bytes > 0
-                ? `다운로드 중 ${mb}MB / ${totalMb}MB (${speedMbps} MB/s)`
-                : `다운로드 중 ${mb}MB`,
-            percent,
-          });
-        } else if (event.kind === "completed") {
-          setAutoState({ kind: "done" });
-        } else if (event.kind === "failed") {
-          setAutoState({ kind: "failed", message: event.message });
-        }
-      });
+                ? Math.round((event.completed_bytes / event.total_bytes) * 100)
+                : null;
+            const mb = (event.completed_bytes / 1_048_576).toFixed(0);
+            const totalMb = (event.total_bytes / 1_048_576).toFixed(0);
+            const speedMbps = (event.speed_bps / 1_048_576).toFixed(1);
+            setAutoState({
+              kind: "running",
+              status:
+                event.total_bytes > 0
+                  ? `다운로드 중 ${mb}MB / ${totalMb}MB (${speedMbps} MB/s)`
+                  : `다운로드 중 ${mb}MB`,
+              percent,
+            });
+          } else if (event.kind === "completed") {
+            setAutoState({ kind: "done" });
+          } else if (event.kind === "failed") {
+            setAutoState({ kind: "failed", message: event.message });
+          }
+        },
+      );
+      // 핵심 fix — invoke return 값으로 status 즉시 갱신 (refresh IPC race 회피).
+      setStatus({ kind: "saved", path: binaryPath });
       setAutoState({ kind: "done" });
-      await refresh();
     } catch (e) {
       const message = parseError(e);
       setAutoState({ kind: "failed", message });
     }
-  }, [refresh]);
+  }, []);
 
   const handleClear = useCallback(async () => {
     try {
@@ -209,6 +214,16 @@ export function LlamaServerPanel() {
           data-testid="settings-llama-server-auto-error"
         >
           자동 셋업 실패: {autoState.message}
+        </p>
+      )}
+
+      {autoState.kind === "done" && (
+        <p
+          className="settings-hint"
+          role="status"
+          data-testid="settings-llama-server-auto-done"
+        >
+          자동 셋업이 끝났어요. 이제 비전 모델 채팅을 사용할 수 있어요.
         </p>
       )}
 
