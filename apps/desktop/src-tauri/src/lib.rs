@@ -184,6 +184,8 @@ pub fn run() {
             settings::llama_server::get_llama_server_path,
             settings::llama_server::set_llama_server_path,
             settings::llama_server::clear_llama_server_path,
+            // Phase 13'.h.2.f.1 — llama-server 자동 install.
+            install::llama_cpp_runtime::install_llama_cpp_runtime,
         ])
         .setup(|app| {
             // 1. Gateway supervisor.

@@ -11,7 +11,9 @@ import { useTranslation } from "react-i18next";
 import {
   clearLlamaServerPath,
   getLlamaServerPath,
+  installLlamaCppRuntime,
   setLlamaServerPath,
+  type LlamaInstallEvent,
 } from "../ipc/llama-server-settings";
 import { pickFile } from "../ipc/path-tokens";
 
@@ -21,9 +23,16 @@ type Status =
   | { kind: "saved"; path: string }
   | { kind: "error"; message: string };
 
+type AutoSetupState =
+  | { kind: "idle" }
+  | { kind: "running"; status: string; percent: number | null }
+  | { kind: "done" }
+  | { kind: "failed"; message: string };
+
 export function LlamaServerPanel() {
   const { t } = useTranslation();
   const [status, setStatus] = useState<Status>({ kind: "loading" });
+  const [autoState, setAutoState] = useState<AutoSetupState>({ kind: "idle" });
 
   const refresh = useCallback(async () => {
     try {
@@ -53,6 +62,50 @@ export function LlamaServerPanel() {
     } catch (e) {
       const message = parseError(e);
       setStatus({ kind: "error", message });
+    }
+  }, [refresh]);
+
+  const handleAutoSetup = useCallback(async () => {
+    setAutoState({
+      kind: "running",
+      status: "준비하고 있어요…",
+      percent: null,
+    });
+    try {
+      await installLlamaCppRuntime((event: LlamaInstallEvent) => {
+        if (event.kind === "status") {
+          setAutoState({
+            kind: "running",
+            status: event.status,
+            percent: null,
+          });
+        } else if (event.kind === "progress") {
+          const percent =
+            event.total_bytes > 0
+              ? Math.round((event.completed_bytes / event.total_bytes) * 100)
+              : null;
+          const mb = (event.completed_bytes / 1_048_576).toFixed(0);
+          const totalMb = (event.total_bytes / 1_048_576).toFixed(0);
+          const speedMbps = (event.speed_bps / 1_048_576).toFixed(1);
+          setAutoState({
+            kind: "running",
+            status:
+              event.total_bytes > 0
+                ? `다운로드 중 ${mb}MB / ${totalMb}MB (${speedMbps} MB/s)`
+                : `다운로드 중 ${mb}MB`,
+            percent,
+          });
+        } else if (event.kind === "completed") {
+          setAutoState({ kind: "done" });
+        } else if (event.kind === "failed") {
+          setAutoState({ kind: "failed", message: event.message });
+        }
+      });
+      setAutoState({ kind: "done" });
+      await refresh();
+    } catch (e) {
+      const message = parseError(e);
+      setAutoState({ kind: "failed", message });
     }
   }, [refresh]);
 
@@ -115,17 +168,75 @@ export function LlamaServerPanel() {
         </p>
       )}
 
+      {autoState.kind === "running" && (
+        <div
+          className="settings-readonly-text"
+          data-testid="settings-llama-server-auto-progress"
+          aria-live="polite"
+        >
+          <p>{autoState.status}</p>
+          {autoState.percent !== null && (
+            <div
+              role="progressbar"
+              aria-valuenow={autoState.percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              style={{
+                height: 6,
+                background: "var(--surface-3)",
+                borderRadius: 3,
+                marginTop: 8,
+              }}
+            >
+              <div
+                style={{
+                  width: `${autoState.percent}%`,
+                  height: "100%",
+                  background: "var(--primary)",
+                  borderRadius: 3,
+                  transition: "width 200ms",
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {autoState.kind === "failed" && (
+        <p
+          className="settings-error"
+          role="alert"
+          data-testid="settings-llama-server-auto-error"
+        >
+          자동 셋업 실패: {autoState.message}
+        </p>
+      )}
+
       <div className="settings-actions">
         <button
           type="button"
           className="settings-btn-primary"
+          onClick={handleAutoSetup}
+          disabled={autoState.kind === "running"}
+          data-testid="settings-llama-server-auto"
+        >
+          {t(
+            "screens.settings.advanced.llamaServer.autoSetup",
+            "자동 셋업할게요",
+          )}
+        </button>
+        <button
+          type="button"
+          className="settings-btn-secondary"
           onClick={handlePick}
-          disabled={status.kind === "loading"}
+          disabled={
+            status.kind === "loading" || autoState.kind === "running"
+          }
           data-testid="settings-llama-server-pick"
         >
           {t(
             "screens.settings.advanced.llamaServer.pick",
-            "실행 파일 선택할게요",
+            "실행 파일 직접 선택",
           )}
         </button>
         {status.kind === "saved" && (
@@ -133,6 +244,7 @@ export function LlamaServerPanel() {
             type="button"
             className="settings-btn-secondary"
             onClick={handleClear}
+            disabled={autoState.kind === "running"}
             data-testid="settings-llama-server-clear"
           >
             {t(

@@ -17,6 +17,40 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-08 v0.6.0 — Phase 13'.h.2.f.1 llama-server 자동 install (사용자 마찰 0)
+
+사용자 정직 피드백 — *비전 chat 검증을 위해 사용자가 llama-server를 수동으로 받아야 한다는 건 제품 비전 실패*. 6 pillar의 "zero-knowledge + 자동 셋업" 중 LlamaCpp만 빠져있었음. 인프라 (GPU detect / Downloader / extract) 이미 다 있어 **wiring만 추가**.
+
+채택안:
+- `apps/desktop/src-tauri/src/install/llama_cpp_runtime.rs` 신규 — `install_llama_cpp_runtime` IPC.
+  - GPU 자동 감지 (`runtime_detector::probe_environment` 결과의 `hardware.gpus[0].vendor`).
+  - `https://api.github.com/repos/ggerganov/llama.cpp/releases/latest` JSON fetch.
+  - `pick_asset(assets, vendor)` — vendor별 우선순위 (Nvidia: cuda → vulkan → cpu / Amd/Intel: vulkan → cpu / Apple: arm64/metal / Other: vulkan → cpu) + OS 매칭 (win/ubuntu/macos) + x64/arm64 필터.
+  - `installer::Downloader` 재사용 (atomic + retry + .partial resume + .no_proxy).
+  - `installer::extract` (Zip)으로 풀고 `walkdir`로 binary 자동 search.
+  - `UserSettings` 자동 저장 + env 주입 — 등록 fallback 흐름 그대로.
+  - cleanup: 다운로드 zip 삭제 (디스크 절약).
+- `LlamaServerPanel.tsx` UI — "자동 셋업할게요" primary button + "실행 파일 직접 선택" fallback secondary button. 진행률 bar + 한국어 status (`"GPU와 환경을 감지하고 있어요…"` / `"다운로드 중 X MB / Y MB (Z MB/s)"` / `"압축을 풀고 있어요…"` / 완료).
+- ko.json + en.json `llamaServer.autoSetup` 키 추가 + hint 문구 갱신. parity 1076 ↔ 1076.
+- 5 unit test (asset selector — Nvidia cuda 선호 / Amd vulkan / Other cpu fallback / 빈 list / OS 매칭).
+
+기각안:
+- *binary sha256 검증*: GitHub Releases는 sha256 별도 제공 X. zip 자체 손상은 extract가 catch. v1.x에 minisign 별도 시그니처 검토.
+- *cancel button*: 다운로드 5분, 압축 풀기 30초 — cancel 가치 작음. v1.x.
+- *동시 install 차단 mutex*: 사용자가 button을 빠르게 두 번 누를 가능성 작음. v1.x.
+
+검증: cargo fmt + clippy 0 warning + tsc clean + i18n parity 1076 ↔ 1076.
+
+사용자 측 흐름 (RTX 2060):
+1. v0.6.0 인스톨러 받기 → 설치
+2. Settings → 고급 → "**자동 셋업할게요**" 클릭
+3. 자동: NVIDIA 감지 → cuda-12 빌드 다운로드 (~250MB) → extract → settings 자동 등록
+4. 완료 후 Catalog → 모델 받기 → Chat
+
+후속:
+- Phase 13'.h.2.f.2 — 자동 install 실패 시 한국어 진단 + 권장 빌드 카드 (ADR-0051 §A6 7-step wizard 일부).
+- 운영 위험: ggerganov/llama.cpp asset 파일명 패턴 변경 시 `pick_asset` heuristic 깨질 수 있음. 사용자 fail 보고 시 keyword 재조정.
+
 ## 2026-05-08 v0.5.2 — gemma 다운로드 fix (HF gated 401) + sha256 placeholder skip
 
 사용자 e2e 검증 첫 fail 보고: `gemma-3-4b-it` 받기 시 HTTP 401 from `huggingface.co/google/gemma-3-4b-it-qat-q4_0-gguf/...`. Google Gemma는 HF에서 *gated* — anonymous 다운로드 차단.

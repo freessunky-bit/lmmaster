@@ -74,6 +74,8 @@ tokio-cron-scheduler.workspace = true
 
 # Phase 1A.3.c
 scopeguard.workspace = true
+# Phase 13'.h.2.f.1 — llama-server zip 풀고 binary 자동 search.
+walkdir.workspace = true
 thiserror.workspace = true
 # Phase 3'.b
 time.workspace = true

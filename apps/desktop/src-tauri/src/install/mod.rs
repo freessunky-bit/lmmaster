@@ -9,6 +9,7 @@
 //! - `Channel::send`는 sync — 닫힘 감지 시 `InstallSinkClosed`로 변환.
 //! - registry.finish는 `Drop` impl로 자동 — 어떤 종료 path든 누락 없음.
 
+pub mod llama_cpp_runtime;
 pub mod registry;
 
 use std::path::PathBuf;
