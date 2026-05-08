@@ -17,6 +17,25 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-08 v0.4.2 — Phase 13'.h.2.c.2 LlamaCpp 모델 자동 다운로드 (catalog → cache_dir)
+
+LlamaCpp 사용자가 카탈로그에서 *모델 받기* 한 번 클릭하면 GGUF + mmproj가 cache_dir에 자동 배치되도록 backend 완성. v0.4.0의 chat IPC와 짝 — env만 등록하면 vision chat 즉시 가능.
+
+채택안:
+- `model_pull::llama_cpp::pull_llama_model(entry, cache_dir, channel, cancel)` 신규 — `installer::Downloader` 재사용 (sha256 + atomic + backon + .partial resume + .no_proxy).
+- `start_model_pull` IPC에 `RuntimeKind::LlamaCpp` 분기 + `catalog_state` State 인자 추가.
+- 메인 GGUF + mmproj(있으면) 두 차례 다운로드. progress event는 `DownloadEvent` → `ModelPullEvent` 변환 closure로 emit (Status/Progress/Cancelled/Completed/Failed).
+- `chat::llama_cpp::derive_main_url(entry, quant)` + `model_filename(entry)` 신규 — 자동 다운로드와 chat 진입 (build_server_spec)이 동일 함수로 path 결정해 round-trip 보장.
+- `cache_dir` = `app_local_data_dir()/models`. `create_dir_all` idempotent mkdir.
+- quant 선택 = `entry.quantization_options.first()` (default Q4_K_M). 명시 quant은 v0.5.x Settings/wizard에서.
+
+검증: cargo fmt --check + clippy 0 warning + workspace test 1120 passed (변경 없음, 다운로드 unit test는 desktop crate 안이라 Windows cdylib 한계로 미실행 — Linux CI 검증) + tsc clean.
+
+후속:
+- Phase 13'.h.2.e.1 (다음 sub-phase) — Settings에 binary path 등록 UI + config persistence + startup env 주입.
+
+결정 노트: `docs/research/phase-13ph2c2-llama-cpp-auto-download-decision.md` (6 섹션).
+
 ## 2026-05-08 v0.4.1 — Workbench 죽은 legacy text-input it 제거 + token-based 단일화
 
 Workbench.test.tsx의 `it.skip("Step 1 — dataset path 입력 시 previewJsonl 호출 (디바운스 후)")` 1 건은 *입력 시맨틱이 사라진* 죽은 테스트 (Workbench 컴포넌트는 v0.3.3에서 button 전환). 같은 invariant (preview 결과 화면 노출)는 token-based로 재작성하여 1 it 단일 통과.

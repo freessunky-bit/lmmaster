@@ -6,6 +6,7 @@
 //! - LM Studio: 풀 미지원 — Tauri shell으로 lmstudio.ai 안내 페이지 open (silent install 금지).
 //! - 어댑터: 기존 `adapter_ollama::OllamaAdapter::pull_model_stream` 재사용.
 
+pub mod llama_cpp;
 pub mod registry;
 
 use std::sync::Arc;
@@ -14,9 +15,10 @@ use adapter_ollama::{ModelPullEvent, OllamaAdapter, PullOutcome};
 use serde::Serialize;
 use shared_types::RuntimeKind;
 use tauri::ipc::Channel;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use thiserror::Error;
 
+use crate::commands::CatalogState;
 use registry::ModelPullRegistry;
 
 #[derive(Debug, Error, Serialize)]
@@ -50,13 +52,15 @@ impl Drop for PullGuard {
 /// `start_model_pull(model_id, runtime_kind, channel)` Tauri command.
 ///
 /// - 등록 → cancel token 발급.
-/// - 어댑터별 풀 실행 (Ollama 우선).
+/// - 어댑터별 풀 실행 (Ollama / LlamaCpp).
 /// - 이벤트는 caller-only Channel<ModelPullEvent>로 전달 — broadcast 미사용.
 /// - `RAII` guard로 finish 보장 — panic / early return 모두 안전.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn start_model_pull(
     app: AppHandle,
     registry: State<'_, Arc<ModelPullRegistry>>,
+    catalog_state: State<'_, Arc<CatalogState>>,
     model_id: String,
     runtime_kind: RuntimeKind,
     channel: Channel<ModelPullEvent>,
@@ -108,6 +112,41 @@ pub async fn start_model_pull(
             Err(ModelPullApiError::UnsupportedRuntime {
                 runtime: "lm-studio".into(),
             })
+        }
+        RuntimeKind::LlamaCpp => {
+            // Phase 13'.h.2.c.2 — 메인 GGUF + mmproj(있으면) 자동 다운로드.
+            let entry = catalog_state
+                .snapshot()
+                .entries()
+                .iter()
+                .find(|e| e.id == model_id)
+                .cloned()
+                .ok_or_else(|| ModelPullApiError::Internal {
+                    message: format!("카탈로그에 모델이 없어요: {model_id}"),
+                })?;
+            let cache_dir = app
+                .path()
+                .app_local_data_dir()
+                .map_err(|e| ModelPullApiError::Internal {
+                    message: format!("cache_dir 해결 실패: {e}"),
+                })?
+                .join("models");
+            let result = llama_cpp::pull_llama_model(&entry, &cache_dir, &channel, &cancel).await;
+            match result {
+                Ok(()) => Ok(PullOutcomeIpc::Completed),
+                Err(e) => {
+                    if cancel.is_cancelled() {
+                        let _ = channel.send(ModelPullEvent::Cancelled);
+                        Ok(PullOutcomeIpc::Cancelled)
+                    } else {
+                        let msg = format!("{e}");
+                        let _ = channel.send(ModelPullEvent::Failed {
+                            message: msg.clone(),
+                        });
+                        Ok(PullOutcomeIpc::Failed { message: msg })
+                    }
+                }
+            }
         }
         other => Err(ModelPullApiError::UnsupportedRuntime {
             runtime: format!("{other:?}").to_lowercase(),

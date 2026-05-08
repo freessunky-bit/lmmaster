@@ -9,7 +9,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use model_registry::manifest::{MmprojSpec, ModelEntry};
+use model_registry::manifest::{MmprojSpec, ModelEntry, ModelSource, QuantOption};
 use runner_llama_cpp::{LlamaServerHandle, ServerSpec};
 use tokio::sync::Mutex;
 
@@ -72,11 +72,62 @@ pub fn build_server_spec(entry: &ModelEntry, cache_dir: &std::path::Path) -> Ser
     }
 }
 
-/// catalog id → 사용자 cache의 GGUF 파일명 추정.
-/// v1 정책: `<id>.gguf` (사용자가 다운로드 후 그 이름으로 배치).
-/// v1.x 자동 다운로드 시점에 manifest의 `download_url` basename 사용 예정.
+/// catalog id → 사용자 cache의 GGUF 파일명.
+///
+/// 정책 (Phase 13'.h.2.c.2 — 자동 다운로드 진입 후):
+/// - `entry.quantization_options.first()` (default Q4_K_M)의 `file_path` basename 사용.
+/// - file_path가 None이면 `derive_main_url`의 URL basename 사용.
+/// - 그것마저 없으면 `<id>.gguf` fallback.
+///
+/// 자동 다운로드 (`model_pull::llama_cpp::pull_llama_model`)와 chat 진입 (`build_server_spec`)이
+/// 동일 함수를 호출해 파일명 round-trip 보장.
 fn derive_model_filename(entry: &ModelEntry) -> String {
+    let quant = entry.quantization_options.first();
+    if let Some(q) = quant {
+        if let Some(p) = q.file_path.as_ref() {
+            if let Some(b) = basename(p) {
+                return b;
+            }
+        }
+        if let Some(url) = derive_main_url(entry, q) {
+            if let Some(b) = basename(&url) {
+                return b;
+            }
+        }
+    }
     format!("{}.gguf", entry.id)
+}
+
+/// `ModelSource` + `QuantOption` → 다운로드 URL.
+///
+/// HuggingFace: `https://huggingface.co/{repo}/resolve/main/{file_path}` (file_path 우선,
+/// 없으면 source의 `file` 폴백). DirectUrl은 그대로.
+pub fn derive_main_url(entry: &ModelEntry, quant: &QuantOption) -> Option<String> {
+    match &entry.source {
+        ModelSource::HuggingFace { repo, file } => {
+            let path = quant.file_path.as_ref().or(file.as_ref())?;
+            Some(format!("https://huggingface.co/{repo}/resolve/main/{path}"))
+        }
+        ModelSource::DirectUrl { url } => Some(url.clone()),
+    }
+}
+
+/// URL/path basename — `/` 또는 `\\` 마지막 segment. 빈 문자열은 None.
+fn basename(s: &str) -> Option<String> {
+    s.rsplit(['/', '\\'])
+        .next()
+        .filter(|x| !x.is_empty())
+        .map(String::from)
+}
+
+/// catalog id → 모델 파일명을 외부에 노출 (model_pull::llama_cpp가 사용).
+pub fn model_filename(entry: &ModelEntry) -> String {
+    derive_model_filename(entry)
+}
+
+/// MmprojSpec → mmproj 파일명을 외부에 노출.
+pub fn mmproj_filename(spec: &MmprojSpec, fallback_id: &str) -> String {
+    derive_mmproj_filename(spec, fallback_id)
 }
 
 /// MmprojSpec → mmproj 파일명. URL의 basename 우선, 없으면 `<id>-mmproj.gguf`.
