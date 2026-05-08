@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-30T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "kullm3",
@@ -10,24 +10,27 @@
       "model_family": "kullm",
       "source": {
         "type": "hugging-face",
-        "repo": "nlpai-lab/KULLM3-GGUF",
-        "file": "KULLM3-Q4_K_M.gguf"
+        "repo": "QuantFactory/KULLM3-GGUF",
+        "file": "KULLM3.Q4_K_M.gguf"
       },
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 6500,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "file_path": "KULLM3-Q4_K_M.gguf"
+          "size_mb": 6162,
+          "sha256": "f6b38b530affb9c74f33ede5a294d9a555764062a25bd72158155b15dbbad0c1",
+          "file_path": "KULLM3.Q4_K_M.gguf"
         }
       ],
       "min_vram_mb": 7168,
       "rec_vram_mb": 10240,
       "min_ram_mb": 12288,
       "rec_ram_mb": 16384,
-      "install_size_mb": 6500,
+      "install_size_mb": 6162,
       "context_guidance": "고려대 NLP & AI 연구실. SOLAR 10.7B 베이스 + 한국어 추가 학습 + DPO. 한국어 자연스러움 + 길이 + 사실성에서 EXAONE과 비교 우위.",
       "language_strength": 10,
       "roleplay_strength": 7,
@@ -57,10 +60,13 @@
         "Ollama 공식 라이브러리 미등록 — llama.cpp 또는 LM Studio로 GGUF 직접 로드.",
         "tool calling / structured output 미지원 — 에이전트 워크플로엔 EXAONE / Llama 3.1 권장."
       ],
-      "intents": ["ko-conversation", "ko-rag"],
+      "intents": [
+        "ko-conversation",
+        "ko-rag"
+      ],
       "domain_scores": {
-        "ko-conversation": 86.0,
-        "ko-rag": 75.0
+        "ko-conversation": 86,
+        "ko-rag": 75
       },
       "community_insights": {
         "strengths_ko": [

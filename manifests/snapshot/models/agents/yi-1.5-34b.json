@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-05-01T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "yi-1.5-34b-chat",
@@ -10,17 +10,21 @@
       "model_family": "yi",
       "source": {
         "type": "hugging-face",
-        "repo": "01-ai/Yi-1.5-34B-Chat-GGUF",
+        "repo": "bartowski/Yi-1.5-34B-Chat-GGUF",
         "file": "Yi-1.5-34B-Chat-Q4_K_M.gguf"
       },
       "hub_id": "yi:34b-chat",
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 20500,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "size_mb": 19702,
+          "sha256": "c6351951b911ff0da022921d66d3413f155e58d27eb9aa99875213eac5b7bacb",
           "file_path": "Yi-1.5-34B-Chat-Q4_K_M.gguf"
         }
       ],
@@ -28,7 +32,7 @@
       "rec_vram_mb": 24576,
       "min_ram_mb": 32768,
       "rec_ram_mb": 49152,
-      "install_size_mb": 20500,
+      "install_size_mb": 19702,
       "context_guidance": "최대 32K context. Apache-2 — 상업 자유. 영/중/한 다국어. Llama 3.3 70B 대비 사이즈 절반에 비슷한 품질.",
       "language_strength": 7,
       "roleplay_strength": 7,
@@ -58,10 +62,13 @@
         "한국어 자연스러움은 EXAONE 32B에 살짝 밀림.",
         "tool calling 정확도는 Llama 3.3 / Mistral Small에 약간 밀림."
       ],
-      "intents": ["agent-tool-use", "translation-multi"],
+      "intents": [
+        "agent-tool-use",
+        "translation-multi"
+      ],
       "domain_scores": {
-        "agent-tool-use": 70.0,
-        "translation-multi": 72.0
+        "agent-tool-use": 70,
+        "translation-multi": 72
       },
       "community_insights": {
         "strengths_ko": [

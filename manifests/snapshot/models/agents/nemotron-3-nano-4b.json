@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-05-06T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "nemotron-3-nano-4b",
@@ -10,16 +10,20 @@
       "model_family": "nemotron",
       "source": {
         "type": "hugging-face",
-        "repo": "nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF",
+        "repo": "unsloth/NVIDIA-Nemotron-3-Nano-4B-GGUF",
         "file": "NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf"
       },
       "tier": "new",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 2900,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "size_mb": 2766,
+          "sha256": "e515c9ceb10ae503db22a201fade92167f757510d1247a65987f8b6ae9e296e7",
           "file_path": "NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf"
         }
       ],
@@ -27,7 +31,7 @@
       "rec_vram_mb": 6144,
       "min_ram_mb": 6144,
       "rec_ram_mb": 8192,
-      "install_size_mb": 2900,
+      "install_size_mb": 2766,
       "context_guidance": "Mamba-2 + Transformer 하이브리드, 262K context. 한국어 포함 15개 언어 학습 — 다국어 사용 분야에 적합해요. 한국어 단독은 EXAONE/HCX-SEED가 더 자연스러워요.",
       "language_strength": 6,
       "roleplay_strength": 5,
@@ -62,10 +66,10 @@
         "ko-rag"
       ],
       "domain_scores": {
-        "agent-tool-use": 72.0,
-        "translation-multi": 76.0,
-        "ko-rag": 58.0,
-        "ko-conversation": 52.0
+        "agent-tool-use": 72,
+        "translation-multi": 76,
+        "ko-rag": 58,
+        "ko-conversation": 52
       },
       "community_insights": {
         "strengths_ko": [

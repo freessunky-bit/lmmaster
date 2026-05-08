@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-30T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "solar-10.7b-instruct",
@@ -10,17 +10,21 @@
       "model_family": "solar",
       "source": {
         "type": "hugging-face",
-        "repo": "upstage/SOLAR-10.7B-Instruct-v1.0",
+        "repo": "TheBloke/SOLAR-10.7B-Instruct-v1.0-GGUF",
         "file": "solar-10.7b-instruct-v1.0.Q4_K_M.gguf"
       },
       "hub_id": "solar:10.7b",
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 6500,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "size_mb": 6162,
+          "sha256": "0f0a4bd237c1ccecabc3c85d08da6e1b9e667942f5117993d0c93149e08ba745",
           "file_path": "solar-10.7b-instruct-v1.0.Q4_K_M.gguf"
         }
       ],
@@ -28,7 +32,7 @@
       "rec_vram_mb": 12288,
       "min_ram_mb": 12288,
       "rec_ram_mb": 16384,
-      "install_size_mb": 6500,
+      "install_size_mb": 6162,
       "context_guidance": "최대 4K context. Llama 2 기반 + Depth Up-Scaling으로 10.7B에서 13B 수준 성능. 한국어/영어 균형 좋음.",
       "language_strength": 8,
       "roleplay_strength": 7,

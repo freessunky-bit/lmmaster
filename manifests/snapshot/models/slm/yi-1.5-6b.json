@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-05-01T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "yi-1.5-6b-chat",
@@ -10,17 +10,21 @@
       "model_family": "yi",
       "source": {
         "type": "hugging-face",
-        "repo": "01-ai/Yi-1.5-6B-Chat-GGUF",
+        "repo": "bartowski/Yi-1.5-6B-Chat-GGUF",
         "file": "Yi-1.5-6B-Chat-Q4_K_M.gguf"
       },
       "hub_id": "yi:6b-chat",
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 3700,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "size_mb": 3504,
+          "sha256": "9187794e1be34335df42a2f82e80c9b4ca7131c0f634aa976e7d70c834afd69f",
           "file_path": "Yi-1.5-6B-Chat-Q4_K_M.gguf"
         }
       ],
@@ -28,7 +32,7 @@
       "rec_vram_mb": 6144,
       "min_ram_mb": 8192,
       "rec_ram_mb": 16384,
-      "install_size_mb": 3700,
+      "install_size_mb": 3504,
       "context_guidance": "Yi-6B 베이스 + instruction-tune. Apache-2. 6B small + 영/중/한 균형형. 노트북 / RTX 3050~3060 가능.",
       "language_strength": 6,
       "roleplay_strength": 5,
@@ -57,9 +61,11 @@
         "한국어 자연스러움은 EXAONE 1.2B에 밀림 — 영어 / 중국어가 더 자연.",
         "Yi-1.5 9B Chat이 후속 — 사양 여유 있으면 9B 권장."
       ],
-      "intents": ["agent-tool-use"],
+      "intents": [
+        "agent-tool-use"
+      ],
       "domain_scores": {
-        "agent-tool-use": 55.0
+        "agent-tool-use": 55
       },
       "community_insights": {
         "strengths_ko": [

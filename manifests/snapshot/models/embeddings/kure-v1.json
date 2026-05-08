@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-30T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "kure-v1",
@@ -10,24 +10,26 @@
       "model_family": "kure",
       "source": {
         "type": "hugging-face",
-        "repo": "nlpai-lab/KURE-v1",
-        "file": "kure-v1.gguf"
+        "repo": "mykor/KURE-v1-gguf",
+        "file": "KURE-v1-Q4_K_M.gguf"
       },
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp"],
+      "runner_compatibility": [
+        "llama-cpp"
+      ],
       "quantization_options": [
         {
-          "label": "F16",
-          "size_mb": 1300,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "file_path": "kure-v1.gguf"
+          "label": "Q4_K_M",
+          "size_mb": 417,
+          "sha256": "468444a5f74f6e39c77cc6c7c0d839b07b402dfcb94208da0895a2280a7056a3",
+          "file_path": "KURE-v1-Q4_K_M.gguf"
         }
       ],
       "min_vram_mb": null,
       "rec_vram_mb": 2048,
       "min_ram_mb": 4096,
       "rec_ram_mb": 8192,
-      "install_size_mb": 1300,
+      "install_size_mb": 417,
       "context_guidance": "한국어 RAG 전용 — KorSTS 등 한국어 retrieval 벤치마크에서 SOTA. 1024-d. 고려대 NLP & AI 연구실.",
       "language_strength": 10,
       "roleplay_strength": 0,
@@ -54,9 +56,11 @@
       "warnings": [
         "임베딩 전용 모델이에요 — 채팅에는 사용할 수 없어요."
       ],
-      "intents": ["ko-rag"],
+      "intents": [
+        "ko-rag"
+      ],
       "domain_scores": {
-        "ko-rag": 88.0
+        "ko-rag": 88
       },
       "community_insights": {
         "strengths_ko": [

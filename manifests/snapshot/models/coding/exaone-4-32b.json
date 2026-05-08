@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-27T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "exaone-4.0-32b-instruct",
@@ -10,29 +10,33 @@
       "model_family": "exaone",
       "source": {
         "type": "hugging-face",
-        "repo": "LGAI-EXAONE/EXAONE-4.0-32B-Instruct-GGUF",
-        "file": "EXAONE-4.0-32B-Instruct-Q4_K_M.gguf"
+        "repo": "LGAI-EXAONE/EXAONE-4.0-32B-GGUF",
+        "file": "EXAONE-4.0-32B-Q4_K_M.gguf"
       },
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 19500,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "file_path": "EXAONE-4.0-32B-Instruct-Q4_K_M.gguf"
+          "size_mb": 18448,
+          "sha256": "738060fec3193ccbd4615b1ac7e6404805af25c0f627093d89cf04a099dfdde8",
+          "file_path": "EXAONE-4.0-32B-Q4_K_M.gguf"
         },
         {
           "label": "Q5_K_M",
-          "size_mb": 23000,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "file_path": "EXAONE-4.0-32B-Instruct-Q5_K_M.gguf"
+          "size_mb": 21645,
+          "sha256": "4701628e06351732dfe96a5ad54addb5e0ee10d533cfbf2d743a72b31bc344bf",
+          "file_path": "EXAONE-4.0-32B-Q5_K_M.gguf"
         }
       ],
       "min_vram_mb": 22528,
       "rec_vram_mb": 24576,
       "min_ram_mb": 32768,
       "rec_ram_mb": 65536,
-      "install_size_mb": 19500,
+      "install_size_mb": 18448,
       "context_guidance": "최대 32K context. 한국어 + 코딩 — 큰 호스트 전용. 추론/계획 강함.",
       "language_strength": 9,
       "roleplay_strength": 7,

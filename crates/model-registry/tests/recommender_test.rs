@@ -143,7 +143,6 @@ fn snapshot_loads_seed_entries() {
         "exaone-3.5-7.8b-instruct",
         "exaone-4.0-32b-instruct",
         "hcx-seed-8b",
-        "polyglot-ko-12.8b",
         "whisper-large-v3-korean",
     ] {
         assert!(
@@ -382,11 +381,9 @@ fn category_asymmetric_match() {
 fn fallback_choice_is_smallest_stable() {
     let cat = Catalog::load_from_dir(&snapshot_dir()).unwrap();
     let r = cat.recommend(&host_high(), ModelCategory::AgentGeneral);
-    // 시드 중 가장 작은 stable은 EXAONE 4.0 1.2B (760MB).
-    assert_eq!(
-        r.fallback_choice.as_deref(),
-        Some("exaone-4.0-1.2b-instruct")
-    );
+    // 카탈로그 전체에서 가장 작은 stable — KURE-v1 임베더(417MB Q4_K_M).
+    // 비-gated 미러 일괄 갱신(2026-05-08) 이후 KURE-v1 Q4_K_M이 시드 중 최소.
+    assert_eq!(r.fallback_choice.as_deref(), Some("kure-v1"));
 }
 
 #[test]
@@ -405,10 +402,9 @@ fn host_with_no_gpu_excludes_vram_required_models() {
             | ExclusionReason::PurposeMismatch { id, .. } => id.as_str(),
         })
         .collect();
-    // EXAONE 3.5 7.8B (min 6GB VRAM), HCX-SEED 8B (min 6GB), Polyglot 12.8B, 32B, qwen 3B (min 3GB).
+    // EXAONE 3.5 7.8B (min 6GB VRAM), HCX-SEED 8B (min 6GB), 32B, qwen 3B (min 3GB).
     assert!(excluded_ids.contains(&"exaone-3.5-7.8b-instruct"));
     assert!(excluded_ids.contains(&"hcx-seed-8b"));
-    assert!(excluded_ids.contains(&"polyglot-ko-12.8b"));
     assert!(excluded_ids.contains(&"exaone-4.0-32b-instruct"));
 }
 

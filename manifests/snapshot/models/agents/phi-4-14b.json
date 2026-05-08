@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-30T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "phi-4-14b",
@@ -10,17 +10,21 @@
       "model_family": "phi",
       "source": {
         "type": "hugging-face",
-        "repo": "microsoft/phi-4-gguf",
+        "repo": "bartowski/phi-4-GGUF",
         "file": "phi-4-Q4_K_M.gguf"
       },
       "hub_id": "phi4:14b",
       "tier": "new",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 9100,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "size_mb": 8634,
+          "sha256": "009aba717c09d4a35890c7d35eb59d54e1dba884c7c526e7197d9c13ab5911d9",
           "file_path": "phi-4-Q4_K_M.gguf"
         }
       ],
@@ -28,7 +32,7 @@
       "rec_vram_mb": 16384,
       "min_ram_mb": 16384,
       "rec_ram_mb": 24576,
-      "install_size_mb": 9100,
+      "install_size_mb": 8634,
       "context_guidance": "최대 16K context. 추론/수학 강함. 영어 중심이지만 한국어도 통함. Microsoft Research에서 합성 데이터 위주 학습.",
       "language_strength": 7,
       "roleplay_strength": 6,

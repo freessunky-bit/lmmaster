@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-30T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "deepseek-r1-7b",
@@ -10,16 +10,20 @@
       "model_family": "deepseek",
       "source": {
         "type": "hugging-face",
-        "repo": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+        "repo": "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF",
         "file": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf"
       },
       "hub_id": "deepseek-r1:7b",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 4700,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "size_mb": 4466,
+          "sha256": "731ece8d06dc7eda6f6572997feb9ee1258db0784827e642909d9b565641937b",
           "file_path": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf"
         }
       ],
@@ -27,7 +31,7 @@
       "rec_vram_mb": 8192,
       "min_ram_mb": 8192,
       "rec_ram_mb": 16384,
-      "install_size_mb": 4700,
+      "install_size_mb": 4466,
       "context_guidance": "최대 128K context. <think>...</think> 단계별 추론을 출력해요. 사실 답변보다 추론 과정을 보고 싶을 때 좋아요.",
       "language_strength": 8,
       "roleplay_strength": 5,

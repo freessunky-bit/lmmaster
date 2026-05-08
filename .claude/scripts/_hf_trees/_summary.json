@@ -1,0 +1,170 @@
+{
+  "aya-expanse-32b": {
+    "repo": "bartowski/aya-expanse-32b-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "aya-expanse-32b-Q4_K_M.gguf",
+    "sha256": "47eed19801ed865fabad06f7c0eb4b079b874281a8caac486f99300c7bf525f9",
+    "size_bytes": 19800833504,
+    "size_mb": 18884
+  },
+  "aya-expanse-8b": {
+    "repo": "bartowski/aya-expanse-8b-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "aya-expanse-8b-Q4_K_M.gguf",
+    "sha256": "9592bad943fe56cf93200286a0a4b00a158cd84a408f227b9978ec5879002fb8",
+    "size_bytes": 5056982720,
+    "size_mb": 4823
+  },
+  "deepseek-r1-7b": {
+    "repo": "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf",
+    "sha256": "731ece8d06dc7eda6f6572997feb9ee1258db0784827e642909d9b565641937b",
+    "size_bytes": 4683073504,
+    "size_mb": 4466
+  },
+  "mistral-small-24b": {
+    "repo": "bartowski/Mistral-Small-24B-Instruct-2501-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "Mistral-Small-24B-Instruct-2501-Q4_K_M.gguf",
+    "sha256": "d1a6d049f09730c3f8ba26cf6b0b60c89790b5fdafa9a59c819acdfe93fffd1b",
+    "size_bytes": 14333908672,
+    "size_mb": 13670
+  },
+  "phi-4-14b": {
+    "repo": "bartowski/phi-4-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "phi-4-Q4_K_M.gguf",
+    "sha256": "009aba717c09d4a35890c7d35eb59d54e1dba884c7c526e7197d9c13ab5911d9",
+    "size_bytes": 9053114816,
+    "size_mb": 8634
+  },
+  "solar-10.7b": {
+    "repo": "TheBloke/SOLAR-10.7B-Instruct-v1.0-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "solar-10.7b-instruct-v1.0.Q4_K_M.gguf",
+    "sha256": "0f0a4bd237c1ccecabc3c85d08da6e1b9e667942f5117993d0c93149e08ba745",
+    "size_bytes": 6461667936,
+    "size_mb": 6162
+  },
+  "yi-1.5-34b": {
+    "repo": "bartowski/Yi-1.5-34B-Chat-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "Yi-1.5-34B-Chat-Q4_K_M.gguf",
+    "sha256": "c6351951b911ff0da022921d66d3413f155e58d27eb9aa99875213eac5b7bacb",
+    "size_bytes": 20658711360,
+    "size_mb": 19702
+  },
+  "yi-1.5-9b": {
+    "repo": "bartowski/Yi-1.5-9B-Chat-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "Yi-1.5-9B-Chat-Q4_K_M.gguf",
+    "sha256": "9bfda34f9343785f9cfb040dd63a215d0ca8781cb38d5b8825c12e6e1d8230f9",
+    "size_bytes": 5328957952,
+    "size_mb": 5082
+  },
+  "yi-1.5-6b": {
+    "repo": "bartowski/Yi-1.5-6B-Chat-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "Yi-1.5-6B-Chat-Q4_K_M.gguf",
+    "sha256": "9187794e1be34335df42a2f82e80c9b4ca7131c0f634aa976e7d70c834afd69f",
+    "size_bytes": 3673968736,
+    "size_mb": 3504
+  },
+  "qwen-2.5-coder-7b": {
+    "repo": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+    "sha256": "1664fccab734674a50763490a8c6931b70e3f2f8ec10031b54806d30e5f956b6",
+    "size_bytes": 4683074336,
+    "size_mb": 4466
+  },
+  "exaone-4-1.2b": {
+    "repo": "LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "EXAONE-4.0-1.2B-Q4_K_M.gguf",
+    "sha256": "7b5e753540183ae4d56e6febd9b48cdd944de53386e6faa8f51c8f98cb2b47df",
+    "size_bytes": 812437792,
+    "size_mb": 775
+  },
+  "exaone-4-32b": {
+    "repo": "LGAI-EXAONE/EXAONE-4.0-32B-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "EXAONE-4.0-32B-Q4_K_M.gguf",
+    "sha256": "738060fec3193ccbd4615b1ac7e6404805af25c0f627093d89cf04a099dfdde8",
+    "size_bytes": 19343826720,
+    "size_mb": 18448
+  },
+  "bge-m3": {
+    "repo": "gpustack/bge-m3-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "bge-m3-Q4_K_M.gguf",
+    "sha256": "6d39681b26c61279ac1f82db35a04a05009e94c415b51c858ff571489a82fc06",
+    "size_bytes": 437778496,
+    "size_mb": 417
+  },
+  "kure-v1": {
+    "repo": "mykor/KURE-v1-gguf",
+    "quant": "Q4_K_M",
+    "file_path": "KURE-v1-Q4_K_M.gguf",
+    "sha256": "468444a5f74f6e39c77cc6c7c0d839b07b402dfcb94208da0895a2280a7056a3",
+    "size_bytes": 437779008,
+    "size_mb": 417
+  },
+  "yi-ko-6b": {
+    "repo": "mradermacher/Yi-Ko-6B-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "yi-ko-6b.Q4_K_M.gguf",
+    "sha256": "d48869393d5e1cb7dfc70c6ae6644a5735ed4ccab6defad1534c394b9965451e",
+    "size_bytes": 3756247360,
+    "size_mb": 3582
+  },
+  "deepseek-coder-v2-16b": {
+    "repo": "bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf",
+    "sha256": "603bd3f8a0281d16571da7c08bd661ee17ff0d1be6fcbd1b42242da257ef0bb8",
+    "size_bytes": 10364416768,
+    "size_mb": 9884
+  },
+  "nous-hermes-2-mistral-7b-dpo": {
+    "repo": "mradermacher/Nous-Hermes-2-Mistral-7B-DPO-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "Nous-Hermes-2-Mistral-7B-DPO.Q4_K_M.gguf",
+    "sha256": "301e617aae1284dbac59c3dd74cf5c896374d66c0466a40b75d36c4a34832a93",
+    "size_bytes": 4368452224,
+    "size_mb": 4166
+  },
+  "stheno-l3-8b": {
+    "repo": "bartowski/L3-8B-Stheno-v3.2-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "L3-8B-Stheno-v3.2-Q4_K_M.gguf",
+    "sha256": "8e98c1953f9c04e060fd9640bbe866685c844363a2360f09099b79c6c9195fc4",
+    "size_bytes": 4920734240,
+    "size_mb": 4693
+  },
+  "synatra-7b-v0.3-rp": {
+    "repo": "mradermacher/Synatra-7B-v0.3-RP-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "Synatra-7B-v0.3-RP.Q4_K_M.gguf",
+    "sha256": "b262e06be9aee2363d59d4cd7ed49f1a5a0d1c46d1b1ed2915e20aedcdb44c23",
+    "size_bytes": 4523084224,
+    "size_mb": 4314
+  },
+  "nemotron-3-nano-4b": {
+    "repo": "unsloth/NVIDIA-Nemotron-3-Nano-4B-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf",
+    "sha256": "e515c9ceb10ae503db22a201fade92167f757510d1247a65987f8b6ae9e296e7",
+    "size_bytes": 2900295712,
+    "size_mb": 2766
+  },
+  "kullm3": {
+    "repo": "QuantFactory/KULLM3-GGUF",
+    "quant": "Q4_K_M",
+    "file_path": "KULLM3.Q4_K_M.gguf",
+    "sha256": "f6b38b530affb9c74f33ede5a294d9a555764062a25bd72158155b15dbbad0c1",
+    "size_bytes": 6461669600,
+    "size_mb": 6162
+  }
+}

@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-05-01T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "stheno-l3-8b",
@@ -10,16 +10,20 @@
       "model_family": "llama",
       "source": {
         "type": "hugging-face",
-        "repo": "Sao10K/L3-8B-Stheno-v3.2-GGUF",
+        "repo": "bartowski/L3-8B-Stheno-v3.2-GGUF",
         "file": "L3-8B-Stheno-v3.2-Q4_K_M.gguf"
       },
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 4900,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "size_mb": 4693,
+          "sha256": "8e98c1953f9c04e060fd9640bbe866685c844363a2360f09099b79c6c9195fc4",
           "file_path": "L3-8B-Stheno-v3.2-Q4_K_M.gguf"
         }
       ],
@@ -27,7 +31,7 @@
       "rec_vram_mb": 8192,
       "min_ram_mb": 8192,
       "rec_ram_mb": 16384,
-      "install_size_mb": 4900,
+      "install_size_mb": 4693,
       "context_guidance": "Llama 3 8B 베이스 + Stheno fine-tune. 성인 RP / 캐릭터 챗 특화. 사용자 명시 토글 OFF면 카탈로그에 hidden.",
       "language_strength": 6,
       "roleplay_strength": 10,
@@ -57,9 +61,11 @@
         "성인 콘텐츠 — 일반 사용엔 권장 안 해요. 용도가 명확할 때만 활성화해 주세요.",
         "Llama 3 라이선스 — 700M+ 사용자 서비스 임베드 시 Meta 별도 라이선스 필요."
       ],
-      "intents": ["roleplay-narrative"],
+      "intents": [
+        "roleplay-narrative"
+      ],
       "domain_scores": {
-        "roleplay-narrative": 88.0
+        "roleplay-narrative": 88
       },
       "community_insights": {
         "strengths_ko": [

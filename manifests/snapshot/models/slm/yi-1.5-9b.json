@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-30T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "yi-1.5-9b-chat",
@@ -10,17 +10,21 @@
       "model_family": "yi",
       "source": {
         "type": "hugging-face",
-        "repo": "01-ai/Yi-1.5-9B-Chat-GGUF",
+        "repo": "bartowski/Yi-1.5-9B-Chat-GGUF",
         "file": "Yi-1.5-9B-Chat-Q4_K_M.gguf"
       },
       "hub_id": "yi:9b-chat",
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 5400,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "size_mb": 5082,
+          "sha256": "9bfda34f9343785f9cfb040dd63a215d0ca8781cb38d5b8825c12e6e1d8230f9",
           "file_path": "Yi-1.5-9B-Chat-Q4_K_M.gguf"
         }
       ],
@@ -28,7 +32,7 @@
       "rec_vram_mb": 8192,
       "min_ram_mb": 8192,
       "rec_ram_mb": 16384,
-      "install_size_mb": 5400,
+      "install_size_mb": 5082,
       "context_guidance": "최대 4K context. 9B Apache-2 챗 모델 — 영어/중국어 강함, 한국어는 보통. EXAONE 7.8B에 비해 다국어 균형형.",
       "language_strength": 6,
       "roleplay_strength": 6,
@@ -52,9 +56,11 @@
         "EXAONE 대안"
       ],
       "warnings": [],
-      "intents": ["agent-tool-use"],
+      "intents": [
+        "agent-tool-use"
+      ],
       "domain_scores": {
-        "agent-tool-use": 65.0
+        "agent-tool-use": 65
       },
       "community_insights": {
         "strengths_ko": [

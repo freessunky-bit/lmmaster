@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-05-01T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "aya-expanse-32b",
@@ -10,17 +10,21 @@
       "model_family": "aya",
       "source": {
         "type": "hugging-face",
-        "repo": "CohereForAI/aya-expanse-32b-GGUF",
+        "repo": "bartowski/aya-expanse-32b-GGUF",
         "file": "aya-expanse-32b-Q4_K_M.gguf"
       },
       "hub_id": "aya-expanse:32b",
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 19500,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "size_mb": 18884,
+          "sha256": "47eed19801ed865fabad06f7c0eb4b079b874281a8caac486f99300c7bf525f9",
           "file_path": "aya-expanse-32b-Q4_K_M.gguf"
         }
       ],
@@ -28,7 +32,7 @@
       "rec_vram_mb": 24576,
       "min_ram_mb": 32768,
       "rec_ram_mb": 49152,
-      "install_size_mb": 19500,
+      "install_size_mb": 18884,
       "context_guidance": "Aya Expanse 8B의 워크스테이션급 변종 — 23 언어 + 32B로 EXAONE 32B에 근접. CC-BY-NC-4.0 비상업 한정.",
       "language_strength": 9,
       "roleplay_strength": 7,
@@ -58,11 +62,15 @@
         "VRAM 22GB+ — RTX 4090 24GB 필요. 일반 게이밍 PC 부담.",
         "한국어 단독은 EXAONE 32B에 살짝 밀림 — 다국어가 핵심일 때 추천."
       ],
-      "intents": ["translation-multi", "translation-ko-en", "ko-conversation"],
+      "intents": [
+        "translation-multi",
+        "translation-ko-en",
+        "ko-conversation"
+      ],
       "domain_scores": {
-        "translation-multi": 88.0,
-        "translation-ko-en": 80.0,
-        "ko-conversation": 76.0
+        "translation-multi": 88,
+        "translation-ko-en": 80,
+        "ko-conversation": 76
       },
       "community_insights": {
         "strengths_ko": [

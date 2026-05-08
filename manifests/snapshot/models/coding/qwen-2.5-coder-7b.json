@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-30T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "qwen-2.5-coder-7b-instruct",
@@ -10,17 +10,21 @@
       "model_family": "qwen",
       "source": {
         "type": "hugging-face",
-        "repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+        "repo": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
         "file": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf"
       },
       "hub_id": "qwen2.5-coder:7b",
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 4700,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "size_mb": 4466,
+          "sha256": "1664fccab734674a50763490a8c6931b70e3f2f8ec10031b54806d30e5f956b6",
           "file_path": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf"
         }
       ],
@@ -28,7 +32,7 @@
       "rec_vram_mb": 8192,
       "min_ram_mb": 8192,
       "rec_ram_mb": 16384,
-      "install_size_mb": 4700,
+      "install_size_mb": 4466,
       "context_guidance": "최대 128K context. fill-in-the-middle + 다언어 코드 지원. 한국어 주석/설명도 잘 받음.",
       "language_strength": 7,
       "roleplay_strength": 4,
@@ -77,10 +81,13 @@
         ],
         "last_reviewed_at": "2026-04-30T00:00:00Z"
       },
-      "intents": ["coding-general", "coding-fim"],
+      "intents": [
+        "coding-general",
+        "coding-fim"
+      ],
       "domain_scores": {
         "coding-general": 88.4,
-        "coding-fim": 78.0
+        "coding-fim": 78
       }
     }
   ]

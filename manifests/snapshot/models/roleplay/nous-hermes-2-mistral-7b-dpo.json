@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-30T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "nous-hermes-2-mistral-7b-dpo",
@@ -10,25 +10,29 @@
       "model_family": "mistral",
       "source": {
         "type": "hugging-face",
-        "repo": "NousResearch/Nous-Hermes-2-Mistral-7B-DPO-GGUF",
-        "file": "Nous-Hermes-2-Mistral-7B-DPO-Q4_K_M.gguf"
+        "repo": "mradermacher/Nous-Hermes-2-Mistral-7B-DPO-GGUF",
+        "file": "Nous-Hermes-2-Mistral-7B-DPO.Q4_K_M.gguf"
       },
       "hub_id": "nous-hermes2:7b",
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 4400,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "file_path": "Nous-Hermes-2-Mistral-7B-DPO-Q4_K_M.gguf"
+          "size_mb": 4166,
+          "sha256": "301e617aae1284dbac59c3dd74cf5c896374d66c0466a40b75d36c4a34832a93",
+          "file_path": "Nous-Hermes-2-Mistral-7B-DPO.Q4_K_M.gguf"
         }
       ],
       "min_vram_mb": 6144,
       "rec_vram_mb": 8192,
       "min_ram_mb": 8192,
       "rec_ram_mb": 16384,
-      "install_size_mb": 4400,
+      "install_size_mb": 4166,
       "context_guidance": "Mistral 7B 베이스 + Hermes 2 instruction-tune + DPO. RP / 캐릭터 / 창작에 강함. Polyglot-Ko 12.8B의 영어/instruct 대안.",
       "language_strength": 6,
       "roleplay_strength": 9,
@@ -54,9 +58,11 @@
         "ChatML 시스템 프롬프트 기반 페르소나"
       ],
       "warnings": [],
-      "intents": ["roleplay-narrative"],
+      "intents": [
+        "roleplay-narrative"
+      ],
       "domain_scores": {
-        "roleplay-narrative": 80.0
+        "roleplay-narrative": 80
       },
       "community_insights": {
         "strengths_ko": [

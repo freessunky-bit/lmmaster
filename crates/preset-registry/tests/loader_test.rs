@@ -69,7 +69,6 @@ fn cross_link_validation_with_real_catalog_models() {
         "exaone-3.5-7.8b-instruct",
         "exaone-4.0-32b-instruct",
         "hcx-seed-8b",
-        "polyglot-ko-12.8b",
         "qwen-2.5-coder-3b-instruct",
         "llama-3.2-3b-instruct",
         "whisper-large-v3-korean",

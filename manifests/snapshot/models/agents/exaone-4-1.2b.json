@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-27T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "exaone-4.0-1.2b-instruct",
@@ -10,30 +10,34 @@
       "model_family": "exaone",
       "source": {
         "type": "hugging-face",
-        "repo": "LGAI-EXAONE/EXAONE-4.0-1.2B-Instruct-GGUF",
-        "file": "EXAONE-4.0-1.2B-Instruct-Q4_K_M.gguf"
+        "repo": "LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF",
+        "file": "EXAONE-4.0-1.2B-Q4_K_M.gguf"
       },
       "hub_id": "sam860/exaone-4.0:1.2b",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 760,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "file_path": "EXAONE-4.0-1.2B-Instruct-Q4_K_M.gguf"
+          "size_mb": 775,
+          "sha256": "7b5e753540183ae4d56e6febd9b48cdd944de53386e6faa8f51c8f98cb2b47df",
+          "file_path": "EXAONE-4.0-1.2B-Q4_K_M.gguf"
         },
         {
           "label": "Q8_0",
-          "size_mb": 1300,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "file_path": "EXAONE-4.0-1.2B-Instruct-Q8_0.gguf"
+          "size_mb": 1301,
+          "sha256": "cc0b2a3f447e134cafd2853104d06227122cc280f4c9fee8c90172066174ef04",
+          "file_path": "EXAONE-4.0-1.2B-Q8_0.gguf"
         }
       ],
       "min_vram_mb": null,
       "rec_vram_mb": 2048,
       "min_ram_mb": 4096,
       "rec_ram_mb": 8192,
-      "install_size_mb": 760,
+      "install_size_mb": 775,
       "context_guidance": "최대 32K context. 한국어 일상 대화/짧은 글쓰기.",
       "language_strength": 9,
       "roleplay_strength": 6,

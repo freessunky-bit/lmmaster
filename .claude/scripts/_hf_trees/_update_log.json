@@ -1,0 +1,151 @@
+[
+  {
+    "name": "aya-expanse-32b",
+    "repo": "bartowski/aya-expanse-32b-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "aya-expanse-8b",
+    "repo": "bartowski/aya-expanse-8b-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "deepseek-r1-7b",
+    "repo": "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "mistral-small-24b",
+    "repo": "bartowski/Mistral-Small-24B-Instruct-2501-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "phi-4-14b",
+    "repo": "bartowski/phi-4-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "solar-10.7b",
+    "repo": "TheBloke/SOLAR-10.7B-Instruct-v1.0-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "yi-1.5-34b",
+    "repo": "bartowski/Yi-1.5-34B-Chat-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "yi-1.5-9b",
+    "repo": "bartowski/Yi-1.5-9B-Chat-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "yi-1.5-6b",
+    "repo": "bartowski/Yi-1.5-6B-Chat-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "qwen-2.5-coder-7b",
+    "repo": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "exaone-4-1.2b",
+    "repo": "LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF",
+    "quants": [
+      "Q4_K_M",
+      "Q8_0"
+    ]
+  },
+  {
+    "name": "exaone-4-32b",
+    "repo": "LGAI-EXAONE/EXAONE-4.0-32B-GGUF",
+    "quants": [
+      "Q4_K_M",
+      "Q5_K_M"
+    ]
+  },
+  {
+    "name": "bge-m3",
+    "repo": "gpustack/bge-m3-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "kure-v1",
+    "repo": "mykor/KURE-v1-gguf",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "yi-ko-6b",
+    "repo": "mradermacher/Yi-Ko-6B-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "deepseek-coder-v2-16b",
+    "repo": "bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "nous-hermes-2-mistral-7b-dpo",
+    "repo": "mradermacher/Nous-Hermes-2-Mistral-7B-DPO-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "stheno-l3-8b",
+    "repo": "bartowski/L3-8B-Stheno-v3.2-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "synatra-7b-v0.3-rp",
+    "repo": "mradermacher/Synatra-7B-v0.3-RP-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "nemotron-3-nano-4b",
+    "repo": "unsloth/NVIDIA-Nemotron-3-Nano-4B-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  },
+  {
+    "name": "kullm3",
+    "repo": "QuantFactory/KULLM3-GGUF",
+    "quants": [
+      "Q4_K_M"
+    ]
+  }
+]

@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-30T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "yi-ko-6b",
@@ -10,24 +10,28 @@
       "model_family": "yi",
       "source": {
         "type": "hugging-face",
-        "repo": "beomi/Yi-Ko-6B-GGUF",
-        "file": "Yi-Ko-6B-Q4_K_M.gguf"
+        "repo": "mradermacher/Yi-Ko-6B-GGUF",
+        "file": "yi-ko-6b.Q4_K_M.gguf"
       },
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 3700,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "file_path": "Yi-Ko-6B-Q4_K_M.gguf"
+          "size_mb": 3582,
+          "sha256": "d48869393d5e1cb7dfc70c6ae6644a5735ed4ccab6defad1534c394b9965451e",
+          "file_path": "yi-ko-6b.Q4_K_M.gguf"
         }
       ],
       "min_vram_mb": 4096,
       "rec_vram_mb": 6144,
       "min_ram_mb": 8192,
       "rec_ram_mb": 16384,
-      "install_size_mb": 3700,
+      "install_size_mb": 3582,
       "context_guidance": "Yi-6B 베이스에 한국어 코퍼스 추가 학습. instruction-tuned 아님 — fine-tune 시드용. 직접 채팅보다 LoRA 학습 베이스로 권장.",
       "language_strength": 8,
       "roleplay_strength": 5,

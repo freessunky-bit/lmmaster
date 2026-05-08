@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-05-01T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "synatra-7b-v0.3-rp",
@@ -10,24 +10,27 @@
       "model_family": "mistral",
       "source": {
         "type": "hugging-face",
-        "repo": "maywell/Synatra-7B-v0.3-RP-GGUF",
-        "file": "Synatra-7B-v0.3-RP-Q4_K_M.gguf"
+        "repo": "mradermacher/Synatra-7B-v0.3-RP-GGUF",
+        "file": "Synatra-7B-v0.3-RP.Q4_K_M.gguf"
       },
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 4400,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "file_path": "Synatra-7B-v0.3-RP-Q4_K_M.gguf"
+          "size_mb": 4314,
+          "sha256": "b262e06be9aee2363d59d4cd7ed49f1a5a0d1c46d1b1ed2915e20aedcdb44c23",
+          "file_path": "Synatra-7B-v0.3-RP.Q4_K_M.gguf"
         }
       ],
       "min_vram_mb": 6144,
       "rec_vram_mb": 8192,
       "min_ram_mb": 8192,
       "rec_ram_mb": 16384,
-      "install_size_mb": 4400,
+      "install_size_mb": 4314,
       "context_guidance": "Mistral 7B 베이스 + 한국어 RP 추가 학습. 한국어 캐릭터 / 챗봇에 강함. CC-BY-NC라 비상업 한정.",
       "language_strength": 8,
       "roleplay_strength": 9,
@@ -57,10 +60,13 @@
         "Ollama 공식 미등록 — llama.cpp 또는 LM Studio 필수.",
         "Mistral 7B 베이스 — Polyglot-Ko 12.8B보다 사이즈 작아 응답 길이 / 깊이 한계."
       ],
-      "intents": ["roleplay-narrative", "ko-conversation"],
+      "intents": [
+        "roleplay-narrative",
+        "ko-conversation"
+      ],
       "domain_scores": {
-        "roleplay-narrative": 80.0,
-        "ko-conversation": 72.0
+        "roleplay-narrative": 80,
+        "ko-conversation": 72
       },
       "community_insights": {
         "strengths_ko": [

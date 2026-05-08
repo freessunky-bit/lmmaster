@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-30T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "deepseek-coder-v2-16b",
@@ -10,17 +10,21 @@
       "model_family": "deepseek",
       "source": {
         "type": "hugging-face",
-        "repo": "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+        "repo": "bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
         "file": "DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf"
       },
       "hub_id": "deepseek-coder-v2:16b",
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
+      "runner_compatibility": [
+        "llama-cpp",
+        "ollama",
+        "lm-studio"
+      ],
       "quantization_options": [
         {
           "label": "Q4_K_M",
-          "size_mb": 9100,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "size_mb": 9884,
+          "sha256": "603bd3f8a0281d16571da7c08bd661ee17ff0d1be6fcbd1b42242da257ef0bb8",
           "file_path": "DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf"
         }
       ],
@@ -28,7 +32,7 @@
       "rec_vram_mb": 16384,
       "min_ram_mb": 16384,
       "rec_ram_mb": 24576,
-      "install_size_mb": 9100,
+      "install_size_mb": 9884,
       "context_guidance": "최대 128K context. 16B MoE (활성 2.4B). 코드 + 수학 강함. Lite 변종이라 RTX 3090/4080에서 실용 가능.",
       "language_strength": 6,
       "roleplay_strength": 3,

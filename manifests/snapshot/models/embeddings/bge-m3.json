@@ -1,7 +1,7 @@
 {
   "$schema_hint": "model-registry ModelManifest schema_version=1.",
   "schema_version": 1,
-  "generated_at": "2026-04-30T00:00:00Z",
+  "generated_at": "2026-05-08T00:00:00Z",
   "entries": [
     {
       "id": "bge-m3",
@@ -10,24 +10,26 @@
       "model_family": "bge",
       "source": {
         "type": "hugging-face",
-        "repo": "BAAI/bge-m3",
-        "file": "bge-m3.gguf"
+        "repo": "gpustack/bge-m3-GGUF",
+        "file": "bge-m3-FP16.gguf"
       },
       "tier": "verified",
-      "runner_compatibility": ["llama-cpp"],
+      "runner_compatibility": [
+        "llama-cpp"
+      ],
       "quantization_options": [
         {
           "label": "F16",
-          "size_mb": 2200,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "file_path": "bge-m3.gguf"
+          "size_mb": 1104,
+          "sha256": "daec91ffb5dd0c27411bd71f29932917c49cf529a641d0168496c3a501e3062c",
+          "file_path": "bge-m3-FP16.gguf"
         }
       ],
       "min_vram_mb": null,
       "rec_vram_mb": 2048,
       "min_ram_mb": 4096,
       "rec_ram_mb": 8192,
-      "install_size_mb": 2200,
+      "install_size_mb": 1104,
       "context_guidance": "100+ 언어 RAG 표준 임베더. 1024-d dense + sparse + multi-vector. ONNX 변환은 knowledge-stack의 embedder cascade에서.",
       "language_strength": 7,
       "roleplay_strength": 0,
@@ -54,9 +56,11 @@
       "warnings": [
         "임베딩 전용 모델이에요 — 채팅에는 사용할 수 없어요. Workspace > Knowledge에서 RAG 검색에 활용해 주세요."
       ],
-      "intents": ["ko-rag"],
+      "intents": [
+        "ko-rag"
+      ],
       "domain_scores": {
-        "ko-rag": 75.0
+        "ko-rag": 75
       },
       "community_insights": {
         "strengths_ko": [
