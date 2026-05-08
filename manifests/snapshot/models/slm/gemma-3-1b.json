@@ -10,24 +10,24 @@
       "model_family": "gemma",
       "source": {
         "type": "hugging-face",
-        "repo": "google/gemma-3-1b-it-qat-q4_0-gguf",
-        "file": "gemma-3-1b-it-q4_0.gguf"
+        "repo": "ggml-org/gemma-3-1b-it-GGUF",
+        "file": "gemma-3-1b-it-Q4_K_M.gguf"
       },
       "hub_id": "gemma3:1b",
       "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
       "quantization_options": [
         {
-          "label": "Q4_0",
-          "size_mb": 815,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "file_path": "gemma-3-1b-it-q4_0.gguf"
+          "label": "Q4_K_M",
+          "size_mb": 769,
+          "sha256": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
+          "file_path": "gemma-3-1b-it-Q4_K_M.gguf"
         }
       ],
       "min_vram_mb": null,
       "rec_vram_mb": 2048,
       "min_ram_mb": 4096,
       "rec_ram_mb": 8192,
-      "install_size_mb": 815,
+      "install_size_mb": 769,
       "context_guidance": "최대 32K context. 짧은 대화/요약/구조화 출력에 강해요. 작아서 빠른 응답이 장점이에요.",
       "language_strength": 7,
       "roleplay_strength": 5,

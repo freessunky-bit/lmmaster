@@ -10,24 +10,24 @@
       "model_family": "gemma",
       "source": {
         "type": "hugging-face",
-        "repo": "google/gemma-3-4b-it-qat-q4_0-gguf",
-        "file": "gemma-3-4b-it-q4_0.gguf"
+        "repo": "ggml-org/gemma-3-4b-it-GGUF",
+        "file": "gemma-3-4b-it-Q4_K_M.gguf"
       },
       "hub_id": "gemma3:4b",
       "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],
       "quantization_options": [
         {
-          "label": "Q4_0",
-          "size_mb": 3300,
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "file_path": "gemma-3-4b-it-q4_0.gguf"
+          "label": "Q4_K_M",
+          "size_mb": 2374,
+          "sha256": "882e8d2db44dc554fb0ea5077cb7e4bc49e7342a1f0da57901c0802ea21a0863",
+          "file_path": "gemma-3-4b-it-Q4_K_M.gguf"
         }
       ],
       "min_vram_mb": 4096,
       "rec_vram_mb": 6144,
       "min_ram_mb": 8192,
       "rec_ram_mb": 16384,
-      "install_size_mb": 3300,
+      "install_size_mb": 2374,
       "context_guidance": "최대 128K context. 멀티모달 (이미지 입력) 지원이지만 v1 카탈로그는 텍스트만 노출. 한국어 + 코드 + 추론 균형형.",
       "language_strength": 8,
       "roleplay_strength": 6,
@@ -65,8 +65,8 @@
       },
       "mmproj": {
         "url": "https://huggingface.co/ggml-org/gemma-3-4b-it-GGUF/resolve/main/mmproj-model-f16.gguf",
-        "sha256": null,
-        "size_mb": 851,
+        "sha256": "8c0fb064b019a6972856aaae2c7e4792858af3ca4561be2dbf649123ba6c40cb",
+        "size_mb": 812,
         "precision": "f16",
         "source": "ggml-org"
       }

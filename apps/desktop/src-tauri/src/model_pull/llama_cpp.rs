@@ -55,13 +55,14 @@ pub async fn pull_llama_model(
     })?;
 
     // 4. 메인 GGUF 다운로드.
-    let main_sha = parse_sha256_hex(&quant.sha256).map_err(|e| ModelPullApiError::Internal {
-        message: format!("sha256 파싱 실패 (quant {}): {e}", quant.label),
-    })?;
+    let main_sha =
+        parse_optional_sha256(&quant.sha256).map_err(|e| ModelPullApiError::Internal {
+            message: format!("sha256 파싱 실패 (quant {}): {e}", quant.label),
+        })?;
     let main_req = DownloadRequest {
         url: main_url,
         final_path: main_path.clone(),
-        expected_sha256: Some(main_sha),
+        expected_sha256: main_sha,
         size_hint: Some(quant.size_mb.saturating_mul(1024 * 1024)),
         max_retries: None,
     };
@@ -80,14 +81,12 @@ pub async fn pull_llama_model(
     if let Some(mmproj) = entry.mmproj.as_ref() {
         let mmproj_name = mmproj_filename(mmproj, &entry.id);
         let mmproj_path = cache_dir.join(&mmproj_name);
-        let mmproj_sha = mmproj
-            .sha256
-            .as_deref()
-            .map(parse_sha256_hex)
-            .transpose()
-            .map_err(|e| ModelPullApiError::Internal {
+        let mmproj_sha = match mmproj.sha256.as_deref() {
+            Some(s) => parse_optional_sha256(s).map_err(|e| ModelPullApiError::Internal {
                 message: format!("mmproj sha256 파싱 실패: {e}"),
-            })?;
+            })?,
+            None => None,
+        };
         let mmproj_req = DownloadRequest {
             url: mmproj.url.clone(),
             final_path: mmproj_path,
@@ -118,6 +117,15 @@ fn parse_sha256_hex(s: &str) -> Result<[u8; 32], String> {
     let mut out = [0u8; 32];
     hex::decode_to_slice(s, &mut out).map_err(|e| format!("hex 디코드 실패: {e}"))?;
     Ok(out)
+}
+
+/// placeholder (빈 문자열 또는 `"0".repeat(64)`)는 None — 검증 skip.
+/// 큐레이터가 sha256을 채우지 않은 manifest 호환 (40+ entries).
+fn parse_optional_sha256(s: &str) -> Result<Option<[u8; 32]>, String> {
+    if s.is_empty() || s.chars().all(|c| c == '0') {
+        return Ok(None);
+    }
+    parse_sha256_hex(s).map(Some)
 }
 
 /// `DownloadEvent` → `ModelPullEvent` 변환 sink. Channel close 시 cancel cascade (R-E.6).
@@ -195,5 +203,25 @@ mod tests {
         let s = "z".repeat(64);
         let err = parse_sha256_hex(&s).unwrap_err();
         assert!(err.contains("hex 디코드 실패"));
+    }
+
+    #[test]
+    fn parse_optional_sha256_placeholder_returns_none() {
+        let placeholder = "0".repeat(64);
+        let result = parse_optional_sha256(&placeholder).unwrap();
+        assert!(result.is_none(), "placeholder 0...0은 None이어야 해요");
+    }
+
+    #[test]
+    fn parse_optional_sha256_empty_returns_none() {
+        let result = parse_optional_sha256("").unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn parse_optional_sha256_real_returns_some() {
+        let real = "882e8d2db44dc554fb0ea5077cb7e4bc49e7342a1f0da57901c0802ea21a0863";
+        let result = parse_optional_sha256(real).unwrap();
+        assert!(result.is_some());
     }
 }

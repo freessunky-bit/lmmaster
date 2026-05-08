@@ -17,6 +17,26 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-08 v0.5.2 — gemma 다운로드 fix (HF gated 401) + sha256 placeholder skip
+
+사용자 e2e 검증 첫 fail 보고: `gemma-3-4b-it` 받기 시 HTTP 401 from `huggingface.co/google/gemma-3-4b-it-qat-q4_0-gguf/...`. Google Gemma는 HF에서 *gated* — anonymous 다운로드 차단.
+
+채택안:
+- **gemma-3-4b.json + gemma-3-1b.json** repo source를 비-gated `ggml-org/gemma-3-{1,4}b-it-GGUF` 미러로 변경. `ggml-org`는 llama.cpp 공식 팀 큐레이션 + license-friendly + mmproj와 동일 repo로 통일.
+- **quant 옵션** — 미러에 Q4_0 미보유, Q4_K_M로 변경. 실제 sha256 (HF API lfs.oid 추출), size_mb 정확값 (Q4_K_M 2374MB / 1B 769MB). install_size_mb도 동기화.
+- **mmproj sha256** — null → 실제 hash `8c0fb064...c40cb`로 채움.
+- **placeholder sha256 skip 코드** — `model_pull/llama_cpp.rs::parse_optional_sha256` 신규. 빈 문자열 또는 `"0".repeat(64)` 받으면 None 반환 (검증 skip). 40+ manifest가 placeholder 상태라 광범위 호환.
+- **catalog 번들 재생성** — `manifests/apps/catalog.json` entries 43 동기화 (CLAUDE.md §3 정책).
+
+기각안:
+- *HF access token Settings UI*: 사용자에게 추가 수동 단계 (HF 가입 + license accept + token 발급). gated 모델 외 가치 없음. v1.x로 이연.
+- *Q4_0 파일 직접 미러 호스팅*: license 부담 + 유지보수. ggml-org 의존이 깔끔.
+
+검증: cargo fmt + clippy 0 warning / model-registry 23 tests passed (snapshot_loads_seed_entries / nemotron_3_nano_4b_in_catalog_preserves_korean_first 모두 통과 — gemma 변경이 한국어 모델 6종 보존 invariant 깨지 않음) / catalog 번들 entries=43.
+
+후속 위험:
+- 다른 manifest의 gated repo는 *click 시 발견*. 점검 candidate: `mistralai/Mistral-Small-24B-Instruct-2501` (Mistral 약관), `naver-hyperclovax/...` (Naver 약관). 사용자 click 후 fail 보고 시 동일 패턴으로 fix.
+
 ## 2026-05-08 v0.5.1 — Phase 13'.h.2.e.2 + e.3 Catalog/Chat LlamaCpp wire-up
 
 v0.5.0 backend의 사용자 진입점을 frontend에 wire up. 비전 chat *클릭만으로 시작*까지의 사용자 흐름 완결.
