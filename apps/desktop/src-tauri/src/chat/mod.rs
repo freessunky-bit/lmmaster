@@ -10,16 +10,21 @@ pub mod registry;
 
 use std::sync::Arc;
 
+use adapter_llama_cpp::LlamaCppAdapter;
 use adapter_lmstudio::LmStudioAdapter;
 use adapter_ollama::OllamaAdapter;
 use chat_protocol::{ChatEvent, ChatMessage, ChatOutcome};
 use serde::Serialize;
 use shared_types::RuntimeKind;
 use tauri::ipc::Channel;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use thiserror::Error;
 use uuid::Uuid;
 
+use crate::chat::llama_cpp::{
+    build_server_spec, ensure_model_files_present, LlamaServerState, ManagedLlamaServer,
+};
+use crate::commands::CatalogState;
 use registry::ChatRegistry;
 
 #[derive(Debug, Error, Serialize)]
@@ -49,9 +54,12 @@ pub enum ChatApiError {
 
 /// 채팅 시작 — 매 호출 신규 chat_id 발급. 같은 chat_id로 cancel 가능.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // Tauri command — State 4종 + config 8 인자 정상.
 pub async fn start_chat(
-    _app: AppHandle,
+    app: AppHandle,
     registry: State<'_, Arc<ChatRegistry>>,
+    catalog_state: State<'_, Arc<CatalogState>>,
+    llama_state: State<'_, LlamaServerState>,
     runtime_kind: RuntimeKind,
     model_id: String,
     messages: Vec<ChatMessage>,
@@ -114,6 +122,81 @@ pub async fn start_chat(
                             tracing::debug!(
                                 "lm-studio chat channel closed — cancelling backend stream"
                             );
+                            cancel_for_emit.cancel();
+                        }
+                    },
+                    &cancel,
+                )
+                .await;
+            Ok(outcome.into())
+        }
+        RuntimeKind::LlamaCpp => {
+            // Phase 13'.h.2.d (ADR-0051) — chat IPC LlamaCpp 분기 wiring.
+            // 1. env 검증.
+            if std::env::var("LMMASTER_LLAMA_SERVER_PATH").is_err() {
+                return Err(ChatApiError::LlamaServerNotConfigured);
+            }
+            // 2. ModelEntry 조회 (catalog).
+            let catalog = catalog_state.snapshot();
+            let entry = catalog
+                .entries()
+                .iter()
+                .find(|e| e.id == model_id)
+                .ok_or_else(|| ChatApiError::Internal {
+                    message: format!("카탈로그에 모델이 없어요: {model_id}"),
+                })?
+                .clone();
+            // 3. cache_dir 해결 — app_local_data_dir/models.
+            let cache_dir = app
+                .path()
+                .app_local_data_dir()
+                .map_err(|e| ChatApiError::Internal {
+                    message: format!("cache_dir 해결 실패: {e}"),
+                })?
+                .join("models");
+            // 4. ServerSpec + 파일 존재 검증.
+            let spec = build_server_spec(&entry, &cache_dir);
+            ensure_model_files_present(&spec).map_err(|e| ChatApiError::LlamaCppNotPrepared {
+                message: e.into_korean_message(),
+            })?;
+            // 5. State lock + reuse vs new spawn (단일 instance 정책).
+            let endpoint_base = {
+                let mut state = llama_state.lock().await;
+                let needs_spawn = match state.as_ref() {
+                    Some(m) => m.model_path() != spec.model_path,
+                    None => true,
+                };
+                if needs_spawn {
+                    *state = None; // 기존 drop → SIGKILL (Unix) / TerminateProcess (Windows).
+                    let handle =
+                        runner_llama_cpp::LlamaServerHandle::start(spec.clone(), cancel.clone())
+                            .await
+                            .map_err(|e| ChatApiError::LlamaServerStartFailed {
+                                message: e.to_string(),
+                            })?;
+                    let endpoint = handle.endpoint().base_url.clone();
+                    *state = Some(ManagedLlamaServer::new(handle, spec));
+                    endpoint
+                } else {
+                    // reuse: 같은 model_path면 endpoint 그대로.
+                    state
+                        .as_ref()
+                        .expect("just checked Some")
+                        .endpoint_base_url()
+                        .to_string()
+                }
+            };
+            // 6. adapter chat_stream — Ollama/LmStudio와 동일 channel + cancel cascade 패턴.
+            let adapter = LlamaCppAdapter::with_endpoint(&endpoint_base);
+            let channel_tx = channel.clone();
+            let cancel_for_emit = cancel.clone();
+            let outcome = adapter
+                .chat_stream(
+                    &model_id,
+                    &messages,
+                    move |event| {
+                        if channel_tx.send(event).is_err() {
+                            tracing::debug!("llama-cpp chat channel closed — cancelling backend");
                             cancel_for_emit.cancel();
                         }
                     },

@@ -48,8 +48,9 @@ scanner.workspace = true
 bench-harness.workspace = true
 adapter-ollama.workspace = true
 adapter-lmstudio.workspace = true
-# Phase 13'.h.2.d (ADR-0051) — LlamaCpp chat IPC wiring (server spawn handle).
+# Phase 13'.h.2.d (ADR-0051) — LlamaCpp chat IPC wiring (server spawn handle + adapter).
 runner-llama-cpp.workspace = true
+adapter-llama-cpp.workspace = true
 chat-protocol.workspace = true
 hardware-probe.workspace = true
 model-registry.workspace = true

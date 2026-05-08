@@ -165,6 +165,8 @@ bench-harness = { path = "crates/bench-harness" }
 preset-registry = { path = "crates/preset-registry" }
 adapter-ollama = { path = "crates/adapter-ollama" }
 adapter-lmstudio = { path = "crates/adapter-lmstudio" }
+# Phase 13'.h.2.d (ADR-0051) — desktop chat IPC가 LlamaCpp adapter 직접 호출.
+adapter-llama-cpp = { path = "crates/adapter-llama-cpp" }
 runner-llama-cpp = { path = "crates/runner-llama-cpp" }
 openai-compat-dto = { path = "crates/openai-compat-dto" }
 chat-protocol = { path = "crates/chat-protocol" }

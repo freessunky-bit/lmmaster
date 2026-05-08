@@ -6,12 +6,31 @@
 //! - 30~90초 모델 로드는 ChatEvent::Stalled로 진행 신호 (Round 2에서 wiring).
 //! - `LMMASTER_LLAMA_SERVER_PATH` env 미설정 시 한국어 친절 안내 + Settings 이동 hint.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use model_registry::manifest::{MmprojSpec, ModelEntry};
 use runner_llama_cpp::{LlamaServerHandle, ServerSpec};
 use tokio::sync::Mutex;
+
+/// 단일 instance hold용 wrapper — runner-llama-cpp::LlamaServerHandle은 spec 미보관이라
+/// reuse 판단(같은 model_path?)을 위해 desktop layer에서 spec을 함께 보관.
+pub struct ManagedLlamaServer {
+    handle: LlamaServerHandle,
+    spec: ServerSpec,
+}
+
+impl ManagedLlamaServer {
+    pub fn new(handle: LlamaServerHandle, spec: ServerSpec) -> Self {
+        Self { handle, spec }
+    }
+    pub fn endpoint_base_url(&self) -> &str {
+        &self.handle.endpoint().base_url
+    }
+    pub fn model_path(&self) -> &Path {
+        &self.spec.model_path
+    }
+}
 
 /// Tauri State alias — 단일 instance hold + 다중 chat 호출이 락을 통해 직렬화.
 ///
@@ -20,7 +39,7 @@ use tokio::sync::Mutex;
 /// - 기존 instance가 같은 `model_path`면 reuse + lock release 후 chat_stream.
 /// - 다른 `model_path`면 기존 shutdown(drop) + 새 spawn + 교체.
 /// - drop이 자동 SIGKILL — Tauri RunEvent::ExitRequested에서 명시 cleanup도 (Round 3).
-pub type LlamaServerState = Arc<Mutex<Option<LlamaServerHandle>>>;
+pub type LlamaServerState = Arc<Mutex<Option<ManagedLlamaServer>>>;
 
 pub fn new_state() -> LlamaServerState {
     Arc::new(Mutex::new(None))
@@ -35,10 +54,7 @@ pub fn new_state() -> LlamaServerState {
 /// - `gpu_layers` / `ctx_size` / `chat_template`은 본 sub-phase 미주입 (v1.x Phase 13'.h.3).
 ///
 /// 미존재 cache 경로는 caller가 `LlamaCppNotPrepared` 분기로 안내 (사용자 수동 다운로드 가이드).
-pub fn build_server_spec(
-    entry: &ModelEntry,
-    cache_dir: &std::path::Path,
-) -> ServerSpec {
+pub fn build_server_spec(entry: &ModelEntry, cache_dir: &std::path::Path) -> ServerSpec {
     let model_filename = derive_model_filename(entry);
     let model_path = cache_dir.join(&model_filename);
     let mmproj_path = entry

@@ -17,23 +17,32 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
-## 2026-05-08 Phase 13'.h.2.d Round 1 — LlamaCpp chat IPC infra (WIP, dead code)
+## 2026-05-08 v0.4.0 — Phase 13'.h.2.d Round 2~4 LlamaCpp chat IPC wiring (vision 모델 활성)
 
-vision 모델 chat 실 동작 sub-phase 시작 (DEFERRED.md 우선순위 1). *Round 1 = infra만 + dead code commit*. Round 2~4는 다음 세션.
+vision 모델 chat 실 동작 sub-phase 종결 (DEFERRED.md 우선순위 1). minor bump 0.3.4 → 0.4.0 — chat IPC LlamaCpp 분기 신규 동작 = 사용자 가치 추가.
 
-- `apps/desktop/src-tauri/src/chat/llama_cpp.rs` 신규 — `LlamaServerState` alias (`Arc<Mutex<Option<LlamaServerHandle>>>`) + `build_server_spec(entry, cache_dir)` 변환 + `ensure_model_files_present` + `MissingFile` (한국어 카피) + 4 unit test (derive_*_filename / ensure_* 검증).
-- `apps/desktop/src-tauri/src/chat/mod.rs` ChatApiError +3 variant — `LlamaServerNotConfigured` / `LlamaCppNotPrepared { message }` / `LlamaServerStartFailed { message }`. mod 등록.
-- `apps/desktop/src-tauri/src/lib.rs::setup` — `LlamaServerState` 등록 (단일 instance hold).
-- `apps/desktop/src-tauri/Cargo.toml` — `runner-llama-cpp.workspace = true` dep 추가.
+채택안 (Round 2~4):
+- **Round 2** — `chat::start_chat` `RuntimeKind::LlamaCpp` 분기 wiring (8단계).
+  - signature 확장: `app: AppHandle` (Manager) + `catalog_state: State<'_, Arc<CatalogState>>` + `llama_state: State<'_, LlamaServerState>` 추가 (`#[allow(clippy::too_many_arguments)]`).
+  - flow: env `LMMASTER_LLAMA_SERVER_PATH` 검증 → catalog `entries().iter().find` lookup → `app.path().app_local_data_dir().join("models")` cache_dir 해결 → `build_server_spec` + `ensure_model_files_present` → State lock + reuse/spawn 분기 (model_path 동일 = reuse) → `LlamaServerHandle::start` 새 spawn 시 → `LlamaCppAdapter::with_endpoint(&base).chat_stream` → channel close → cancel cascade (R-E.6 패턴 동일).
+  - error 매핑: `LlamaServerNotConfigured` / `LlamaCppNotPrepared { message }` / `LlamaServerStartFailed { message }` 모두 한국어 안내 (Round 1 ChatApiError variant 활용).
+- **Round 3** — Tauri `RunEvent::ExitRequested` 훅에서 명시 cleanup (`lib.rs:583-595`). `try_state::<LlamaServerState>` + `try_lock` best-effort + `guard.take()`로 `Drop` trigger (SIGKILL/TerminateProcess).
+- **Round 4** — version bump + commit + tag.
+- `chat/llama_cpp.rs::ManagedLlamaServer` wrapper 신설 — runner-llama-cpp의 `LlamaServerHandle`이 `ServerSpec`을 보관하지 않아 reuse 판단(같은 `model_path`?) 위해 desktop layer에서 spec을 함께 hold. `endpoint_base_url()` / `model_path()` accessor.
+- workspace `Cargo.toml` + desktop crate `Cargo.toml`에 `adapter-llama-cpp.workspace = true` 추가 (Round 1까지 runner-llama-cpp만 있었음).
 
-검증: `cargo clippy -p lmmaster-desktop --all-targets -- -D warnings` ✅ 0 warning. *dead code 상태* (Round 2 wiring 후 사용처 생김). 사용자 동작 영향 0.
+검증: cargo fmt --all -- --check ✅ / cargo clippy -p lmmaster-desktop --all-targets -- -D warnings ✅ 0 warning / cargo test --workspace --exclude lmmaster-desktop ✅ 1120 passed (desktop crate exe는 Windows cdylib STATUS_ENTRYPOINT_NOT_FOUND — release.yml exclude와 동일 조건) / pnpm exec tsc -b ✅ 0 error.
 
-**다음 세션 진입 (Round 2~4)**:
-- Round 2: `chat::start_chat`에 `RuntimeKind::LlamaCpp` 분기 추가 + State lock + reuse/spawn 분기 + env `LMMASTER_LLAMA_SERVER_PATH` 검증 + ServerSpec + `LlamaServerHandle::start` + adapter-llama-cpp::chat_stream + ChatEvent::Stalled (모델 로드 30-90초).
-- Round 3: Tauri `RunEvent::ExitRequested` 훅 + 명시 cleanup.
-- Round 4: 검증 + version bump 0.3.4 → 0.4.0 + commit + tag v0.4.0 + push.
+운영 노트:
+- LlamaCpp 분기는 사용자 측 사전 조건 2종 필요: (1) `LMMASTER_LLAMA_SERVER_PATH` env로 llama-server binary 경로 등록, (2) `%LOCALAPPDATA%/com.lmmaster/models/<model-id>.gguf` 위치에 모델 파일 사전 배치 (vision은 mmproj도). 둘 다 미충족 시 한국어 안내 + 사용자가 카탈로그/Settings로 이동 가이드.
+- 단일 instance 정책 — 기존 instance와 다른 model_path 호출 시 `*state = None` (자동 Drop) 후 새 spawn. 동일 model_path는 reuse → 모델 로드 30-90s 비용 회피.
 
-결정 노트 + ADR-0051은 `docs/research/phase-13ph2bc-llama-server-mmproj-decision.md` §A6에 이미 작성됨 — 다음 세션 추가 결정 노트 불필요.
+후속 (v1.x):
+- Phase 13'.h.2.c.2 — 카탈로그 download 후 자동 cache_dir 배치 (현재는 사용자 수동).
+- Phase 13'.h.2.e — LlamaCppSetupWizard (env 등록 + binary 경로 안내 UI).
+- Phase 13'.h.3 — `chat_template_hint` / `gpu_layers` / `ctx_size` 카탈로그 주입 (현재 GGUF 내장 자동 또는 None).
+
+결정 노트 + ADR-0051은 `docs/research/phase-13ph2bc-llama-server-mmproj-decision.md` §A6에 작성 완료 (Round 1 시점). Round 2~4는 그 §A6 청사진 그대로 구현.
 
 ## 2026-05-08 v0.3.4 — R-F.3 후속 token-flow 회귀 가드 minimal
 

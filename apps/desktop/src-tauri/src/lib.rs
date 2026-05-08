@@ -581,6 +581,21 @@ pub fn run() {
                 tracing::info!("ExitRequested received, cancelling all in-flight chats");
                 registry.cancel_all();
             }
+            // Phase 13'.h.2.d Round 3 (ADR-0051) — llama-server 명시 cleanup.
+            // Drop이 자동 SIGKILL이지만 Arc<Mutex>에 hold된 상태라 명시 take()로 trigger.
+            // try_lock best-effort — chat이 동시 진행 중이면 곧 chat cancel 후 drop으로 흐름.
+            if let Some(state) = app_handle.try_state::<chat::llama_cpp::LlamaServerState>() {
+                tracing::info!("ExitRequested received, shutting down llama-server (best-effort)");
+                if let Ok(mut guard) = state.try_lock() {
+                    if guard.take().is_some() {
+                        tracing::info!("llama-server instance dropped on shutdown");
+                    }
+                } else {
+                    tracing::warn!(
+                        "llama-server state busy on exit — relying on Drop after task end"
+                    );
+                }
+            }
             // In-flight bench cancel.
             if let Some(registry) = app_handle.try_state::<Arc<BenchRegistry>>() {
                 tracing::info!("ExitRequested received, cancelling all in-flight benches");
