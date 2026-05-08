@@ -114,8 +114,13 @@ describe("Workbench Phase 5'.b — 5단계 작업대", () => {
     );
   });
 
-  // Phase R-F.3 — text input → 파일 선택 button 전환. legacy 보존 (v0.4.0에서 unskip + 통합).
-  it.skip("Step 1 — dataset path 입력 시 previewJsonl 호출 (디바운스 후)", async () => {
+  // Phase R-F.3 — pickJsonlFile token + previewJsonl 결과의 화면 노출 검증.
+  // legacy text-input it 대체 (Workbench v0.3.3에서 button 전환).
+  it("Step 1 — pickJsonlFile 후 preview 결과가 화면에 노출", async () => {
+    pickFileMock.mockResolvedValueOnce({
+      token: "tok-preview",
+      name: "preview.jsonl",
+    });
     previewMock.mockResolvedValue([
       {
         messages: [
@@ -126,16 +131,10 @@ describe("Workbench Phase 5'.b — 5단계 작업대", () => {
     ]);
     const user = userEvent.setup();
     render(<Workbench />);
-    const pathInput = screen.getByTestId("wb-input-dataset-path");
-    await user.type(pathInput, "/tmp/x.jsonl");
-    // 디바운스 250ms — 짧게 wait.
-    await waitFor(
-      () => {
-        expect(previewMock).toHaveBeenCalled();
-      },
-      { timeout: 1000 },
-    );
-    // preview 결과가 화면에 노출.
+    await user.click(screen.getByTestId("wb-input-dataset-path"));
+    await waitFor(() => expect(previewMock).toHaveBeenCalled(), {
+      timeout: 1000,
+    });
     await waitFor(() => {
       const preview = screen.getByTestId("wb-preview");
       expect(within(preview).getByText("hi")).toBeInTheDocument();

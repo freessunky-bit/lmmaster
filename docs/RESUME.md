@@ -17,6 +17,18 @@
 | 보강 리서치 (34건) | `docs/research/` |
 | 제품 비전 / 6 pillar | `docs/PRODUCT.md` |
 
+## 2026-05-08 v0.4.1 — Workbench 죽은 legacy text-input it 제거 + token-based 단일화
+
+Workbench.test.tsx의 `it.skip("Step 1 — dataset path 입력 시 previewJsonl 호출 (디바운스 후)")` 1 건은 *입력 시맨틱이 사라진* 죽은 테스트 (Workbench 컴포넌트는 v0.3.3에서 button 전환). 같은 invariant (preview 결과 화면 노출)는 token-based로 재작성하여 1 it 단일 통과.
+
+- `apps/desktop/src/pages/Workbench.test.tsx`: legacy it.skip 1 건 제거 + `pickJsonlFile` token + `previewJsonl` 결과의 `wb-preview` 노출 검증으로 invariant 보존. 18 tests 모두 통과.
+- Workspace.test.tsx의 legacy `describe.skip` 13 it 처리는 *Node 24 + vitest 2.1.9 + tinypool 1.1.1*에서 worker unexpected exit (3번째 it부터 SIGSEGV 추정). 환경 호환 fix가 별도 sub-phase 필요 — v0.5.x로 deferred.
+
+검증: cargo fmt --check + clippy + workspace test (변경 없음, 1120 passed) / Workbench.test.tsx 18 passed (v0.4.0 17 passed → +1) / tsc clean.
+
+후속:
+- *Phase R-M (가칭) — vitest 환경 호환 fix*: vitest 3.x upgrade 또는 Node 22 LTS pin. Workspace 12 it (legacy 13 - 1 신규 중복 삭제 가능) unskip 진입 조건.
+
 ## 2026-05-08 v0.4.0 — Phase 13'.h.2.d Round 2~4 LlamaCpp chat IPC wiring (vision 모델 활성)
 
 vision 모델 chat 실 동작 sub-phase 종결 (DEFERRED.md 우선순위 1). minor bump 0.3.4 → 0.4.0 — chat IPC LlamaCpp 분기 신규 동작 = 사용자 가치 추가.
