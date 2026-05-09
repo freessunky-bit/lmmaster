@@ -116,6 +116,7 @@ pub fn run() {
             keys::commands::create_api_key,
             keys::commands::list_api_keys,
             keys::commands::revoke_api_key,
+            keys::commands::delete_api_key,
             keys::commands::update_api_key_pipelines,
             keys::commands::update_api_key_scope,
             workspace::commands::get_workspace_fingerprint,

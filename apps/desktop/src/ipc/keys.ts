@@ -82,6 +82,11 @@ export async function revokeApiKey(id: string): Promise<void> {
   return invoke<void>("revoke_api_key", { id });
 }
 
+/** 회수된 키 영구 삭제. 미회수 키에 호출 시 에러. */
+export async function deleteApiKey(id: string): Promise<void> {
+  return invoke<void>("delete_api_key", { id });
+}
+
 /**
  * Phase 8'.c.3 (ADR-0029) — 키별 Pipeline 화이트리스트만 부분 업데이트.
  * `enabled_pipelines = null` = 전역 토글 따름. `[]` = 모두 비활성. 명시 vec = 그 ID만 활성.

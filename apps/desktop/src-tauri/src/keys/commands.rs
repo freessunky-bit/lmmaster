@@ -145,6 +145,16 @@ pub fn revoke_api_key(
     Ok(())
 }
 
+/// 회수된 키 영구 삭제. 미회수 상태 키는 거부 (먼저 회수 필요).
+#[tauri::command]
+pub fn delete_api_key(
+    km: tauri::State<'_, Arc<KeyManager>>,
+    id: String,
+) -> Result<(), KeyApiError> {
+    km.delete(&id)?;
+    Ok(())
+}
+
 /// Phase 8'.c.3 (ADR-0029) — 키별 Pipeline 화이트리스트 부분 업데이트.
 ///
 /// 정책:

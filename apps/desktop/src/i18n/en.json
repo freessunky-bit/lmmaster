@@ -1319,7 +1319,9 @@
     "actions": {
       "revoke": "Revoke",
       "revokeConfirm": "Revoke this key? Revoked keys stop working immediately.",
-      "edit": "Edit filters"
+      "edit": "Edit filters",
+      "delete": "Delete",
+      "deleteConfirm": "Permanently delete this revoked key? This cannot be undone."
     },
     "empty": {
       "title": "No keys yet",
@@ -1403,6 +1405,7 @@
       "emptyModels": "Pick at least one model. Toggle 'All' to allow every model.",
       "createFailed": "Couldn't create key. Retry.",
       "revokeFailed": "Couldn't revoke key.",
+      "deleteFailed": "Couldn't delete key. Make sure it has been revoked first.",
       "updateFailed": "Couldn't save filters. Retry?",
       "emptyScope": "Keep at least one model or endpoint pattern. An empty scope blocks every call."
     },

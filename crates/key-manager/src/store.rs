@@ -27,6 +27,8 @@ pub enum StoreError {
     Time(#[from] time::error::Format),
     #[error("키를 찾을 수 없어요 (id={0})")]
     NotFound(String),
+    #[error("회수되지 않은 키는 삭제할 수 없어요. 먼저 회수해 주세요 (id={0})")]
+    NotRevoked(String),
     #[error("키 저장소 패스프레이즈가 비어 있어요")]
     EmptyPassphrase,
     #[error("키 저장소 마이그레이션에 실패했어요: {0}")]
@@ -293,6 +295,19 @@ impl KeyStore {
                 return Err(StoreError::NotFound(id.to_string()));
             }
         }
+        Ok(())
+    }
+
+    /// 회수된 키 영구 삭제. 회수되지 않은 키는 거부.
+    pub fn delete(&self, id: &str) -> Result<(), StoreError> {
+        let row = self
+            .find_by_id(id)?
+            .ok_or_else(|| StoreError::NotFound(id.to_string()))?;
+        if row.revoked_at.is_none() {
+            return Err(StoreError::NotRevoked(id.to_string()));
+        }
+        self.conn
+            .execute("DELETE FROM api_keys WHERE id = ?1", params![id])?;
         Ok(())
     }
 

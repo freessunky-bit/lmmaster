@@ -13,6 +13,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+type CodeTab = "curl" | "js";
+
 import type { NetworkScope } from "../../ipc/keys";
 
 const AUTOMASK_SECONDS = 8;
@@ -49,6 +51,8 @@ export function ApiKeyRevealStep({
   const [maskedAt, setMaskedAt] = useState<number | null>(null);
   const [copiedTarget, setCopiedTarget] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(AUTOMASK_SECONDS);
+  const [codeTab, setCodeTab] = useState<CodeTab>("curl");
+  const [showTrouble, setShowTrouble] = useState(false);
 
   // 8초 카운트다운 + auto-mask.
   useEffect(() => {
@@ -100,6 +104,23 @@ export function ApiKeyRevealStep({
     `  -H "Authorization: Bearer ${exampleKey}" \\`,
     `  -H "Content-Type: application/json" \\`,
     `  -d '{"model":"${exampleModel}","messages":[{"role":"user","content":"안녕"}]}'`,
+  ].join("\n");
+
+  // JavaScript fetch 예시.
+  const jsExample = [
+    `const res = await fetch("${exampleBase}/chat/completions", {`,
+    `  method: "POST",`,
+    `  headers: {`,
+    `    "Authorization": "Bearer ${exampleKey}",`,
+    `    "Content-Type": "application/json",`,
+    `  },`,
+    `  body: JSON.stringify({`,
+    `    model: "${exampleModel}",`,
+    `    messages: [{ role: "user", content: "안녕" }],`,
+    `  }),`,
+    `});`,
+    `const data = await res.json();`,
+    `console.log(data.choices[0].message.content);`,
   ].join("\n");
 
   return (
@@ -211,19 +232,40 @@ export function ApiKeyRevealStep({
               t={t}
             />
 
-            {/* curl 예시 */}
+            {/* 코드 예시 — curl / JS 탭 */}
             <div className="keys-reveal-curl-block">
-              <div className="keys-reveal-row keys-reveal-curl-header">
-                <span className="keys-reveal-label">
-                  {t("keys.modal.guide.curlLabel")}
-                </span>
+              <div className="keys-reveal-code-tabs" role="tablist" aria-label="코드 예시">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={codeTab === "curl"}
+                  className={`keys-reveal-tab${codeTab === "curl" ? " is-active" : ""}`}
+                  onClick={() => setCodeTab("curl")}
+                >
+                  curl
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={codeTab === "js"}
+                  className={`keys-reveal-tab${codeTab === "js" ? " is-active" : ""}`}
+                  onClick={() => setCodeTab("js")}
+                >
+                  JavaScript
+                </button>
                 <button
                   type="button"
                   className="keys-button-secondary keys-reveal-copy-btn"
-                  onClick={() => void handleCopy("curl", curlExample)}
+                  style={{ marginLeft: "auto" }}
+                  onClick={() =>
+                    void handleCopy(
+                      "code",
+                      codeTab === "curl" ? curlExample : jsExample,
+                    )
+                  }
                   data-testid="keys-reveal-copy-curl"
                 >
-                  {copiedTarget === "curl"
+                  {copiedTarget === "code"
                     ? t("keys.modal.guide.copied")
                     : t("keys.modal.guide.copyAll")}
                 </button>
@@ -231,8 +273,9 @@ export function ApiKeyRevealStep({
               <pre
                 className="keys-reveal-curl num"
                 data-testid="keys-reveal-curl-block"
+                role="tabpanel"
               >
-                {curlExample}
+                {codeTab === "curl" ? curlExample : jsExample}
               </pre>
               {masked && (
                 <p
@@ -241,6 +284,46 @@ export function ApiKeyRevealStep({
                 >
                   {t("keys.modal.guide.maskedNote")}
                 </p>
+              )}
+            </div>
+
+            {/* 오류 체크리스트 — 토글 */}
+            <div className="keys-reveal-trouble">
+              <button
+                type="button"
+                className="keys-reveal-trouble-toggle"
+                aria-expanded={showTrouble}
+                onClick={() => setShowTrouble((v) => !v)}
+              >
+                {showTrouble ? "▾" : "▸"} 연결이 안 될 때 확인하세요
+              </button>
+              {showTrouble && (
+                <ol className="keys-reveal-trouble-list">
+                  <li>
+                    <strong>포트가 맞나요?</strong>{" "}
+                    하단 상태바의 포트 번호와 URL의 포트가 같아야 해요.
+                    현재 포트: <code className="num">{gatewayPort ?? "?"}</code>
+                  </li>
+                  <li>
+                    <strong>CORS 오류?</strong>{" "}
+                    키 발급 시 허용한 ORIGIN 주소와 브라우저 주소창이 정확히 같아야 해요
+                    (예: <code>http://localhost:3000</code>).
+                  </li>
+                  <li>
+                    <strong>401 인증 오류?</strong>{" "}
+                    헤더가 <code>Authorization: Bearer &lt;키&gt;</code> 형식인지 확인해요.
+                    공백·대소문자 주의.
+                  </li>
+                  <li>
+                    <strong>모델을 못 찾나요?</strong>{" "}
+                    <code>model</code> 값이 Ollama에 받아둔 모델 ID와 정확히 일치해야 해요.
+                    <code>ollama list</code>로 확인할 수 있어요.
+                  </li>
+                  <li>
+                    <strong>Ollama가 꺼져 있나요?</strong>{" "}
+                    LMmaster 하단에 "사용 가능" 표시가 있어야 Ollama가 실행 중인 거예요.
+                  </li>
+                </ol>
               )}
             </div>
           </section>

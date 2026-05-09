@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
+  deleteApiKey,
   listApiKeys,
   revokeApiKey,
   type ApiKeyView,
@@ -53,6 +54,21 @@ export function ApiKeysPanel() {
       } catch (e) {
         console.warn("revokeApiKey failed:", e);
         setError(t("keys.errors.revokeFailed"));
+      }
+    },
+    [refresh, t],
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      const ok = window.confirm(t("keys.actions.deleteConfirm"));
+      if (!ok) return;
+      try {
+        await deleteApiKey(id);
+        await refresh();
+      } catch (e) {
+        console.warn("deleteApiKey failed:", e);
+        setError(t("keys.errors.deleteFailed"));
       }
     },
     [refresh, t],
@@ -146,7 +162,7 @@ export function ApiKeysPanel() {
                   </span>
                 </td>
                 <td>
-                  {!k.revoked_at && (
+                  {!k.revoked_at ? (
                     <div className="keys-row-actions">
                       <button
                         type="button"
@@ -162,6 +178,17 @@ export function ApiKeysPanel() {
                         onClick={() => handleRevoke(k.id)}
                       >
                         {t("keys.actions.revoke")}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="keys-row-actions">
+                      <button
+                        type="button"
+                        className="keys-button-danger"
+                        onClick={() => handleDelete(k.id)}
+                        data-testid={`keys-delete-${k.id}`}
+                      >
+                        {t("keys.actions.delete")}
                       </button>
                     </div>
                   )}

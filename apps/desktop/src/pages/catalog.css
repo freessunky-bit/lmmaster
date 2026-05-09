@@ -1178,6 +1178,86 @@
   transition: width 200ms linear;
 }
 
+/* ── rp-explicit 모델 system prompt 안내 배너 ───────────────────── */
+
+.catalog-drawer-rp-guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary-a-3);
+  border-radius: var(--radius-2);
+}
+
+.catalog-drawer-rp-guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--fs-13);
+}
+
+.catalog-drawer-rp-guide-toggle {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: var(--fs-12);
+  color: var(--primary);
+  cursor: pointer;
+  padding: 0;
+}
+
+.catalog-drawer-rp-guide-body {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+  line-height: var(--lh-loose);
+}
+
+.catalog-drawer-rp-guide-step {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+}
+
+.catalog-drawer-rp-guide-steps {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+  line-height: var(--lh-loose);
+}
+
+.catalog-drawer-rp-guide-steps strong {
+  color: var(--text);
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
+.catalog-drawer-rp-guide-code {
+  margin: var(--space-1) 0 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-1);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--fs-12);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.catalog-drawer-rp-guide-prompt-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 .catalog-drawer-chat {
   background: var(--surface);
   color: var(--text);
