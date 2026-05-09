@@ -137,11 +137,7 @@ impl KeyManager {
 
     /// 회수된 키 영구 삭제. 미회수 키 삭제 시도 시 에러.
     pub fn delete(&self, id: &str) -> Result<(), KeyManagerError> {
-        Ok(self
-            .store
-            .lock()
-            .expect("KeyStore poisoned")
-            .delete(id)?)
+        Ok(self.store.lock().expect("KeyStore poisoned").delete(id)?)
     }
 
     /// Phase 8'.c.3 (ADR-0029) — `scope.enabled_pipelines`만 갱신.

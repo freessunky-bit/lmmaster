@@ -72,10 +72,7 @@ struct ModelItem {
     id: String,
 }
 
-async fn fetch_models(
-    base_url: &str,
-    api_key: &str,
-) -> Result<Vec<String>, RemoteEndpointError> {
+async fn fetch_models(base_url: &str, api_key: &str) -> Result<Vec<String>, RemoteEndpointError> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()
@@ -104,12 +101,12 @@ async fn fetch_models(
         return Err(RemoteEndpointError::TestFailed { message: msg });
     }
 
-    let list = resp
-        .json::<ModelListResponse>()
-        .await
-        .map_err(|e| RemoteEndpointError::TestFailed {
-            message: format!("응답 파싱 실패: {e}"),
-        })?;
+    let list =
+        resp.json::<ModelListResponse>()
+            .await
+            .map_err(|e| RemoteEndpointError::TestFailed {
+                message: format!("응답 파싱 실패: {e}"),
+            })?;
 
     Ok(list.data.into_iter().map(|m| m.id).collect())
 }

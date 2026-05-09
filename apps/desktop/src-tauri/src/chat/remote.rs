@@ -76,7 +76,9 @@ pub async fn start_remote_chat(
         .into_iter()
         .find(|e| e.id == endpoint_id)
         .ok_or_else(|| ChatApiError::Internal {
-            message: format!("원격 연결 정보를 찾을 수 없어요 (id={endpoint_id}). 다시 등록해 주세요."),
+            message: format!(
+                "원격 연결 정보를 찾을 수 없어요 (id={endpoint_id}). 다시 등록해 주세요."
+            ),
         })?;
 
     // 2. 채팅 ID + cancel token (ChatRegistry로 기존 cancel_all_chats와 호환).
@@ -149,12 +151,16 @@ pub async fn start_remote_chat(
         let body_text = resp.text().await.unwrap_or_default();
         let msg = match status.as_u16() {
             401 | 403 => "API 키가 올바르지 않아요. 키를 다시 확인해 주세요.".to_string(),
-            404 => format!("모델을 찾을 수 없어요: {model_id}. 사용자 A가 모델을 설치했는지 확인해 주세요."),
+            404 => format!(
+                "모델을 찾을 수 없어요: {model_id}. 사용자 A가 모델을 설치했는지 확인해 주세요."
+            ),
             429 => "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.".to_string(),
             _ => format!("원격 서버 오류 HTTP {status}: {body_text}"),
         };
         tracing::warn!(endpoint_id, %status, "원격 채팅 HTTP 오류");
-        let _ = channel.send(ChatEvent::Failed { message: msg.clone() });
+        let _ = channel.send(ChatEvent::Failed {
+            message: msg.clone(),
+        });
         return Ok(ChatOutcomeIpc::Failed { message: msg });
     }
 
