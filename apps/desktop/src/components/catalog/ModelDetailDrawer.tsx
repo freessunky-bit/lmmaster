@@ -1082,41 +1082,48 @@ function RpExplicitGuide() {
         </button>
       </div>
       <p className="catalog-drawer-rp-guide-body">
-        이 모델은 <strong>system prompt 없이는 성인 콘텐츠 요청을 거부</strong>해요.
-        채팅 창에서 직접 system prompt를 첫 번째 메시지로 설정해야 해요.
+        이 모델은 <strong>시스템 프롬프트 없이는 성인 콘텐츠를 거부</strong>해요.
+        모델을 설치한 후 <strong>채팅 메뉴</strong>에서 AI 역할을 설정하면 돼요.
       </p>
       {open && (
         <>
-          <p className="catalog-drawer-rp-guide-step">
-            <strong>방법</strong>: LMmaster 채팅에서는 현재 system prompt 입력란이 없어요.
-            Ollama CLI 또는 Modelfile로 설정하는 게 가장 확실해요.
-          </p>
           <ol className="catalog-drawer-rp-guide-steps">
             <li>
-              <strong>Ollama CLI 즉시 테스트</strong>
-              <pre className="catalog-drawer-rp-guide-code num">{`ollama run stheno-l3-8b <<EOF\n<system 프롬프트 내용>\nEOF`}</pre>
+              <strong>채팅 메뉴 진입</strong>
+              <p style={{ margin: "var(--space-1) 0 0", fontWeight: "normal" }}>
+                좌측 사이드바 → <strong>채팅</strong> → 모델 드롭다운에서 이 모델 선택
+              </p>
             </li>
             <li>
-              <strong>Modelfile로 영구 적용 (권장)</strong>
-              <pre className="catalog-drawer-rp-guide-code num">{`FROM stheno-l3-8b\nSYSTEM """\n[여기에 system prompt 입력]\n"""`}</pre>
-              이후 <code>ollama create mychar -f Modelfile</code> 실행
+              <strong>시스템 프롬프트 영역 펼치기</strong>
+              <p style={{ margin: "var(--space-1) 0 0", fontWeight: "normal" }}>
+                채팅 화면 상단의 <strong>▸ 시스템 프롬프트</strong> 버튼을 클릭하면 입력창이 열려요.
+                이 모델은 자동으로 열려 있어요.
+              </p>
             </li>
             <li>
-              <strong>권장 system prompt 템플릿</strong> (복사 후 수정해 쓰세요)
-              <div className="catalog-drawer-rp-guide-prompt-wrap">
-                <pre className="catalog-drawer-rp-guide-code num">
-                  {RP_SYSTEM_PROMPT_EXAMPLE}
-                </pre>
-                <button
-                  type="button"
-                  className="catalog-drawer-llama-btn"
-                  onClick={handleCopy}
-                >
-                  {copied ? "복사됐어요" : "복사할게요"}
-                </button>
-              </div>
+              <strong>AI 역할 입력 후 채팅 시작</strong>
+              <p style={{ margin: "var(--space-1) 0 0", fontWeight: "normal" }}>
+                "기본 템플릿 불러올게요" 버튼을 눌러 예시를 불러온 다음 캐릭터 이름과 배경을 수정하세요.
+                입력하지 않으면 모델이 성인 내용을 거부해요.
+              </p>
             </li>
           </ol>
+          <p className="catalog-drawer-rp-guide-step" style={{ marginTop: "var(--space-2)" }}>
+            <strong>참고 — 권장 system prompt 템플릿</strong> (복사 후 수정해 쓰세요)
+          </p>
+          <div className="catalog-drawer-rp-guide-prompt-wrap">
+            <pre className="catalog-drawer-rp-guide-code num">
+              {RP_SYSTEM_PROMPT_EXAMPLE}
+            </pre>
+            <button
+              type="button"
+              className="catalog-drawer-llama-btn"
+              onClick={handleCopy}
+            >
+              {copied ? "복사됐어요" : "복사할게요"}
+            </button>
+          </div>
         </>
       )}
     </div>
