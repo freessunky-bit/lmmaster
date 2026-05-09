@@ -63,6 +63,9 @@
     },
     "bundle": {
       "heading": "This week's curation",
+      "previewBadge": "Preview",
+      "itemCount": "{{count}} items",
+      "previewNote": "Seed content for the v2.0 preview. Real curator GHA cron + jsdelivr propagate kicks in at v2.0.",
       "publishedAt": "Published",
       "attribution": "Attribution"
     },

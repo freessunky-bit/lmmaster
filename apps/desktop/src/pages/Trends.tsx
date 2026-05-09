@@ -232,7 +232,7 @@ export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => voi
         </section>
       )}
 
-      {/* Phase 22'.c — 실 큐레이션 5건 카드 그리드. bundleItems 비어있으면 미렌더. */}
+      {/* Phase 22'.c — 시드 카드 그리드. v2.0 진입 시 큐레이터 GHA cron이 자동 갱신. */}
       {bundleItems.length > 0 && (
         <section
           className="trends-section"
@@ -242,12 +242,26 @@ export function Trends({ onNavigate }: { onNavigate?: (target: "catalog") => voi
           <h2 id="trends-bundle-heading" className="trends-section-heading">
             <Sparkles size={18} aria-hidden="true" />
             <span>{t("trends.bundle.heading", "이번 주 큐레이션")}</span>
+            <span className="trends-tier-badge" aria-label="Preview">
+              {t("trends.bundle.previewBadge", "프리뷰")}
+            </span>
+            <span className="trends-section-count" aria-live="polite">
+              {t("trends.bundle.itemCount", "{{count}}건", {
+                count: bundleItems.length,
+              })}
+            </span>
           </h2>
           {trendsBundleData.curator_note_ko && (
             <p className="trends-section-meta trends-curator-note">
               {trendsBundleData.curator_note_ko}
             </p>
           )}
+          <p className="trends-section-meta trends-preview-note">
+            {t(
+              "trends.bundle.previewNote",
+              "본 콘텐츠는 v2.0 진입 전 시드예요. 실 큐레이션 GHA cron + jsdelivr propagate는 v2.0에서 자동 동작해요.",
+            )}
+          </p>
           <ul className="trends-grid" role="list">
             {bundleItems.map((item) => {
               const Icon =

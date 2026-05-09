@@ -63,6 +63,9 @@
     },
     "bundle": {
       "heading": "이번 주 큐레이션",
+      "previewBadge": "프리뷰",
+      "itemCount": "{{count}}건",
+      "previewNote": "본 콘텐츠는 v2.0 진입 전 시드예요. 실 큐레이션 GHA cron + jsdelivr propagate는 v2.0에서 자동 동작해요.",
       "publishedAt": "발행",
       "attribution": "출처"
     },

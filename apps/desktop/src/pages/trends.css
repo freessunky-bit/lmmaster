@@ -120,6 +120,22 @@
   line-height: 1.6;
 }
 
+/* Phase 22'.c — section heading 끝의 카운트 + preview note (placeholder 식별). */
+.trends-section-count {
+  margin-left: auto;
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: normal;
+}
+
+.trends-preview-note {
+  font-style: italic;
+  color: var(--text-muted);
+  border-left: 2px solid var(--border);
+  padding-left: var(--space-3);
+}
+
 /* ── 카드 그리드 ────────────────────────────────────────── */
 
 .trends-grid {

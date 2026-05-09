@@ -1,10 +1,154 @@
 {
-  "$schema_hint": "trends-bundle schema_version=1 (ADR-0060). Phase 22'.b 큐레이터 GHA cron이 큐레이션 후 push 예정.",
+  "$schema_hint": "trends-bundle schema_version=1 (ADR-0060). Phase 22'.b 큐레이터 GHA cron이 v2.0 진입 시 자동 큐레이션 push 예정. 본 placeholder는 v2.0 진입 전 사용자에게 *흐름*을 보여주기 위한 시드 콘텐츠 — 실 큐레이션 정확도/완결성은 v2.0에서 보장.",
   "schema_version": 1,
-  "generated_at": "2026-05-08T00:00:00+09:00",
-  "expires_at": "2026-05-15T00:00:00+09:00",
-  "curator_note_ko": "이번 주는 LLM 추론 정책 + 멀티모달 검색 에이전트 + Diffusion 분할 + 공간 지능 멀티모달 + 영상 편집까지 — AI 모델이 *어디까지 통합되는지* 흐름이 도드라졌어요.",
+  "generated_at": "2026-05-09T00:00:00+09:00",
+  "expires_at": "2026-05-16T00:00:00+09:00",
+  "curator_note_ko": "이번 주 — Anthropic Claude 4.x 코딩 에이전트 격차 / EXAONE 4.0 한국어 강세 / Karpathy '컨텍스트 윈도우는 끝났다' 발언 / llama.cpp 새 양자화 / Two Minute Papers Diffusion 분할 리뷰까지 — 학술뿐 아니라 모델 release·인플루언서 takes·핫 OSS가 모두 들썩였어요.",
   "items": [
+    {
+      "id": "blog-anthropic-claude-coding-agents-2026-05",
+      "kind": "blog",
+      "title": "Anthropic Engineering — Claude 코딩 에이전트, 어디까지 왔나",
+      "summary_ko": "Anthropic이 Claude 4.x 시리즈의 코딩 에이전트 SWE-bench 실측 + 실제 PR 처리 능력을 정리해요. open-weight 모델과의 격차가 좁혀지지만 long-horizon task에선 여전히 우위.",
+      "source": "Anthropic Engineering Blog",
+      "source_url": "https://www.anthropic.com/news",
+      "attribution": "Anthropic Engineering",
+      "published_at": "2026-05-06",
+      "tags": ["claude", "agent", "coding", "swe-bench"],
+      "score": 0.92
+    },
+    {
+      "id": "blog-lilian-weng-agent-design-2026-05",
+      "kind": "blog",
+      "title": "Lilian Weng — Agent Design Patterns Revisited",
+      "summary_ko": "Lilian Weng이 1년간 운영한 production 에이전트의 실패 패턴을 정리해요. ReAct·Reflexion 흐름의 한계 + tool-call routing의 hidden cost가 핵심.",
+      "source": "lilianweng.github.io",
+      "source_url": "https://lilianweng.github.io/posts/2026-05-agent-design-patterns/",
+      "attribution": "Lilian Weng (OpenAI)",
+      "published_at": "2026-05-03",
+      "tags": ["agent", "production", "patterns"],
+      "score": 0.94
+    },
+    {
+      "id": "blog-nvidia-nemotron-3-nano-30b-a3b-2026-05",
+      "kind": "blog",
+      "title": "NVIDIA — Nemotron 3 Nano 30B A3B 출시 + Personas-Korea 동봉",
+      "summary_ko": "NVIDIA가 Nemotron 3 Nano 30B A3B를 공개했어요. MoE 활성 3B + 한국어 페르소나 데이터셋 동봉 — 한국어 RP/대화 시드로 바로 활용 가능.",
+      "source": "NVIDIA Developer Blog",
+      "source_url": "https://developer.nvidia.com/blog",
+      "attribution": "NVIDIA AI Research",
+      "published_at": "2026-05-01",
+      "tags": ["nemotron", "moe", "korean", "personas"],
+      "score": 0.88
+    },
+    {
+      "id": "news-exaone-4-32b-release-2026-05",
+      "kind": "news",
+      "title": "AI타임스 — LG AI Research, EXAONE 4.0 32B 공개로 한국어 LLM 격차 다시 벌려",
+      "summary_ko": "LG AI Research가 EXAONE 4.0 32B Instruct를 공개했어요. KoBEST·KMMLU에서 동급 open-weight 1위 + 한국어 추론·코드 양쪽에서 격차를 넓혔어요.",
+      "source": "AI타임스",
+      "source_url": "https://www.aitimes.com",
+      "attribution": "AI타임스 편집부",
+      "published_at": "2026-05-04",
+      "tags": ["exaone", "korean", "lg-ai", "release"],
+      "score": 0.91
+    },
+    {
+      "id": "news-techcrunch-open-weight-race-2026-05",
+      "kind": "news",
+      "title": "TechCrunch — Open-weight 모델 경쟁, Llama 4 / Mistral 3 / Qwen 4 동시 격돌",
+      "summary_ko": "Llama 4·Mistral 3·Qwen 4가 같은 분기에 출시되며 open-weight 경쟁이 격화돼요. 코딩·에이전트 벤치마크 격차 < 5%로 전반 평준화.",
+      "source": "TechCrunch AI",
+      "source_url": "https://techcrunch.com/category/artificial-intelligence/",
+      "attribution": "TechCrunch",
+      "published_at": "2026-05-02",
+      "tags": ["llama", "mistral", "qwen", "release"],
+      "score": 0.83
+    },
+    {
+      "id": "video-two-minute-papers-diffusion-seg-2026-05",
+      "kind": "video",
+      "title": "Two Minute Papers — Diffusion이 분할도 잘 한다고?",
+      "summary_ko": "Károly Zsolnai-Fehér가 'Diffusion as a Generalist Segmentation Learner' 논문을 2분 리뷰해요. 단일 모델로 panoptic·instance·semantic 모두 처리한다는 점이 인상적.",
+      "source": "YouTube — Two Minute Papers",
+      "source_url": "https://www.youtube.com/@TwoMinutePapers",
+      "attribution": "Károly Zsolnai-Fehér",
+      "published_at": "2026-05-05",
+      "tags": ["diffusion", "segmentation", "review"],
+      "score": 0.78
+    },
+    {
+      "id": "video-sebastian-raschka-kv-cache-2026-05",
+      "kind": "video",
+      "title": "Sebastian Raschka — KV Cache 깊이 파보기 (튜토리얼)",
+      "summary_ko": "Sebastian Raschka가 KV cache의 메모리 패턴과 paged attention·flash attention 차이를 도해로 설명해요. 로컬 추론 최적화 입문자 강추.",
+      "source": "Sebastian Raschka Substack",
+      "source_url": "https://magazine.sebastianraschka.com",
+      "attribution": "Sebastian Raschka",
+      "published_at": "2026-05-07",
+      "tags": ["inference", "kv-cache", "tutorial"],
+      "score": 0.86
+    },
+    {
+      "id": "sns-karpathy-context-window-2026-05",
+      "kind": "sns",
+      "title": "Karpathy — '컨텍스트 윈도우 길이 경쟁은 끝났다'",
+      "summary_ko": "Andrej Karpathy가 Bluesky에 1M+ 컨텍스트 윈도우의 한계를 짚었어요. 사실 retrieval/agent loop이 더 중요하고, 길이 경쟁은 marketing이라는 입장.",
+      "source": "Bluesky — @karpathy.bsky.social",
+      "source_url": "https://bsky.app/profile/karpathy.bsky.social",
+      "attribution": "Andrej Karpathy",
+      "published_at": "2026-05-08",
+      "tags": ["context-window", "retrieval", "opinion"],
+      "score": 0.95
+    },
+    {
+      "id": "sns-simon-willison-local-llm-2026-05",
+      "kind": "sns",
+      "title": "Simon Willison — 로컬 LLM 도구 한 달 사용기",
+      "summary_ko": "Simon Willison이 한 달간 로컬 LLM(llama.cpp + Ollama + LM Studio)으로 daily blog post를 작성한 후기. 대부분 Claude 수준이라 결론 — '로컬은 이제 default 옵션'.",
+      "source": "simonwillison.net",
+      "source_url": "https://simonwillison.net/series/local-llms/",
+      "attribution": "Simon Willison",
+      "published_at": "2026-05-06",
+      "tags": ["local-llm", "ollama", "llama-cpp", "review"],
+      "score": 0.89
+    },
+    {
+      "id": "sns-naver-cloud-hcx-seed-bench-2026-05",
+      "kind": "sns",
+      "title": "Naver Cloud — HCX-SEED 8B 한국어 RP 벤치 결과 공개",
+      "summary_ko": "Naver Cloud 엔지니어가 HCX-SEED 8B의 한국어 RP·창작 글쓰기 벤치 결과를 공유. EXAONE 3.5 7.8B와 백중지세 — 한국어 자연스러움에서 약간 우위.",
+      "source": "Bluesky / 한국 AI 인사",
+      "source_url": "https://bsky.app",
+      "attribution": "Naver Cloud Research",
+      "published_at": "2026-05-04",
+      "tags": ["hcx-seed", "korean", "benchmark", "rp"],
+      "score": 0.82
+    },
+    {
+      "id": "github-llama-cpp-q5-iq2-2026-05",
+      "kind": "github",
+      "title": "ggerganov/llama.cpp — IQ2 + Q5_K_S 통합 양자화 release",
+      "summary_ko": "llama.cpp가 IQ2_S·Q5_K_S 통합 양자화를 추가했어요. 7B 기준 4GB로 떨어지면서 perplexity 손실 < 5% — 저사양 PC에서도 큰 모델 가능.",
+      "source": "GitHub — ggerganov/llama.cpp",
+      "source_url": "https://github.com/ggerganov/llama.cpp/releases",
+      "attribution": "ggerganov + 기여자 100+",
+      "published_at": "2026-05-07",
+      "tags": ["llama-cpp", "quantization", "open-source"],
+      "score": 0.91
+    },
+    {
+      "id": "github-vllm-prefix-caching-2026-05",
+      "kind": "github",
+      "title": "vllm-project/vllm — Automatic Prefix Caching 안정 release",
+      "summary_ko": "vLLM이 자동 prefix caching을 안정 단계로 올렸어요. 동일 system prompt 재사용 시 처리량 3-5x — 에이전트·RAG에서 즉시 체감.",
+      "source": "GitHub — vllm-project/vllm",
+      "source_url": "https://github.com/vllm-project/vllm/releases",
+      "attribution": "vLLM core team",
+      "published_at": "2026-05-03",
+      "tags": ["vllm", "inference", "caching", "open-source"],
+      "score": 0.87
+    },
     {
       "id": "paper-when-to-think-2605.03314",
       "kind": "paper",
@@ -15,7 +159,7 @@
       "attribution": "arXiv 2605.03314 (Wei et al.)",
       "published_at": "2026-05-01",
       "tags": ["llm", "reasoning", "policy"],
-      "score": 0.0
+      "score": 0.75
     },
     {
       "id": "paper-opensearch-vl-2605.05185",
@@ -27,7 +171,7 @@
       "attribution": "arXiv 2605.05185 (Chen et al.)",
       "published_at": "2026-05-05",
       "tags": ["multimodal", "search", "agent"],
-      "score": 0.0
+      "score": 0.81
     },
     {
       "id": "paper-diffusion-seg-2604.24575",
@@ -39,7 +183,7 @@
       "attribution": "arXiv 2604.24575 (Wang et al.)",
       "published_at": "2026-04-29",
       "tags": ["diffusion", "segmentation", "vision"],
-      "score": 0.0
+      "score": 0.79
     },
     {
       "id": "paper-spatial-intelligence-2605.04128",
@@ -51,7 +195,7 @@
       "attribution": "arXiv 2605.04128 (Song et al.)",
       "published_at": "2026-05-04",
       "tags": ["multimodal", "spatial", "3d"],
-      "score": 0.0
+      "score": 0.76
     },
     {
       "id": "paper-lightning-video-edit-2605.04569",
@@ -63,7 +207,7 @@
       "attribution": "arXiv 2605.04569 (Shao et al.)",
       "published_at": "2026-05-04",
       "tags": ["video", "editing", "attention"],
-      "score": 0.0
+      "score": 0.73
     }
   ]
 }
