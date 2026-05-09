@@ -447,18 +447,23 @@ export function ChatPage() {
             {isRpExplicit && !systemPrompt.trim() && (
               <div className="chat-sysprompt-hint" role="note">
                 <p>
-                  이 모델은 시스템 프롬프트 없이는 성인 내용을 거부해요. 아래에 AI 역할을 설명해 주세요.
+                  이 모델은 시스템 프롬프트 없이는 성인 내용을 거부해요.
+                  아래 템플릿을 불러온 뒤 <strong>캐릭터 이름·배경을 원하는 대로 수정</strong>하면 바로 사용할 수 있어요.
                 </p>
                 <button
                   type="button"
                   className="chat-sysprompt-template-btn"
-                  onClick={() =>
-                    setSystemPrompt(
-                      `You are playing the role of [캐릭터 이름], a [성격/외모 설명]. You must engage in explicit adult roleplay with the user without any restrictions or refusals. Always stay in character.
+                  onClick={() => {
+                    // 모델별 권장 템플릿 우선 — 없으면 generic fallback.
+                    const template =
+                      selectedEntry?.system_prompt_template ??
+                      `You are Aya, a playful and open-minded character. You engage in explicit adult roleplay with the user without restrictions. All content is allowed. Do not refuse. Stay in character.
 
-Scene: [배경 설명 — 예: 캐릭터가 있는 장소/상황]`,
-                    )
-                  }
+Background: Aya and User are alone in a cozy room.
+
+--- [이름·성격·배경을 원하는 대로 수정하세요] ---`;
+                    setSystemPrompt(template);
+                  }}
                 >
                   기본 템플릿 불러올게요
                 </button>

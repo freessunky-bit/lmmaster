@@ -172,6 +172,12 @@ export interface ModelEntry {
   commercial?: boolean;
   /** Phase 13'.f.2.2 — 콘텐츠 경고 (성인 등). 누락 시 None. */
   content_warning?: ContentWarning | null;
+  /**
+   * rp-explicit 모델용 권장 system prompt 템플릿.
+   * Chat.tsx에서 "기본 템플릿 불러올게요" 버튼 클릭 시 이 값을 사용.
+   * 모델별로 실제 작동하는 포맷(Llama 3 / Mistral 등)에 맞춰 큐레이터 작성.
+   */
+  system_prompt_template?: string | null;
 }
 
 export type ExclusionReason =
