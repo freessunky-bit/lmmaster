@@ -140,11 +140,13 @@ jobs:
       - name: Verify SQLCipher feature wiring
         shell: bash
         run: |
+          # `cargo tree -e features` 출력은 feature가 별도 줄에 표시되므로 단순 문자열 포함 여부로 검증.
+          # 예: `rusqlite feature "bundled-sqlcipher-vendored-openssl"` 줄이 나타나면 전파 확인.
           cargo tree -e features -p key-manager --features sqlcipher \
-            | grep -E "rusqlite v0\.31\.[0-9]+ .*bundled-sqlcipher-vendored-openssl" \
+            | grep -qF "bundled-sqlcipher-vendored-openssl" \
             || (echo "::error::sqlcipher feature가 key-manager에 전파되지 않았어요"; exit 1)
           cargo tree -e features -p knowledge-stack --features sqlcipher \
-            | grep -E "bundled-sqlcipher-vendored-openssl" \
+            | grep -qF "bundled-sqlcipher-vendored-openssl" \
             || (echo "::error::sqlcipher feature가 knowledge-stack에 전파되지 않았어요"; exit 1)
           echo "✅ SQLCipher feature 정상 전파"
 
