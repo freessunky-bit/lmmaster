@@ -39,9 +39,36 @@ export type ChatOutcome =
   | { kind: "cancelled" }
   | { kind: "failed"; message: string };
 
+// Rust ChatApiError enum과 1:1 대응 (chat/mod.rs #[serde(tag = "kind", rename_all = "kebab-case")]).
 export type ChatApiError =
   | { kind: "unsupported-runtime"; runtime: string }
-  | { kind: "internal"; message: string };
+  | { kind: "internal"; message: string }
+  | { kind: "llama-server-not-configured" }
+  | { kind: "llama-cpp-not-prepared"; message: string }
+  | { kind: "llama-server-start-failed"; message: string };
+
+/** ChatApiError에서 사용자 향 한국어 메시지 추출. */
+export function chatApiErrorMessage(e: unknown): string {
+  const err = e as Partial<ChatApiError>;
+  switch (err.kind) {
+    case "unsupported-runtime":
+      return `지원하지 않는 런타임이에요 (${(err as { runtime?: string }).runtime ?? ""}). 카탈로그에서 Ollama 또는 llama.cpp용 모델인지 확인해 주세요.`;
+    case "internal":
+      return (err as { message?: string }).message ?? "내부 오류가 났어요. 다시 시도해 볼래요?";
+    case "llama-server-not-configured":
+      return "llama-server 경로가 설정되지 않았어요. 설정 화면에서 경로를 등록해 주세요.";
+    case "llama-cpp-not-prepared":
+      return (err as { message?: string }).message ?? "LlamaCpp 모델 파일을 찾지 못했어요. 카탈로그에서 먼저 받아주세요.";
+    case "llama-server-start-failed":
+      return (err as { message?: string }).message ?? "LlamaCpp 서버를 시작하지 못했어요. 다시 시도해 볼래요?";
+    default:
+      // Tauri가 message 필드를 가진 Error-like 객체로 래핑하는 경우.
+      if (typeof (e as { message?: unknown }).message === "string") {
+        return (e as { message: string }).message;
+      }
+      return "알 수 없는 오류가 났어요. 다시 시도해 볼래요?";
+  }
+}
 
 /** 채팅 1턴 시작. delta 이벤트가 스트리밍으로 도착. */
 export async function startChat(args: {

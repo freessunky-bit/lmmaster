@@ -727,10 +727,13 @@
       "actions": {
         "install": "Install",
         "reinstall": "Reinstall",
+        "openOfficialSite": "Open official site",
+        "openOfficialSiteAgain": "Reopen site",
         "details": "Details",
         "openFolder": "Open folder",
         "cancel": "Stop"
       },
+      "externalBadge": "External site",
       "cards": {
         "ollama": {
           "name": "Ollama",
@@ -739,9 +742,16 @@
         },
         "lmStudio": {
           "name": "LM Studio",
-          "reason": "Best if you want a GUI. Install from the official site.",
-          "license": "EULA acceptance required"
+          "reason": "Great if you want a GUI. Auto-install is not allowed; we open the official site for you (EULA policy).",
+          "license": "EULA required · install from official site"
         }
+      },
+      "openedUrl": {
+        "title": "{{name}} official site opened",
+        "body": "Finish the install on the official site and LMmaster will pick it up automatically. If the page didn't open, copy the URL below and open it manually.",
+        "reopen": "Reopen site",
+        "openFailed": "Couldn't reopen the site. Please copy the URL and open it yourself.",
+        "dismiss": "Got it"
       },
       "empty": {
         "title": "Both runtimes are ready",
@@ -1537,6 +1547,7 @@
       },
       "cta": {
         "install": "Install",
+        "openOfficial": "Open official site",
         "alreadyOk": "Ready"
       },
       "cards": {
@@ -1546,7 +1557,7 @@
           "size": "~800MB"
         },
         "lmStudio": {
-          "reason": "Best if you want a GUI. Install from the official site.",
+          "reason": "Great if you want a GUI. Auto-install is not allowed; we open the official site for you (EULA policy).",
           "license": "EULA acceptance required",
           "size": "From the official site"
         }

@@ -94,6 +94,29 @@ describe("Step3Install", () => {
     });
   });
 
+  it("idle — LM Studio CTA는 '공식 사이트 열게요' 라벨로 차별화 (자동 설치 오해 방지, ADR-0016)", async () => {
+    mocks.sub.mockReturnValue("idle");
+    mocks.env.mockReturnValue(ENV_NO_RUNTIMES);
+    const send = vi.fn();
+    mocks.send.mockReturnValue(send);
+    const user = userEvent.setup();
+    render(<Step3Install />);
+    // Ollama는 cta.install, LM Studio는 cta.openOfficial — 라벨로 구분돼야 해요.
+    expect(
+      screen.getAllByRole("button", {
+        name: "onboarding.install.cta.install",
+      }),
+    ).toHaveLength(1);
+    const lmCta = screen.getByRole("button", {
+      name: "onboarding.install.cta.openOfficial",
+    });
+    await user.click(lmCta);
+    expect(send).toHaveBeenCalledWith({
+      type: "SELECT_MODEL",
+      id: "lm-studio",
+    });
+  });
+
   it("skip 상태 — 안내 banner 노출 (1.2초 후 자동 done은 머신 책임)", () => {
     mocks.sub.mockReturnValue("skip");
     render(<Step3Install />);

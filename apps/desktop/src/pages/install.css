@@ -106,6 +106,27 @@
   border: 1px solid var(--border);
 }
 
+/* 외부 사이트 안내 chip — LM Studio 같이 EULA로 자동 설치 금지된 카드. */
+.install-card-external-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.install-card-external-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-11);
+  font-weight: var(--weight-medium);
+  background: var(--primary-a-2);
+  color: var(--primary);
+  border: 1px solid var(--primary-a-3);
+}
+
 .install-card-reason {
   margin: 0;
   font-size: var(--fs-13);
@@ -128,6 +149,10 @@
 }
 
 .install-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   appearance: none;
   font: inherit;
   height: 32px;
@@ -142,6 +167,10 @@
   transition:
     background var(--dur-fast) var(--ease-emphasized),
     border-color var(--dur-fast) var(--ease-emphasized);
+}
+
+.install-action-icon {
+  flex-shrink: 0;
 }
 
 .install-action:hover {
@@ -236,6 +265,43 @@
 
 .onb-install-progress.is-compact .onb-install-bar {
   height: 4px;
+}
+
+/* ── OpenedUrl 안내 패널 — LM Studio 등 외부 사이트 전용 런타임 ── */
+
+.install-opened-url {
+  gap: var(--space-3);
+}
+
+.install-opened-url-body {
+  margin: 0;
+  font-size: var(--fs-13);
+  line-height: var(--lh-loose);
+  color: var(--text-secondary);
+}
+
+.install-opened-url-link {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  font-size: var(--fs-12);
+  color: var(--text);
+  word-break: break-all;
+  user-select: all;
+}
+
+.install-opened-url-error {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--text-secondary);
+}
+
+.install-opened-url-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 /* ── Empty state ──────────────────────────────────────────────── */

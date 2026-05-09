@@ -18,6 +18,7 @@ import {
 
 import {
   cancelAllChats,
+  chatApiErrorMessage,
   listLocalLlamaCppModels,
   startChat,
   type ChatEvent,
@@ -297,10 +298,7 @@ export function ChatPage() {
         );
       }
     } catch (e) {
-      const msg =
-        (e as { message?: string }).message ??
-        (e as { kind?: string; runtime?: string }).runtime ??
-        String(e);
+      const msg = chatApiErrorMessage(e);
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMsg.id

@@ -203,7 +203,9 @@ function RuntimeCard({
       >
         {isRunning
           ? t("onboarding.install.cta.alreadyOk")
-          : t("onboarding.install.cta.install")}
+          : pillKind === "eula"
+            ? t("onboarding.install.cta.openOfficial")
+            : t("onboarding.install.cta.install")}
       </button>
     </SpotlightCard>
   );

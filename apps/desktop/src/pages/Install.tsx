@@ -3,8 +3,11 @@
 // 정책 (phase-4-screens-decision.md §1.1 install + phase-4b-install-screen-decision.md):
 // - 카드 그리드 (Ollama + LM Studio 2 카드).
 // - 카드 상태별 액션: not-installed → "받을게요", running/installed → "재설치", 공통 "자세히" / "폴더 열기".
+// - LM Studio는 EULA 상 자동 설치 금지(ADR-0016) → CTA 라벨을 "공식 사이트 열게요"로 차별화 +
+//   카드 헤더에 외부 사이트 안내 chip 노출. 사용자가 ollama처럼 자체 다운로드된다고 오해하지 않도록.
 // - 카드 클릭 시 우측 drawer로 manifest detail.
 // - 설치 진행 중일 때 하단 진행 패널 (InstallProgress compact 모드) — 접힘 가능.
+// - OpenedUrl outcome일 때는 진행 바 대신 OpenedUrlNotice 노출(다시 열기 + URL 복사 안내).
 // - 둘 다 설치되어 있으면 빈 상태 + 카탈로그 이동 CTA.
 // - 디자인 토큰만 사용. 인라인 스타일 금지.
 
@@ -17,6 +20,8 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { ExternalLink } from "lucide-react";
+import { open as openExternal } from "@tauri-apps/plugin-shell";
 
 import { StatusPill, type PillStatus } from "@lmmaster/design-system/react";
 
@@ -41,8 +46,13 @@ interface RuntimeCardDef {
   licenseKey: string;
   /** 설치 크기 표시(라이선스 분리). */
   installSize: string;
-  /** 공식 사이트 링크. drawer에 노출. */
+  /** 공식 사이트 링크. drawer에 노출 + OpenedUrlNotice fallback URL. */
   homepage: string;
+  /**
+   * EULA 등으로 자동 설치가 금지되어 공식 사이트로만 설치 가능한 런타임 표식.
+   * true면 CTA 라벨을 "공식 사이트 열게요"로 바꾸고 외부 사이트 chip을 노출.
+   */
+  externalSiteOnly: boolean;
 }
 
 const RUNTIME_DEFS: RuntimeCardDef[] = [
@@ -53,6 +63,7 @@ const RUNTIME_DEFS: RuntimeCardDef[] = [
     licenseKey: "screens.install.cards.ollama.license",
     installSize: "약 800MB",
     homepage: "https://ollama.com/",
+    externalSiteOnly: false,
   },
   {
     id: "lm-studio",
@@ -60,9 +71,14 @@ const RUNTIME_DEFS: RuntimeCardDef[] = [
     reasonKey: "screens.install.cards.lmStudio.reason",
     licenseKey: "screens.install.cards.lmStudio.license",
     installSize: "공식 사이트 안내",
-    homepage: "https://lmstudio.ai/",
+    homepage: "https://lmstudio.ai/download",
+    externalSiteOnly: true,
   },
 ];
+
+function defForId(id: RuntimeCardDef["id"]): RuntimeCardDef {
+  return RUNTIME_DEFS.find((d) => d.id === id) ?? RUNTIME_DEFS[0]!;
+}
 
 // ── State 모델 ────────────────────────────────────────────────────
 
@@ -298,11 +314,25 @@ function RuntimeCard({
     onSelect();
   };
 
+  // LM Studio 등 외부 사이트 전용 런타임은 CTA 라벨을 명확히 분리해
+  // "ollama처럼 자동 설치되는 줄 알았다"는 오해를 방지(ADR-0016).
+  const primaryActionKey = (() => {
+    if (def.externalSiteOnly) {
+      return isReady
+        ? "screens.install.actions.openOfficialSiteAgain"
+        : "screens.install.actions.openOfficialSite";
+    }
+    return isReady
+      ? "screens.install.actions.reinstall"
+      : "screens.install.actions.install";
+  })();
+
   return (
     <article
       className="install-card"
       data-runtime={def.id}
       data-status={status}
+      data-external-site={def.externalSiteOnly ? "true" : undefined}
       onClick={handleAreaClick}
       aria-labelledby={titleId}
     >
@@ -312,6 +342,15 @@ function RuntimeCard({
         </h3>
         <span className="install-card-license">{t(def.licenseKey)}</span>
       </div>
+
+      {def.externalSiteOnly && (
+        <div className="install-card-external-row">
+          <span className="install-card-external-chip">
+            <ExternalLink size={12} aria-hidden="true" />
+            <span>{t("screens.install.externalBadge")}</span>
+          </span>
+        </div>
+      )}
 
       <div className="install-card-status-row">
         <StatusPill
@@ -331,9 +370,14 @@ function RuntimeCard({
           onClick={onInstall}
           disabled={isInstalling}
         >
-          {isReady
-            ? t("screens.install.actions.reinstall")
-            : t("screens.install.actions.install")}
+          {def.externalSiteOnly && (
+            <ExternalLink
+              size={14}
+              aria-hidden="true"
+              className="install-action-icon"
+            />
+          )}
+          <span>{t(primaryActionKey)}</span>
         </button>
         <button
           type="button"
@@ -382,6 +426,19 @@ function ProgressPanel({
 }) {
   const { t } = useTranslation();
   const isFinished = isTerminalData(active.data);
+  const openedUrl = openedUrlOf(active.data);
+
+  if (openedUrl) {
+    return (
+      <OpenedUrlNotice
+        runtimeId={active.id}
+        runtimeName={nameForId(active.id, t)}
+        url={openedUrl}
+        onDismiss={onDismiss}
+      />
+    );
+  }
+
   return (
     <section
       className="install-progress-panel"
@@ -413,6 +470,89 @@ function ProgressPanel({
       />
     </section>
   );
+}
+
+// ── OpenedUrl 안내 패널 ────────────────────────────────────────
+//
+// LM Studio처럼 EULA로 자동 설치가 금지된 런타임은 백엔드가 ActionOutcome::OpenedUrl을
+// 반환해요. 다운로드 진행 바는 의미가 없고 "사이트 열렸다 + 설치 완료 후 자동 인식돼요"
+// 메시지가 핵심이에요. URL은 selectable 텍스트로 노출해 사용자가 직접 복사 가능.
+
+function OpenedUrlNotice({
+  runtimeId,
+  runtimeName,
+  url,
+  onDismiss,
+}: {
+  runtimeId: RuntimeCardDef["id"];
+  runtimeName: string;
+  url: string;
+  onDismiss: () => void;
+}) {
+  const { t } = useTranslation();
+  const [reopenError, setReopenError] = useState<string | null>(null);
+
+  const handleReopen = useCallback(async () => {
+    setReopenError(null);
+    try {
+      await openExternal(url);
+    } catch (e) {
+      console.warn("openExternal failed:", e);
+      setReopenError(t("screens.install.openedUrl.openFailed"));
+    }
+  }, [url, t]);
+
+  return (
+    <section
+      className="install-progress-panel install-opened-url"
+      data-runtime={runtimeId}
+      aria-labelledby="install-opened-url-title"
+      aria-live="polite"
+      role="status"
+    >
+      <div className="install-topbar-row">
+        <h3
+          id="install-opened-url-title"
+          className="install-progress-panel-title"
+        >
+          {t("screens.install.openedUrl.title", { name: runtimeName })}
+        </h3>
+      </div>
+      <p className="install-opened-url-body">
+        {t("screens.install.openedUrl.body")}
+      </p>
+      <p className="install-opened-url-link num">{url}</p>
+      {reopenError && (
+        <p className="install-opened-url-error" role="alert">
+          {reopenError}
+        </p>
+      )}
+      <div className="install-opened-url-actions">
+        <button
+          type="button"
+          className="install-action is-primary"
+          onClick={handleReopen}
+        >
+          <ExternalLink
+            size={14}
+            aria-hidden="true"
+            className="install-action-icon"
+          />
+          <span>{t("screens.install.openedUrl.reopen")}</span>
+        </button>
+        <button type="button" className="install-action" onClick={onDismiss}>
+          {t("screens.install.openedUrl.dismiss")}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function openedUrlOf(data: InstallProgressData): string | null {
+  const ev = data.latest;
+  if (ev?.kind !== "finished") return null;
+  if (ev.outcome.kind !== "opened-url") return null;
+  return ev.outcome.url;
 }
 
 // ── 빈 상태 ────────────────────────────────────────────────────

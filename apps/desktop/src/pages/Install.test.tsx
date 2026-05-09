@@ -39,6 +39,13 @@ vi.mock("../ipc/install", () => ({
   cancelInstall: vi.fn().mockResolvedValue(undefined),
 }));
 
+const openExternalMock = vi.hoisted(() =>
+  vi.fn(async (_url: string) => undefined as void),
+);
+vi.mock("@tauri-apps/plugin-shell", () => ({
+  open: openExternalMock,
+}));
+
 import { detectEnvironment, type EnvironmentReport } from "../ipc/environment";
 import { cancelInstall, installApp } from "../ipc/install";
 import type { InstallEvent } from "../ipc/install-events";
@@ -96,6 +103,8 @@ beforeEach(() => {
   );
   vi.mocked(installApp).mockImplementation(() => new Promise(() => {}));
   vi.mocked(cancelInstall).mockResolvedValue(undefined);
+  openExternalMock.mockReset();
+  openExternalMock.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -135,15 +144,28 @@ describe("InstallPage 렌더", () => {
     ).toBeTruthy();
   });
 
-  it("not-installed 카드는 '받을게요' 버튼 노출", async () => {
-    render(<InstallPage />);
+  it("Ollama 카드는 '받을게요' / LM Studio 카드는 '공식 사이트 열게요' 노출 (CTA 라벨 분리)", async () => {
+    const { container } = render(<InstallPage />);
     await waitFor(() => {
-      // 카드는 role=button, footer에도 button — 모두 install button이 두 개 (카드당 1).
-      const installButtons = screen.getAllByRole("button", {
-        name: /screens\.install\.actions\.install/,
-      });
-      expect(installButtons.length).toBe(2);
+      expect(container.querySelectorAll(".install-card").length).toBe(2);
     });
+    const cards = container.querySelectorAll(".install-card");
+    const ollamaCard = cards[0]! as HTMLElement;
+    const lmCard = cards[1]! as HTMLElement;
+
+    // Ollama: 자동 설치 가능 → install 라벨.
+    const ollamaInstall = within(ollamaCard).getAllByRole("button", {
+      name: /screens\.install\.actions\.install$/,
+    });
+    expect(ollamaInstall.length).toBe(1);
+
+    // LM Studio: EULA 외부 사이트 전용 → openOfficialSite 라벨 + 외부 사이트 chip.
+    const lmOpenSite = within(lmCard).getAllByRole("button", {
+      name: /screens\.install\.actions\.openOfficialSite$/,
+    });
+    expect(lmOpenSite.length).toBe(1);
+    expect(lmCard.dataset["externalSite"]).toBe("true");
+    expect(within(lmCard).getByText("screens.install.externalBadge")).toBeTruthy();
   });
 });
 
@@ -274,6 +296,52 @@ describe("InstallPage 진행 패널", () => {
     });
     await user.click(cancelBtn);
     expect(cancelInstall).toHaveBeenCalledWith("ollama");
+  });
+});
+
+describe("InstallPage OpenedUrl outcome (LM Studio)", () => {
+  it("LM Studio 클릭 → 백엔드가 opened-url outcome emit → OpenedUrlNotice + URL + 다시 열기", async () => {
+    let emitter: ((event: InstallEvent) => void) | null = null;
+    vi.mocked(installApp).mockImplementation((_id, options) => {
+      emitter = options.onEvent;
+      return new Promise(() => {});
+    });
+    const user = userEvent.setup();
+    const { container } = render(<InstallPage />);
+    await waitFor(() => {
+      expect(container.querySelectorAll(".install-card").length).toBe(2);
+    });
+
+    // LM Studio 카드(두 번째)의 footer "공식 사이트 열게요" 버튼 클릭.
+    const cards = container.querySelectorAll(".install-card");
+    const lmCard = cards[1]! as HTMLElement;
+    const lmCta = within(lmCard).getByRole("button", {
+      name: /screens\.install\.actions\.openOfficialSite$/,
+    });
+    await user.click(lmCta);
+
+    // 백엔드가 finished + opened-url outcome 이벤트를 흘려보내요.
+    emitter!({
+      kind: "finished",
+      outcome: { kind: "opened-url", url: "https://lmstudio.ai/download" },
+    });
+
+    // OpenedUrlNotice가 노출되고 URL 텍스트가 selectable로 보여야 함.
+    await waitFor(() => {
+      const panel = container.querySelector(".install-opened-url");
+      expect(panel).toBeTruthy();
+      expect(
+        within(panel as HTMLElement).getByText("https://lmstudio.ai/download"),
+      ).toBeTruthy();
+    });
+
+    // "다시 열기" 버튼 클릭 시 openExternal 호출.
+    const panel = container.querySelector(".install-opened-url") as HTMLElement;
+    const reopenBtn = within(panel).getByRole("button", {
+      name: /screens\.install\.openedUrl\.reopen/,
+    });
+    await user.click(reopenBtn);
+    expect(openExternalMock).toHaveBeenCalledWith("https://lmstudio.ai/download");
   });
 });
 

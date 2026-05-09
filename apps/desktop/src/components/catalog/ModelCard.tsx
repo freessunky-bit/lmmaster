@@ -15,7 +15,6 @@ import type {
   ModelEntry,
   Recommendation,
 } from "../../ipc/catalog";
-import { buildWorkbenchHash } from "../workbench/hash";
 import { SpotlightCard } from "../SpotlightCard";
 
 import {
@@ -189,7 +188,7 @@ export function ModelCard({
             data-testid={`catalog-card-start-${model.id}`}
             onClick={(e) => {
               e.stopPropagation();
-              window.location.hash = buildWorkbenchHash(model.id, intent);
+              onSelect(model);
             }}
             title={t(
               "catalog.card.startWorkbenchTitle",

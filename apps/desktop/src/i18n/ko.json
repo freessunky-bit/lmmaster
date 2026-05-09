@@ -727,10 +727,13 @@
       "actions": {
         "install": "받을게요",
         "reinstall": "다시 받을게요",
+        "openOfficialSite": "공식 사이트 열게요",
+        "openOfficialSiteAgain": "사이트 다시 열게요",
         "details": "자세히 볼래요",
         "openFolder": "폴더 열기",
         "cancel": "그만둘게요"
       },
+      "externalBadge": "외부 사이트 안내",
       "cards": {
         "ollama": {
           "name": "Ollama",
@@ -739,9 +742,16 @@
         },
         "lmStudio": {
           "name": "LM Studio",
-          "reason": "GUI가 필요하면 좋아요. 공식 사이트에서 설치해요",
-          "license": "EULA 동의 필요"
+          "reason": "GUI가 필요하면 좋아요. 자동 설치는 안 되고 공식 사이트로 안내해 드려요 (EULA 정책)",
+          "license": "EULA 동의 필요 · 공식 사이트 설치"
         }
+      },
+      "openedUrl": {
+        "title": "{{name}} 공식 사이트가 열렸어요",
+        "body": "공식 사이트에서 설치를 끝내면 LMmaster가 자동으로 인식해요. 페이지가 열리지 않았으면 아래 주소를 복사해서 직접 열어보세요.",
+        "reopen": "사이트 다시 열게요",
+        "openFailed": "사이트를 다시 열지 못했어요. 주소를 복사해 직접 열어주세요.",
+        "dismiss": "확인했어요"
       },
       "empty": {
         "title": "두 런타임 모두 준비됐어요",
@@ -1537,6 +1547,7 @@
       },
       "cta": {
         "install": "받을게요",
+        "openOfficial": "공식 사이트 열게요",
         "alreadyOk": "준비됐어요"
       },
       "cards": {
@@ -1546,7 +1557,7 @@
           "size": "약 800MB"
         },
         "lmStudio": {
-          "reason": "GUI가 필요하면 좋아요. 공식 사이트에서 직접 설치해요",
+          "reason": "GUI가 필요하면 좋아요. 자동 설치는 안 되고 공식 사이트로 안내해 드려요 (EULA 정책)",
           "license": "EULA 동의 필요",
           "size": "공식 사이트 안내"
         }
