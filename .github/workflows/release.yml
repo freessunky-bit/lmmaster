@@ -135,20 +135,21 @@ jobs:
         shell: bash
 
       # Phase R-F+R-G hotfix (ADR-0064 §3) — release-only SQLCipher feature wiring 검증.
-      # cargo tree로 rusqlite의 활성 features에 bundled-sqlcipher-vendored-openssl이 포함되는지 grep.
-      # 본 step이 fail하면 tauri-action `args: '--features sqlcipher'` 주입이 끊겼거나 forwarding 깨진 거예요.
+      # Cargo.toml 파일을 직접 grep해서 sqlcipher feature 정의 + desktop forwarding을 검증.
+      # cargo tree -e features는 가상 워크스페이스에서 feature 이름을 출력에 포함하지 않아 신뢰 불가.
+      # 실제 컴파일 검증은 이후 tauri-action 빌드 step에서 자동 수행.
       - name: Verify SQLCipher feature wiring
         shell: bash
         run: |
-          # `cargo tree -e features` 출력은 feature가 별도 줄에 표시되므로 단순 문자열 포함 여부로 검증.
-          # 예: `rusqlite feature "bundled-sqlcipher-vendored-openssl"` 줄이 나타나면 전파 확인.
-          cargo tree -e features -p key-manager --features sqlcipher \
-            | grep -qF "bundled-sqlcipher-vendored-openssl" \
-            || (echo "::error::sqlcipher feature가 key-manager에 전파되지 않았어요"; exit 1)
-          cargo tree -e features -p knowledge-stack --features sqlcipher \
-            | grep -qF "bundled-sqlcipher-vendored-openssl" \
-            || (echo "::error::sqlcipher feature가 knowledge-stack에 전파되지 않았어요"; exit 1)
-          echo "✅ SQLCipher feature 정상 전파"
+          grep -qF 'bundled-sqlcipher-vendored-openssl' crates/key-manager/Cargo.toml \
+            || (echo "::error::key-manager Cargo.toml에 sqlcipher feature 정의가 없어요"; exit 1)
+          grep -qF 'bundled-sqlcipher-vendored-openssl' crates/knowledge-stack/Cargo.toml \
+            || (echo "::error::knowledge-stack Cargo.toml에 sqlcipher feature 정의가 없어요"; exit 1)
+          grep -qF 'key-manager/sqlcipher' apps/desktop/src-tauri/Cargo.toml \
+            || (echo "::error::desktop crate가 key-manager/sqlcipher를 forwarding하지 않아요"; exit 1)
+          grep -qF 'knowledge-stack/sqlcipher' apps/desktop/src-tauri/Cargo.toml \
+            || (echo "::error::desktop crate가 knowledge-stack/sqlcipher를 forwarding하지 않아요"; exit 1)
+          echo "✅ SQLCipher feature 정의 + forwarding 확인"
 
       - name: Frontend type-check
         run: pnpm --filter @lmmaster/desktop exec tsc -b
