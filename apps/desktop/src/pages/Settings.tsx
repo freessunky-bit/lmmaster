@@ -82,8 +82,10 @@ const CATEGORIES: CategoryKey[] = [
 /** registry URL은 외부 통신 0 정책상 표시만. */
 const REGISTRY_URL = "lmmaster://registry/local";
 
-/** 빌드 시점 mock — 실제는 Tauri info()에서 가져옴. v1.1에 wire-up. */
-const APP_VERSION = "0.1.0";
+// vite.config.ts의 define으로 빌드 시 package.json 버전이 주입됨.
+declare const __APP_VERSION__: string;
+const APP_VERSION =
+  typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
 const BUILD_COMMIT = "dev";
 
 /** 자동 갱신 — GitHub repo (외부 통신 0 정책 예외, ADR-0026 §1). */

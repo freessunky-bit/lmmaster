@@ -66,7 +66,8 @@ function slugifyAscii(s: string): string {
  * 마커가 있으면 우선, 없으면 제목 slugify.
  */
 export function parseSections(md: string): MarkdownSection[] {
-  const blocks = md.split(/\n---\n/);
+  // \r?\n 으로 Windows CRLF + Unix LF 모두 처리.
+  const blocks = md.split(/\r?\n---\r?\n/);
   const out: MarkdownSection[] = [];
   for (const block of blocks) {
     const trimmed = block.trim();
