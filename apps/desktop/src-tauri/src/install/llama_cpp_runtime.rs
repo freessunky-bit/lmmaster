@@ -163,6 +163,7 @@ pub async fn install_llama_cpp_runtime(
         expected_sha256: None,
         size_hint: Some(asset.size),
         max_retries: None,
+        auth_header: None, // GitHub Releases는 공개 URL.
     };
     let channel_dl = channel.clone();
     let sink = move |ev: DownloadEvent| {

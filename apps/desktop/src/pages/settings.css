@@ -440,6 +440,43 @@
   padding: var(--space-2) var(--space-3);
 }
 
+/* ── HuggingFace Token ───────────────────────────────────────────── */
+
+.settings-hf-token-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.settings-hf-token-input {
+  flex: 1;
+  min-width: 200px;
+  appearance: none;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--fs-13);
+  color: var(--text);
+}
+
+.settings-hf-token-input:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: 1px;
+  border-color: var(--primary);
+}
+
+.settings-link {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.settings-link:hover {
+  text-decoration: underline;
+}
+
 /* ── LAN gateway (Phase 8'.c.4 / ADR-0066) ─────────────────────── */
 
 .settings-warning {

@@ -11,6 +11,7 @@
 //! startup env 주입. 변경 후 게이트웨이 재시작 필요 (자동 hot-restart는 v1.x 이월).
 
 pub mod gateway;
+pub mod hf_token;
 pub mod llama_server;
 pub mod models;
 pub mod remote_endpoints;
@@ -52,6 +53,11 @@ pub struct UserSettings {
     /// 빈 vec이 default. 기존 settings.json 호환 (serde default).
     #[serde(default)]
     pub remote_endpoints: Vec<RemoteEndpoint>,
+
+    /// HuggingFace Personal Access Token — gated 모델 다운로드에 필요.
+    /// None이면 공개 모델만 다운 가능. settings.json에 평문 저장 (로컬 파일 시스템 보호에 의존).
+    #[serde(default)]
+    pub hf_access_token: Option<String>,
 }
 
 impl UserSettings {

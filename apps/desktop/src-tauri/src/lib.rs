@@ -193,6 +193,9 @@ pub fn run() {
             settings::llama_server::set_llama_server_path,
             settings::llama_server::clear_llama_server_path,
             // Phase 8'.c.4 (ADR-0066) — 사내망 노출 + LAN IP 감지.
+            settings::hf_token::get_hf_token_prefix,
+            settings::hf_token::set_hf_token,
+            settings::hf_token::clear_hf_token,
             settings::gateway::get_gateway_allow_external,
             settings::gateway::set_gateway_allow_external,
             settings::gateway::list_lan_addresses,

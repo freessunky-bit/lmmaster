@@ -987,6 +987,9 @@ function AdvancedPanel({ version, commit }: AdvancedPanelProps) {
       {/* Phase 8'.0.c — Workbench artifact retention */}
       <WorkbenchArtifactPanel />
 
+      {/* HuggingFace Access Token — gated 모델(HCX-SEED 등) 다운로드 */}
+      <HfTokenPanel />
+
       {/* Phase 13'.h.2.e.1 — LlamaCpp binary path 등록 */}
       <LlamaServerPanel />
 
@@ -1033,6 +1036,128 @@ interface SettingRadioProps {
   disabled?: boolean;
   label: string;
   iconRight?: ReactNode;
+}
+
+// ── HuggingFace Access Token 패널 ────────────────────────────────────
+//
+// 설정 > 고급 — gated 모델(HCX-SEED 등) 다운로드에 필요한 HF 토큰 등록.
+// 토큰은 settings.json에 평문 저장. UI에는 prefix만 노출.
+
+type HfTokenStatus =
+  | { kind: "idle" }
+  | { kind: "saved"; prefix: string }
+  | { kind: "error"; message: string };
+
+function HfTokenPanel() {
+  const { t } = useTranslation();
+  const [status, setStatus] = useState<HfTokenStatus>({ kind: "idle" });
+  const [inputValue, setInputValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const refresh = useCallback(async () => {
+    try {
+      const { invoke: inv } = await import("@tauri-apps/api/core");
+      const prefix = await inv<string | null>("get_hf_token_prefix");
+      setStatus(prefix ? { kind: "saved", prefix } : { kind: "idle" });
+    } catch (e) {
+      console.warn("get_hf_token_prefix failed:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const handleSave = useCallback(async () => {
+    if (!inputValue.trim()) return;
+    setBusy(true);
+    try {
+      const { invoke: inv } = await import("@tauri-apps/api/core");
+      await inv("set_hf_token", { token: inputValue.trim() });
+      setInputValue("");
+      await refresh();
+    } catch (e) {
+      const msg = (e as { message?: string }).message ?? "저장 실패";
+      setStatus({ kind: "error", message: msg });
+    } finally {
+      setBusy(false);
+    }
+  }, [inputValue, refresh]);
+
+  const handleClear = useCallback(async () => {
+    setBusy(true);
+    try {
+      const { invoke: inv } = await import("@tauri-apps/api/core");
+      await inv("clear_hf_token");
+      await refresh();
+    } catch (e) {
+      console.warn("clear_hf_token failed:", e);
+    } finally {
+      setBusy(false);
+    }
+  }, [refresh]);
+
+  return (
+    <fieldset className="settings-fieldset" data-testid="settings-hf-token">
+      <legend className="settings-legend">HuggingFace 액세스 토큰</legend>
+      <p className="settings-hint">
+        네이버 HCX-SEED 등 <strong>접근 신청이 필요한 모델</strong>을 받으려면 HuggingFace 개인
+        토큰이 필요해요.{" "}
+        <a
+          href="https://huggingface.co/settings/tokens"
+          target="_blank"
+          rel="noreferrer"
+          className="settings-link"
+        >
+          huggingface.co/settings/tokens
+        </a>
+        에서 발급 후 붙여넣어 주세요.
+      </p>
+
+      {status.kind === "saved" && (
+        <p className="settings-readonly-text" data-testid="settings-hf-token-saved">
+          등록됨: <code className="num">{status.prefix}</code>
+        </p>
+      )}
+      {status.kind === "error" && (
+        <p className="settings-error" role="alert">
+          {status.message}
+        </p>
+      )}
+
+      <div className="settings-hf-token-row">
+        <input
+          type="password"
+          className="settings-hf-token-input"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder={status.kind === "saved" ? "새 토큰으로 교체하려면 입력해요" : "hf_..."}
+          disabled={busy}
+          autoComplete="off"
+          data-testid="settings-hf-token-input"
+        />
+        <button
+          type="button"
+          className="settings-btn-primary"
+          onClick={handleSave}
+          disabled={busy || !inputValue.trim()}
+          data-testid="settings-hf-token-save"
+        >
+          {busy ? "저장 중…" : "저장할게요"}
+        </button>
+        {status.kind === "saved" && (
+          <button
+            type="button"
+            className="settings-btn-secondary"
+            onClick={handleClear}
+            disabled={busy}
+            data-testid="settings-hf-token-clear"
+          >
+            제거할게요
+          </button>
+        )}
+      </div>
+    </fieldset>
+  );
 }
 
 function SettingRadio({

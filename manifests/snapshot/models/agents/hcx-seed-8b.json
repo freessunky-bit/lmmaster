@@ -10,7 +10,7 @@
       "model_family": "hcx",
       "source": {
         "type": "hugging-face",
-        "repo": "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B-GGUF",
+        "repo": "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-8B-GGUF",
         "file": "HyperCLOVAX-SEED-Text-Instruct-Q4_K_M.gguf"
       },
       "runner_compatibility": ["llama-cpp", "ollama", "lm-studio"],

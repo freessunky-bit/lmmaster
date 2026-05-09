@@ -224,6 +224,7 @@ impl ActionExecutor {
             expected_sha256,
             size_hint: None,
             max_retries: Some(5),
+            auth_header: None,
         };
         self.downloader.download(&req, cancel, sink).await?;
 
@@ -414,6 +415,7 @@ impl ActionExecutor {
             expected_sha256,
             size_hint: None,
             max_retries: Some(5),
+            auth_header: None, // installer(Ollama 등) 다운로드는 공개 URL — 인증 불필요.
         };
         let outcome = self.downloader.download(&req, cancel, sink).await?;
         Ok(outcome.final_path)

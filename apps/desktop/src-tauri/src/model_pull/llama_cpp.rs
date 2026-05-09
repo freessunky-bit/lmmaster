@@ -29,6 +29,7 @@ pub async fn pull_llama_model(
     cache_dir: &Path,
     channel: &Channel<ModelPullEvent>,
     cancel: &CancellationToken,
+    hf_auth_header: Option<String>,
 ) -> Result<(), ModelPullApiError> {
     // 1. cache_dir mkdir (idempotent).
     std::fs::create_dir_all(cache_dir).map_err(|e| ModelPullApiError::Internal {
@@ -65,6 +66,7 @@ pub async fn pull_llama_model(
         expected_sha256: main_sha,
         size_hint: Some(quant.size_mb.saturating_mul(1024 * 1024)),
         max_retries: None,
+        auth_header: hf_auth_header.clone(),
     };
     let main_sink = make_sink(channel.clone(), cancel.clone(), main_filename.clone());
     let _ = channel.send(ModelPullEvent::Status {
@@ -93,6 +95,7 @@ pub async fn pull_llama_model(
             expected_sha256: mmproj_sha,
             size_hint: Some(mmproj.size_mb.saturating_mul(1024 * 1024)),
             max_retries: None,
+            auth_header: hf_auth_header.clone(),
         };
         let mmproj_sink = make_sink(channel.clone(), cancel.clone(), mmproj_name.clone());
         let _ = channel.send(ModelPullEvent::Status {

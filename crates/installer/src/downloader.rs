@@ -23,7 +23,7 @@ const PROGRESS_BYTES_THRESHOLD: u64 = 256 * 1024;
 const PROGRESS_INTERVAL_MS: u128 = 100;
 
 /// 다운로드 요청.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct DownloadRequest {
     pub url: String,
     /// 검증 성공 후 atomic rename할 최종 경로. 부모 디렉터리는 사전 존재 가정 (호출자가 보장).
@@ -34,6 +34,9 @@ pub struct DownloadRequest {
     pub size_hint: Option<u64>,
     /// 최대 retry 횟수 (default 5).
     pub max_retries: Option<u32>,
+    /// HTTP Authorization 헤더 값. HuggingFace gated 모델 다운로드 시 "Bearer {hf_token}" 형식.
+    /// None이면 헤더 미포함 (공개 모델은 불필요).
+    pub auth_header: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -152,10 +155,13 @@ impl Downloader {
             }
         }
 
-        // Range request.
+        // Range request + optional Authorization header (HuggingFace gated 모델 등).
         let mut request = self.client.get(&req.url);
         if resume_from > 0 {
             request = request.header(reqwest::header::RANGE, format!("bytes={}-", resume_from));
+        }
+        if let Some(auth) = req.auth_header.as_deref() {
+            request = request.header(reqwest::header::AUTHORIZATION, auth);
         }
         let resp = request.send().await?;
 

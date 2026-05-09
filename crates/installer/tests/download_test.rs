@@ -60,6 +60,7 @@ async fn fresh_download_with_correct_sha256() {
         expected_sha256: Some(expected),
         size_hint: None,
         max_retries: Some(0),
+        auth_header: None,
     };
     let cancel = CancellationToken::new();
     let sink = CapturedSink::default();
@@ -269,6 +270,7 @@ async fn progress_events_throttled_emitted() {
         expected_sha256: Some(expected),
         size_hint: None,
         max_retries: Some(0),
+        auth_header: None,
     };
     let cancel = CancellationToken::new();
     let sink = CapturedSink::default();
