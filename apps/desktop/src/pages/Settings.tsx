@@ -27,10 +27,8 @@ import {
 
 import {
   getEncryptDbHint,
-  getNotifyOnPhase5,
   getScanInterval,
   getUpdateChannel,
-  setNotifyOnPhase5 as writeNotifyOnPhase5,
   setScanInterval as writeScanInterval,
   setUpdateChannel as writeUpdateChannel,
   type ScanIntervalValue,
@@ -194,12 +192,9 @@ interface GeneralPanelProps {
 function GeneralPanel({ currentLang, onChangeLanguage }: GeneralPanelProps) {
   const { t } = useTranslation();
   const [scanMin, setScanMin] = useState<ScanIntervalValue>(60);
-  const [notifyOn, setNotifyOn] = useState<boolean>(false);
 
-  // 첫 마운트 시 localStorage 로드.
   useEffect(() => {
     setScanMin(getScanInterval());
-    setNotifyOn(getNotifyOnPhase5());
   }, []);
 
   const handleLangChange = useCallback(
@@ -294,27 +289,6 @@ function GeneralPanel({ currentLang, onChangeLanguage }: GeneralPanelProps) {
             onChange={() => handleScanChange(60)}
             label={t("screens.settings.general.scanInterval.60m")}
           />
-        </div>
-      </fieldset>
-
-      <fieldset className="settings-fieldset">
-        <legend className="settings-legend">
-          {t("screens.settings.general.voice")}
-        </legend>
-        <div className="settings-toggle-row">
-          <ToggleSwitch
-            checked={notifyOn}
-            onChange={() => {
-              const next = !notifyOn;
-              setNotifyOn(next);
-              writeNotifyOnPhase5(next);
-            }}
-            disabled
-            ariaLabel={t("screens.settings.general.voice")}
-          />
-          <span className="settings-coming-soon">
-            {t("screens.settings.general.voice.comingSoon")}
-          </span>
         </div>
       </fieldset>
 

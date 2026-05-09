@@ -8,7 +8,7 @@
 // - "이 모델 설치할게요" → in-place 풀 진행 패널 (페이지 이동 없음).
 // - 풀 완료 시 자동으로 30초 측정 가능 상태로 전환 + CTA 강조.
 
-import { Sparkles } from "lucide-react";
+import { Download, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -26,6 +26,11 @@ import {
   type QuantOption,
   type RuntimeKind,
 } from "../../ipc/catalog";
+import {
+  getLlamaServerPath,
+  installLlamaCppRuntime,
+  type LlamaInstallEvent,
+} from "../../ipc/llama-server-settings";
 import {
   bytesToSize,
   cancelModelPull,
@@ -80,10 +85,73 @@ export function ModelDetailDrawer({
   const [benchState, setBenchState] = useState<BenchChipState>({ kind: "idle" });
   const [pullState, setPullState] = useState<PullState>({ kind: "idle" });
 
+  // llama-server 설치 여부 — llama-cpp 기반 모델에서만 확인.
+  const [llamaReady, setLlamaReady] = useState<boolean | null>(null);
+  const [llamaInstalling, setLlamaInstalling] = useState(false);
+  const [llamaInstallMsg, setLlamaInstallMsg] = useState<string | null>(null);
+  const [llamaInstallPct, setLlamaInstallPct] = useState<number | null>(null);
+  const [llamaInstallDone, setLlamaInstallDone] = useState(false);
+
+  const isLlamaCpp = model?.runner_compatibility[0] === "llama-cpp";
+
   const runtime = benchRuntime ?? pickRuntime(model) ?? DEFAULT_BENCH_RUNTIME;
 
   // 이 모델을 recommended_models[]에 포함하는 preset 목록.
   const [recommendedPresets, setRecommendedPresets] = useState<Preset[]>([]);
+
+  // llama-cpp 기반 모델이면 llama-server 설치 여부 확인.
+  useEffect(() => {
+    if (!model || !isLlamaCpp) {
+      setLlamaReady(null);
+      setLlamaInstallDone(false);
+      return;
+    }
+    setLlamaInstallDone(false);
+    setLlamaInstallMsg(null);
+    getLlamaServerPath()
+      .then((p) => setLlamaReady(!!p && p.length > 0))
+      .catch(() => setLlamaReady(false));
+  }, [model, isLlamaCpp]);
+
+  const handleAutoInstallLlama = useCallback(async () => {
+    setLlamaInstalling(true);
+    setLlamaInstallMsg("준비하고 있어요…");
+    setLlamaInstallPct(null);
+    try {
+      await installLlamaCppRuntime((event: LlamaInstallEvent) => {
+        if (event.kind === "status") {
+          setLlamaInstallMsg(event.status);
+        } else if (event.kind === "progress") {
+          const pct =
+            event.total_bytes > 0
+              ? Math.round((event.completed_bytes / event.total_bytes) * 100)
+              : null;
+          const mb = (event.completed_bytes / 1_048_576).toFixed(0);
+          const totalMb =
+            event.total_bytes > 0
+              ? `/${(event.total_bytes / 1_048_576).toFixed(0)}MB`
+              : "";
+          setLlamaInstallMsg(`받고 있어요 ${mb}${totalMb}`);
+          setLlamaInstallPct(pct);
+        } else if (event.kind === "completed") {
+          setLlamaInstallDone(true);
+          setLlamaReady(true);
+          setLlamaInstallMsg(null);
+        } else if (event.kind === "failed") {
+          setLlamaInstallMsg(`실패했어요 — ${event.message}`);
+        }
+      });
+      setLlamaReady(true);
+      setLlamaInstallDone(true);
+    } catch (e) {
+      setLlamaInstallMsg(
+        `설치에 실패했어요 — ${e instanceof Error ? e.message : "다시 시도해 볼래요?"}`,
+      );
+    } finally {
+      setLlamaInstalling(false);
+      setLlamaInstallPct(null);
+    }
+  }, []);
 
   // model이 바뀔 때마다 첫 quant를 default로 + 캐시된 측정 결과 조회.
   useEffect(() => {
@@ -359,6 +427,7 @@ export function ModelDetailDrawer({
               type="button"
               className="catalog-drawer-chat"
               onClick={handleOpenChat}
+              disabled={isLlamaCpp && llamaReady === false}
               aria-label={`${model.display_name}로 채팅 페이지로 이동할게요`}
               data-testid="drawer-chat-button"
             >
@@ -377,6 +446,54 @@ export function ModelDetailDrawer({
         </header>
 
         <div className="catalog-drawer-body">
+          {/* llama-server 미설치 안내 — 설정>고급 안 가도 여기서 바로 설치 가능. */}
+          {isLlamaCpp && llamaReady === false && (
+            <div className="catalog-drawer-llama-notice" role="alert">
+              <div className="catalog-drawer-llama-notice-header">
+                <Download size={16} aria-hidden="true" />
+                <strong>llama-server가 필요해요</strong>
+              </div>
+              <p className="catalog-drawer-llama-notice-body">
+                이 모델은 llama.cpp 런타임을 써요. 채팅을 시작하려면 llama-server를 먼저 받아야 해요.
+              </p>
+              {llamaInstallDone ? (
+                <p className="catalog-drawer-llama-notice-done" role="status">
+                  설치 완료됐어요. 이제 채팅으로 시험해 볼 수 있어요.
+                </p>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="catalog-drawer-llama-btn"
+                    onClick={handleAutoInstallLlama}
+                    disabled={llamaInstalling}
+                  >
+                    {llamaInstalling ? "받고 있어요…" : "자동으로 받을게요"}
+                  </button>
+                  {llamaInstallMsg && (
+                    <p className="catalog-drawer-llama-notice-msg" aria-live="polite">
+                      {llamaInstallMsg}
+                    </p>
+                  )}
+                  {llamaInstalling && llamaInstallPct !== null && (
+                    <div
+                      className="catalog-drawer-llama-bar-wrap"
+                      role="progressbar"
+                      aria-valuenow={llamaInstallPct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                    >
+                      <div
+                        className="catalog-drawer-llama-bar"
+                        style={{ width: `${llamaInstallPct}%` }}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           {pullState.kind !== "idle" && (
             <PullProgressPanel
               state={pullState}

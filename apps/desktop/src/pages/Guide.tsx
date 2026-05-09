@@ -8,6 +8,20 @@
 // - i18n: ko / en 마크다운 동시 갱신 (guide-{ko,en}-v1.md).
 // - markdown renderer는 _render-markdown.ts에서 공유 (EulaGate와 함께).
 
+import type React from "react";
+import {
+  BookOpen,
+  BrainCircuit,
+  Database,
+  FileSearch,
+  HelpCircle,
+  Key,
+  LayoutGrid,
+  MessageSquare,
+  Package,
+  Settings2,
+  Zap,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -22,6 +36,21 @@ import guideKo from "../i18n/guide-ko-v1.md?raw";
 import guideEn from "../i18n/guide-en-v1.md?raw";
 
 import "./guide.css";
+
+/** 섹션별 아이콘 (lucide-react). */
+const SECTION_ICONS: Record<string, React.ElementType> = {
+  "getting-started": Zap,
+  catalog: LayoutGrid,
+  chat: MessageSquare,
+  "model-tuning": Settings2,
+  workbench: BrainCircuit,
+  "persona-simulation": FileSearch,
+  knowledge: Database,
+  "api-keys": Key,
+  portable: Package,
+  diagnostics: BookOpen,
+  faq: HelpCircle,
+};
 
 /** 가이드 섹션 — 마크다운 마커와 일치해야 해요 (`<!-- section: id -->`). */
 const SECTION_IDS = [
@@ -223,6 +252,7 @@ export function Guide({ initialSection }: GuideProps = {}) {
             >
               {filteredSections.map((s) => {
                 const id = s.id as SectionId;
+                const Icon = SECTION_ICONS[s.id] ?? HelpCircle;
                 return (
                   <button
                     key={s.id}
@@ -234,7 +264,12 @@ export function Guide({ initialSection }: GuideProps = {}) {
                     onClick={() => setActiveId(id)}
                     data-testid={`guide-section-${s.id}`}
                   >
-                    {t(`screens.guide.sections.${s.id}`, s.title)}
+                    <span className="guide-section-item-icon" aria-hidden="true">
+                      <Icon size={14} />
+                    </span>
+                    <span className="guide-section-item-label">
+                      {t(`screens.guide.sections.${s.id}`, s.title)}
+                    </span>
                   </button>
                 );
               })}

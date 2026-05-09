@@ -115,8 +115,10 @@ export function ChatPage() {
         if (preselect) {
           setSelectedRuntimeId(preselect);
         } else if (local.length > 0) {
-          // 첫 번째 받은 모델 자동 선택.
           setSelectedRuntimeId(local[0]?.id ?? "");
+        } else if (llamaCppIds.length > 0) {
+          // llama-cpp 기반 모델만 설치된 경우에도 자동 선택 — Ollama 없어도 입력창 활성.
+          setSelectedRuntimeId(llamaCppIds[0] ?? "");
         }
       })
       .catch((e) => {
@@ -431,7 +433,7 @@ export function ChatPage() {
       {availableModels.length === 0 && (
         <div className="chat-empty" role="status">
           <p className="chat-empty-text">
-            아직 받은 Ollama 모델이 없어요. 카탈로그에서 모델을 받고 다시 와주세요.
+            아직 받은 모델이 없어요. 카탈로그에서 먼저 받아주세요.
           </p>
         </div>
       )}

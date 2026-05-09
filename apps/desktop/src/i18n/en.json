@@ -442,9 +442,7 @@
         "scanInterval": "Self-scan interval",
         "scanInterval.off": "Off",
         "scanInterval.15m": "15 min",
-        "scanInterval.60m": "1 hour",
-        "voice": "Korean voice I/O",
-        "voice.comingSoon": "Coming in Phase 6"
+        "scanInterval.60m": "1 hour"
       },
       "autoUpdate": {
         "title": "Auto-update",

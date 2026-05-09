@@ -1092,9 +1092,90 @@
   outline-offset: 2px;
 }
 
-.catalog-drawer-install:disabled {
-  opacity: 0.5;
+.catalog-drawer-install:disabled,
+.catalog-drawer-chat:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ── llama-server 미설치 인라인 안내 배너 ──────────────────────── */
+
+.catalog-drawer-llama-notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--primary-a-2);
+  border: 1px solid var(--primary-a-3);
+  border-radius: var(--radius-2);
+}
+
+.catalog-drawer-llama-notice-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-14);
+  color: var(--primary);
+}
+
+.catalog-drawer-llama-notice-body {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+  line-height: var(--lh-loose);
+}
+
+.catalog-drawer-llama-notice-msg {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--text-secondary);
+}
+
+.catalog-drawer-llama-notice-done {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--primary);
+  font-weight: var(--weight-medium);
+}
+
+.catalog-drawer-llama-btn {
+  appearance: none;
+  font: inherit;
+  height: 32px;
+  padding: 0 var(--space-4);
+  background: var(--primary-a-3);
+  color: var(--primary);
+  border: 1px solid var(--primary-a-3);
+  border-radius: var(--radius-2);
+  font-size: var(--fs-13);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-emphasized);
+  align-self: flex-start;
+}
+
+.catalog-drawer-llama-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: var(--surface);
+}
+
+.catalog-drawer-llama-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.catalog-drawer-llama-bar-wrap {
+  height: 6px;
+  background: var(--surface-3);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.catalog-drawer-llama-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: var(--radius-pill);
+  transition: width 200ms linear;
 }
 
 .catalog-drawer-chat {

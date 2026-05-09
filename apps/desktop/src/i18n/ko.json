@@ -442,9 +442,7 @@
         "scanInterval": "자가 점검 주기",
         "scanInterval.off": "끔",
         "scanInterval.15m": "15분",
-        "scanInterval.60m": "1시간",
-        "voice": "한국어 음성 입출력",
-        "voice.comingSoon": "Phase 6'에서 만나요"
+        "scanInterval.60m": "1시간"
       },
       "autoUpdate": {
         "title": "자동 갱신",

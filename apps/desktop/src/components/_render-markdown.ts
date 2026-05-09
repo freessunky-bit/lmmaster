@@ -75,9 +75,9 @@ export function parseSections(md: string): MarkdownSection[] {
     const title = extractTitle(trimmed);
     const id =
       idMatch?.[1] ?? (slugifyAscii(title) || `section-${out.length + 1}`);
-    // 본문에서 마커 라인 제거.
+    // HTML 주석 전체 제거 (<!-- ... -->) — section 마커 포함, 그 외 내부 주석도.
     const body = trimmed
-      .replace(/<!--\s*section:\s*[a-z0-9\-_]+\s*-->\s*\n?/i, "")
+      .replace(/<!--[\s\S]*?-->/g, "")
       .trim();
     const searchText = body
       .replace(/[#*`_\->\[\]\(\)]+/g, " ")
@@ -90,18 +90,69 @@ export function parseSections(md: string): MarkdownSection[] {
 
 /** 우리가 작성한 markdown만 처리 — user input 아님. */
 export function renderMarkdown(md: string): string {
-  const lines = md.split(/\r?\n/);
+  // HTML 주석 제거 먼저 (섹션 마커 등이 화면에 노출되지 않도록).
+  const cleaned = md.replace(/<!--[\s\S]*?-->/g, "");
+  const lines = cleaned.split(/\r?\n/);
   const out: string[] = [];
   let inList = false;
+  let inTable = false;
+  let tableHeaderDone = false;
+  let inCodeBlock = false;
+  let codeLang = "";
+  const codeLines: string[] = [];
 
   const closeList = () => {
-    if (inList) {
-      out.push("</ul>");
-      inList = false;
-    }
+    if (inList) { out.push("</ul>"); inList = false; }
+  };
+  const closeTable = () => {
+    if (inTable) { out.push("</tbody></table>"); inTable = false; tableHeaderDone = false; }
   };
 
   for (const line of lines) {
+    // ── fenced code block ──────────────────────────────────────────
+    if (line.startsWith("```")) {
+      if (!inCodeBlock) {
+        closeList(); closeTable();
+        inCodeBlock = true;
+        codeLang = line.slice(3).trim();
+        codeLines.length = 0;
+      } else {
+        inCodeBlock = false;
+        const esc = codeLines.map((l) => escapeHtml(l)).join("\n");
+        const cls = codeLang ? ` class="lang-${escapeHtml(codeLang)}"` : "";
+        out.push(`<pre><code${cls}>${esc}</code></pre>`);
+        codeLang = "";
+      }
+      continue;
+    }
+    if (inCodeBlock) { codeLines.push(line); continue; }
+
+    // ── markdown table (| col | col |) ────────────────────────────
+    if (line.trimStart().startsWith("|")) {
+      // separator 행 (|---|---| 형태) 건너뜀.
+      if (/^\s*\|[\s\-:|]+\|\s*$/.test(line)) {
+        tableHeaderDone = true;
+        continue;
+      }
+      const cells = line.split("|").slice(1, -1).map((c) => c.trim());
+      if (!inTable) {
+        closeList();
+        inTable = true;
+        tableHeaderDone = false;
+        out.push('<table><thead><tr>');
+        cells.forEach((c) => out.push(`<th>${renderInline(c)}</th>`));
+        out.push('</tr></thead><tbody>');
+      } else {
+        out.push('<tr>');
+        cells.forEach((c) => out.push(`<td>${renderInline(c)}</td>`));
+        out.push('</tr>');
+      }
+      continue;
+    } else {
+      closeTable();
+    }
+
+    // ── 일반 마크다운 ──────────────────────────────────────────────
     if (line.startsWith("# ")) {
       closeList();
       out.push(`<h1>${renderInline(line.slice(2))}</h1>`);
@@ -112,22 +163,18 @@ export function renderMarkdown(md: string): string {
       closeList();
       out.push(`<h3>${renderInline(line.slice(4))}</h3>`);
     } else if (line.startsWith("- ")) {
-      if (!inList) {
-        out.push("<ul>");
-        inList = true;
-      }
+      if (!inList) { out.push("<ul>"); inList = true; }
       out.push(`<li>${renderInline(line.slice(2))}</li>`);
     } else if (line.trim() === "") {
       closeList();
     } else if (line.trim() === "---") {
-      // 섹션 구분선은 외부 splitter가 처리. 여기선 무시.
       closeList();
     } else {
       closeList();
       out.push(`<p>${renderInline(line)}</p>`);
     }
   }
-  closeList();
+  closeList(); closeTable();
   return out.join("\n");
 }
 
