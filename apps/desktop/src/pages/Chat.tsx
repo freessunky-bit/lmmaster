@@ -21,6 +21,7 @@ import {
   chatApiErrorMessage,
   listLocalLlamaCppModels,
   startChat,
+  startRemoteChat,
   type ChatEvent,
   type ChatMessage,
 } from "../ipc/chat";
@@ -34,6 +35,7 @@ import { processImageForVision } from "../lib/image";
 import { listRuntimeModels, type RuntimeModelView } from "../ipc/runtimes";
 // Phase 13'.h.2.e.2 — LlamaCpp 모델 chat 진입 시 binary 등록 여부 안내.
 import { getLlamaServerPath } from "../ipc/llama-server-settings";
+import { listAllRemoteModels, type RemoteModelInfo } from "../ipc/remote-endpoints";
 
 import "./chat.css";
 
@@ -76,6 +78,8 @@ export function ChatPage() {
   >(null);
   // Phase 13'.h.2.e.4 — cache_dir에 받은 LlamaCpp catalog id Set.
   const [llamaCppLocal, setLlamaCppLocal] = useState<Set<string>>(new Set());
+  // 원격 연결에서 조회한 모델 목록.
+  const [remoteModels, setRemoteModels] = useState<RemoteModelInfo[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -91,13 +95,15 @@ export function ChatPage() {
       listRuntimeModels("ollama"),
       getLlamaServerPath(),
       listLocalLlamaCppModels(),
+      listAllRemoteModels(),
     ])
-      .then(([view, local, llamaPath, llamaCppIds]) => {
+      .then(([view, local, llamaPath, llamaCppIds, remotes]) => {
         if (cancelled) return;
         setEntries(view.entries);
         setLocalModels(local);
         setLlamaServerConfigured(llamaPath !== null && llamaPath.length > 0);
         setLlamaCppLocal(new Set(llamaCppIds));
+        setRemoteModels(remotes);
         // preselect: 사용자가 catalog drawer에서 보낸 모델 우선.
         let preselect: string | null = null;
         try {
@@ -216,8 +222,17 @@ export function ChatPage() {
         });
       }
     }
+    // 원격 연결 모델 추가 — "remote::{endpoint_id}::{model_id}" runtimeId.
+    for (const rm of remoteModels) {
+      list.push({
+        id: rm.runtime_id,
+        runtimeId: rm.runtime_id,
+        displayName: `🔗 ${rm.display_name}`,
+        runtime: "ollama" as RuntimeKind, // 타입 호환용 — 실제 라우팅은 runtimeId prefix로 분기.
+      });
+    }
     return list;
-  }, [entries, localModels, runtimeIdsByModelId, llamaCppLocal]);
+  }, [entries, localModels, runtimeIdsByModelId, llamaCppLocal, remoteModels]);
 
   // Phase 13'.h — 선택된 모델의 카탈로그 정보. vision_support 판정용.
   // Phase 13'.h.2.e.2 — LlamaCpp 모델은 e.id로 직접 매칭.
@@ -278,14 +293,32 @@ export function ChatPage() {
     const turn: ChatMessage[] = [...history, userTurn];
 
     try {
-      const outcome = await startChat({
-        runtimeKind: selectedRuntime,
-        modelId: selectedRuntimeId,
-        messages: turn,
-        onEvent: (e: ChatEvent) => {
-          setMessages((prev) => mergeChatEvent(prev, assistantMsg.id, e));
-        },
-      });
+      // 원격 모델이면 startRemoteChat으로 분기 — runtimeId prefix "remote::" 판별.
+      const isRemote = selectedRuntimeId.startsWith("remote::");
+      let outcome;
+      if (isRemote) {
+        // "remote::{endpoint_id}::{model_id}" 파싱.
+        const parts = selectedRuntimeId.split("::");
+        const endpointId = parts[1] ?? "";
+        const modelId = parts.slice(2).join("::"); // model_id에 "::" 포함 가능.
+        outcome = await startRemoteChat({
+          endpointId,
+          modelId,
+          messages: turn,
+          onEvent: (e: ChatEvent) => {
+            setMessages((prev) => mergeChatEvent(prev, assistantMsg.id, e));
+          },
+        });
+      } else {
+        outcome = await startChat({
+          runtimeKind: selectedRuntime,
+          modelId: selectedRuntimeId,
+          messages: turn,
+          onEvent: (e: ChatEvent) => {
+            setMessages((prev) => mergeChatEvent(prev, assistantMsg.id, e));
+          },
+        });
+      }
       if (outcome.kind === "failed") {
         setMessages((prev) =>
           prev.map((m) =>

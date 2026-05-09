@@ -13,12 +13,26 @@
 pub mod gateway;
 pub mod llama_server;
 pub mod models;
+pub mod remote_endpoints;
 
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
 const SETTINGS_FILENAME: &str = "settings.json";
+
+/// 원격 LMmaster 게이트웨이 연결 정보 — 사용자 B가 사용자 A의 모델을 쓸 때.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RemoteEndpoint {
+    pub id: String,
+    /// 사용자가 붙이는 별명 (예: "진우 PC").
+    pub alias: String,
+    /// 원격 게이트웨이 base URL — "/v1" 포함 (예: "http://192.168.1.10:14964/v1").
+    pub base_url: String,
+    /// 사용자 A가 발급한 LAN API 키.
+    pub api_key: String,
+    pub created_at: String,
+}
 
 /// 사용자 settings 스키마. `serde(default)`로 부분 기록 호환 — 누락 키는 None.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -33,6 +47,11 @@ pub struct UserSettings {
     /// 변경 후 게이트웨이 재시작 필요 (자동 hot-restart는 v1.x).
     #[serde(default)]
     pub gateway_allow_external: bool,
+
+    /// 원격 LMmaster 게이트웨이 연결 목록 — 사용자가 수동 등록한 외부 API 엔드포인트.
+    /// 빈 vec이 default. 기존 settings.json 호환 (serde default).
+    #[serde(default)]
+    pub remote_endpoints: Vec<RemoteEndpoint>,
 }
 
 impl UserSettings {

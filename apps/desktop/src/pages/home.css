@@ -199,3 +199,56 @@
   font-size: var(--fs-13);
   color: var(--text-muted);
 }
+
+/* ── 연결 페이지 탭 (로컬 API 키 | 원격 연결) ─────────────────────── */
+
+.connections-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.connections-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  padding: 0 var(--space-6);
+}
+
+.connections-tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-3) var(--space-4);
+  font: inherit;
+  font-size: var(--fs-14);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-emphasized),
+    border-color var(--dur-fast) var(--ease-emphasized);
+}
+
+.connections-tab:hover {
+  color: var(--text);
+}
+
+.connections-tab.is-active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.connections-tab:focus-visible {
+  outline: 2px solid var(--primary-a-3);
+  outline-offset: -2px;
+}
+
+.connections-panel {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}

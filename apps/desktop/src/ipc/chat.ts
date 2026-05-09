@@ -91,3 +91,24 @@ export async function startChat(args: {
 export async function cancelAllChats(): Promise<void> {
   return invoke<void>("cancel_all_chats");
 }
+
+/**
+ * 원격 LMmaster 게이트웨이 채팅 — OpenAI SSE 스트리밍.
+ * `endpointId` — settings.json의 remote_endpoints[].id.
+ * `modelId` — 원격 서버의 model ID.
+ */
+export async function startRemoteChat(args: {
+  endpointId: string;
+  modelId: string;
+  messages: ChatMessage[];
+  onEvent: (event: ChatEvent) => void;
+}): Promise<ChatOutcome> {
+  const channel = new Channel<ChatEvent>();
+  channel.onmessage = args.onEvent;
+  return invoke<ChatOutcome>("start_remote_chat", {
+    endpointId: args.endpointId,
+    modelId: args.modelId,
+    messages: args.messages,
+    channel,
+  });
+}

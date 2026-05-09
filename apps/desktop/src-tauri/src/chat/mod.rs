@@ -7,6 +7,7 @@
 
 pub mod llama_cpp;
 pub mod registry;
+pub mod remote;
 
 use std::sync::Arc;
 

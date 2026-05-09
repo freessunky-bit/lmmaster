@@ -31,6 +31,7 @@ import {
   resetOnboarding,
 } from "./onboarding/persistence";
 import { ApiKeysPanel } from "./components/keys/ApiKeysPanel";
+import { RemoteEndpointsPanel } from "./components/remote/RemoteEndpointsPanel";
 import { WorkspaceRepairBanner } from "./components/workspace/WorkspaceRepairBanner";
 import { WorkspaceSwitcher } from "./components/WorkspaceSwitcher";
 import { ActiveWorkspaceProvider } from "./contexts/ActiveWorkspaceContext";
@@ -307,7 +308,7 @@ function MainShell({
         {activeNav === "catalog" ? (
           <CatalogPage />
         ) : activeNav === "keys" ? (
-          <ApiKeysPanel />
+          <ConnectionsPage />
         ) : activeNav === "install" ? (
           <InstallPage />
         ) : activeNav === "chat" ? (
@@ -348,6 +349,42 @@ function MainShell({
         onClose={() => setShortcutsOpen(false)}
       />
       <TourWelcomeToast trigger={tourTrigger} />
+    </div>
+  );
+}
+
+// ── 연결 페이지 — 로컬 API 키 + 원격 연결 탭 ─────────────────────────
+
+type ConnectionTab = "local" | "remote";
+
+function ConnectionsPage() {
+  const [tab, setTab] = useState<ConnectionTab>("local");
+  return (
+    <div className="connections-page">
+      <div className="connections-tabs" role="tablist" aria-label="연결 종류">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "local"}
+          className={`connections-tab${tab === "local" ? " is-active" : ""}`}
+          onClick={() => setTab("local")}
+        >
+          로컬 API 키
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "remote"}
+          className={`connections-tab${tab === "remote" ? " is-active" : ""}`}
+          onClick={() => setTab("remote")}
+          data-testid="connections-tab-remote"
+        >
+          원격 연결
+        </button>
+      </div>
+      <div role="tabpanel" className="connections-panel">
+        {tab === "local" ? <ApiKeysPanel /> : <RemoteEndpointsPanel />}
+      </div>
     </div>
   );
 }
