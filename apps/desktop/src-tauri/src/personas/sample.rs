@@ -169,7 +169,15 @@ fn batch_to_personas(batch: &RecordBatch, filter: &PersonaFilter) -> Vec<Persona
             .or_else(|| fields.get("hobbies_and_interests_persona").cloned())
             .unwrap_or_default();
 
-        if !apply_filter(filter, &sex, &age, &province, &occupation, &persona, &fields) {
+        if !apply_filter(
+            filter,
+            &sex,
+            &age,
+            &province,
+            &occupation,
+            &persona,
+            &fields,
+        ) {
             continue;
         }
 
@@ -278,12 +286,11 @@ pub async fn personas_sample(
                         message: format!("{}: {e}", path.display()),
                     }
                 })?;
-                let reader =
-                    builder
-                        .build()
-                        .map_err(|e| PersonasSampleError::ParquetParse {
-                            message: format!("{}: {e}", path.display()),
-                        })?;
+                let reader = builder
+                    .build()
+                    .map_err(|e| PersonasSampleError::ParquetParse {
+                        message: format!("{}: {e}", path.display()),
+                    })?;
                 for batch_result in reader {
                     let batch = batch_result.map_err(|e| PersonasSampleError::ParquetParse {
                         message: format!("batch: {e}"),

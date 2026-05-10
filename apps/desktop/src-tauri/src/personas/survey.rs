@@ -77,17 +77,26 @@ pub struct SurveyAnswer {
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum PersonasSurveyEvent {
-    Started { total_calls: usize },
+    Started {
+        total_calls: usize,
+    },
     Progress {
         completed: usize,
         total: usize,
         current_persona: String,
         current_question: String,
     },
-    Answer { answer: SurveyAnswer },
-    Completed { count: usize, total_ms: u64 },
+    Answer {
+        answer: SurveyAnswer,
+    },
+    Completed {
+        count: usize,
+        total_ms: u64,
+    },
     Cancelled,
-    Failed { message: String },
+    Failed {
+        message: String,
+    },
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -153,7 +162,9 @@ fn build_user_prompt(q: &SurveyQuestion) -> String {
         "scale" => {
             out.push_str(&format!(
                 "\n척도: {}\n\n답변(숫자 하나):",
-                q.scale.as_deref().unwrap_or("1=매우 그렇지 않다, 5=매우 그렇다")
+                q.scale
+                    .as_deref()
+                    .unwrap_or("1=매우 그렇지 않다, 5=매우 그렇다")
             ));
         }
         _ => {
@@ -294,8 +305,10 @@ pub async fn personas_run_survey(
                             cancel.clone(),
                         )
                         .await
-                        .map_err(|e| PersonasSurveyError::ModelNotReady {
-                            message: format!("llama-server 시작 실패: {e}"),
+                        .map_err(|e| {
+                            PersonasSurveyError::ModelNotReady {
+                                message: format!("llama-server 시작 실패: {e}"),
+                            }
                         })?;
                         *state = Some(ManagedLlamaServer::new(handle, spec));
                     }

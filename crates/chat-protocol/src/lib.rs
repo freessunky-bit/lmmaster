@@ -184,7 +184,10 @@ mod tests {
             let back: FinishReason = serde_json::from_str(&json).unwrap();
             assert_eq!(back, r);
             // kebab-case: "length", "aborted" 등 lowercase.
-            assert!(json.chars().filter(|c| *c != '"').all(|c| !c.is_uppercase()));
+            assert!(json
+                .chars()
+                .filter(|c| *c != '"')
+                .all(|c| !c.is_uppercase()));
         }
     }
 

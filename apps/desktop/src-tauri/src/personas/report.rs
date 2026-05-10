@@ -96,7 +96,14 @@ fn render_question(q: &QuestionSummary) -> String {
             if !q.open_samples.is_empty() {
                 s.push_str("주요 응답 샘플:\n");
                 for sample in &q.open_samples {
-                    s.push_str(&format!("- \"{}\"\n", sample.replace('\n', " ").chars().take(200).collect::<String>()));
+                    s.push_str(&format!(
+                        "- \"{}\"\n",
+                        sample
+                            .replace('\n', " ")
+                            .chars()
+                            .take(200)
+                            .collect::<String>()
+                    ));
                 }
                 s.push('\n');
             }
@@ -155,9 +162,7 @@ fn style_directive(style: ReportStyle) -> &'static str {
 }
 
 #[tauri::command]
-pub fn personas_generate_report_prompt(
-    req: ReportRequest,
-) -> Result<String, PersonasReportError> {
+pub fn personas_generate_report_prompt(req: ReportRequest) -> Result<String, PersonasReportError> {
     Ok(build_full_prompt(&req))
 }
 
@@ -170,7 +175,9 @@ fn build_full_prompt(req: &ReportRequest) -> String {
         req.persona_count
     ));
     out.push_str(&format!("- **분포**: {}\n", req.persona_distribution));
-    out.push_str("- **출처**: NVIDIA Nemotron-Personas-Korea (CC BY 4.0) + 사용자 PC의 로컬 LLM\n\n");
+    out.push_str(
+        "- **출처**: NVIDIA Nemotron-Personas-Korea (CC BY 4.0) + 사용자 PC의 로컬 LLM\n\n",
+    );
     out.push_str("---\n\n## 설문 결과\n\n");
     for q in &req.question_summaries {
         out.push_str(&render_question(q));
@@ -308,9 +315,8 @@ fn build_plan_internal(req: &ReportRequest, chunk_token_limit: u64) -> ReportPro
         .collect();
 
     // 2. 청크 한도 (헤더+푸터 여유 20% 제외).
-    let usable_per_chunk = chunk_token_limit
-        .saturating_mul(CHUNK_USE_RATIO_NUM)
-        / CHUNK_USE_RATIO_DEN;
+    let usable_per_chunk =
+        chunk_token_limit.saturating_mul(CHUNK_USE_RATIO_NUM) / CHUNK_USE_RATIO_DEN;
 
     // 3. 청크 grouping (질문 순서 보존).
     let mut groups: Vec<Vec<usize>> = Vec::new();
@@ -368,12 +374,7 @@ fn build_plan_internal(req: &ReportRequest, chunk_token_limit: u64) -> ReportPro
         .iter()
         .map(|c| c.estimated_tokens)
         .sum::<u64>()
-        .saturating_add(
-            final_synthesis
-                .as_deref()
-                .map(estimate_tokens)
-                .unwrap_or(0),
-        );
+        .saturating_add(final_synthesis.as_deref().map(estimate_tokens).unwrap_or(0));
 
     ReportPromptPlan {
         chunks,
@@ -438,7 +439,12 @@ mod tests {
     fn multiple_chunks_when_over_limit() {
         // 작은 한도(500토큰)로 강제 분할 — 5개 질문이 분리되도록.
         let qs: Vec<_> = (0..5)
-            .map(|i| sample_summary(&format!("q{i}"), "이것은 분할 테스트용 질문이에요. ".repeat(50).as_str()))
+            .map(|i| {
+                sample_summary(
+                    &format!("q{i}"),
+                    "이것은 분할 테스트용 질문이에요. ".repeat(50).as_str(),
+                )
+            })
             .collect();
         let req = req_with(qs);
         let plan = build_plan_internal(&req, 500);
@@ -473,7 +479,12 @@ mod tests {
     #[test]
     fn estimated_tokens_total_matches_sum_plus_synthesis() {
         let qs: Vec<_> = (0..3)
-            .map(|i| sample_summary(&format!("q{i}"), "이것은 분할 테스트용 질문이에요. ".repeat(40).as_str()))
+            .map(|i| {
+                sample_summary(
+                    &format!("q{i}"),
+                    "이것은 분할 테스트용 질문이에요. ".repeat(40).as_str(),
+                )
+            })
             .collect();
         let req = req_with(qs);
         let plan = build_plan_internal(&req, 500);
