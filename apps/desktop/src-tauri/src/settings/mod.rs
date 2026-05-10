@@ -167,6 +167,7 @@ mod tests {
             llama_server_path: None,
             gateway_allow_external: true,
             remote_endpoints: vec![],
+            hf_access_token: None,
         };
         s.save(tmp.path()).unwrap();
         let back = UserSettings::load(tmp.path());

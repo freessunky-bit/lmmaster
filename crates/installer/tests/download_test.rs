@@ -117,6 +117,7 @@ async fn sha256_mismatch_removes_partial_and_errors() {
         expected_sha256: Some(wrong_expected),
         size_hint: None,
         max_retries: Some(0),
+        auth_header: None,
     };
     let cancel = CancellationToken::new();
     let sink = CapturedSink::default();
@@ -160,6 +161,7 @@ async fn cancelled_download_preserves_partial() {
         expected_sha256: None,
         size_hint: None,
         max_retries: Some(0),
+        auth_header: None,
     };
     let cancel = CancellationToken::new();
     let sink = CapturedSink::default();
@@ -192,6 +194,7 @@ async fn invalid_request_empty_url() {
         expected_sha256: None,
         size_hint: None,
         max_retries: Some(0),
+        auth_header: None,
     };
     let cancel = CancellationToken::new();
     let sink = installer::NoopSink;
@@ -208,6 +211,7 @@ async fn invalid_request_missing_parent_dir() {
         expected_sha256: None,
         size_hint: None,
         max_retries: Some(0),
+        auth_header: None,
     };
     let cancel = CancellationToken::new();
     let sink = installer::NoopSink;
@@ -231,6 +235,7 @@ async fn http_404_is_not_retryable_and_fails_fast() {
         expected_sha256: None,
         size_hint: None,
         max_retries: Some(3),
+        auth_header: None,
     };
     let cancel = CancellationToken::new();
     let sink = CapturedSink::default();
