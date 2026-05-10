@@ -1,0 +1,288 @@
+/* 페르소나 시뮬 페이지 — design-system tokens만. v0.8.x. */
+
+.personas-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-8);
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* ── 헤더 ───────────────────────────────────────────────────────── */
+
+.personas-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.personas-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.personas-title-icon {
+  color: var(--primary);
+}
+
+.personas-title {
+  margin: 0;
+  font-size: var(--fs-22);
+  font-weight: var(--weight-semi);
+  letter-spacing: -0.01em;
+}
+
+.personas-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-11);
+  font-weight: var(--weight-medium);
+  background: var(--primary-a-2);
+  color: var(--primary);
+  border: 1px solid var(--primary-a-3);
+  margin-left: var(--space-2);
+}
+
+.personas-subtitle {
+  margin: 0;
+  font-size: var(--fs-14);
+  color: var(--text-secondary);
+  line-height: var(--lh-loose);
+  max-width: 720px;
+}
+
+/* ── 4 단계 스텝 ─────────────────────────────────────────────────── */
+
+.personas-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  transition: opacity var(--dur-fast) var(--ease-emphasized);
+}
+
+.personas-step.is-locked {
+  opacity: 0.55;
+}
+
+.personas-step-num {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary-a-2);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-15);
+  font-weight: var(--weight-semi);
+  border: 1px solid var(--primary-a-3);
+}
+
+.personas-step.is-locked .personas-step-num {
+  background: var(--surface);
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
+.personas-step-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.personas-step-title {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: var(--weight-semi);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.personas-step-desc {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+  line-height: var(--lh-loose);
+}
+
+.personas-step-coming {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+}
+
+/* ── 데이터셋 카드 ──────────────────────────────────────────────── */
+
+.personas-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+}
+
+.personas-card.is-installed {
+  border-color: var(--primary-a-3);
+  background: var(--primary-a-2);
+}
+
+.personas-card.is-downloading {
+  border-color: var(--primary-a-3);
+}
+
+.personas-card.is-loading {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-13);
+  color: var(--text-muted);
+}
+
+.personas-card.is-error {
+  border-color: color-mix(in srgb, var(--error, #f87171) 35%, transparent);
+  background: color-mix(in srgb, var(--error, #f87171) 8%, transparent);
+}
+
+.personas-card-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.personas-card-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.personas-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.personas-card-info strong {
+  font-size: var(--fs-14);
+  color: var(--text);
+}
+
+.personas-card-meta {
+  font-size: var(--fs-12);
+  color: var(--text-secondary);
+}
+
+.personas-card-info-text {
+  margin: 0;
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+  line-height: var(--lh-loose);
+}
+
+/* ── 진행률 바 ──────────────────────────────────────────────────── */
+
+.personas-progress {
+  height: 6px;
+  background: var(--surface-3, var(--surface-2));
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.personas-progress-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: var(--radius-pill);
+  transition: width 200ms linear;
+}
+
+/* ── 버튼 ──────────────────────────────────────────────────────── */
+
+.personas-btn-primary,
+.personas-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  appearance: none;
+  font: inherit;
+  font-size: var(--fs-13);
+  font-weight: var(--weight-medium);
+  height: 32px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-2);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-emphasized);
+  align-self: flex-start;
+}
+
+.personas-btn-primary {
+  background: var(--primary-a-2);
+  color: var(--primary);
+  border: 1px solid var(--primary-a-3);
+}
+
+.personas-btn-primary:hover:not(:disabled) {
+  background: var(--primary-a-3);
+}
+
+.personas-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.personas-btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  height: 28px;
+  padding: 0 var(--space-3);
+  font-size: var(--fs-12);
+}
+
+.personas-btn-secondary:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--primary-a-3);
+}
+
+.personas-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── 스피너 애니메이션 ─────────────────────────────────────────── */
+
+@keyframes personas-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.personas-spin {
+  animation: personas-spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .personas-spin { animation: none; }
+}

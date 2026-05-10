@@ -44,6 +44,7 @@ import { InstallPage } from "./pages/Install";
 import { Projects } from "./pages/Projects";
 import { RuntimesPage } from "./pages/Runtimes";
 import { Settings } from "./pages/Settings";
+import { PersonaSurveyPage } from "./pages/PersonaSurvey";
 import { Trends } from "./pages/Trends";
 import { Workbench } from "./pages/Workbench";
 import { Workspace } from "./pages/Workspace";
@@ -60,6 +61,7 @@ const NAV_KEYS = [
   "projects",
   "keys",
   "workbench",
+  "personas",
   "trends",
   "diagnostics",
   "guide",
@@ -321,6 +323,8 @@ function MainShell({
           <Projects />
         ) : activeNav === "workbench" ? (
           <Workbench />
+        ) : activeNav === "personas" ? (
+          <PersonaSurveyPage />
         ) : activeNav === "trends" ? (
           <Trends onNavigate={(target) => setActiveNav(target)} />
         ) : activeNav === "diagnostics" ? (

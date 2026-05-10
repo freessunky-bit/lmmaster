@@ -18,6 +18,7 @@ pub mod install;
 pub mod keys;
 pub mod knowledge;
 pub mod model_pull;
+pub mod personas;
 // Phase R-F.3 (ADR-0064 §F.3) — selected_path_token registry.
 pub mod panic_hook;
 pub mod path_tokens;
@@ -111,6 +112,8 @@ pub fn run() {
             chat::llama_cpp::list_local_llama_cpp_models,
             chat::llama_cpp::list_local_gguf_files,
             chat::remote::start_remote_chat,
+            personas::dataset::get_personas_dataset_status,
+            personas::dataset::download_personas_dataset,
             settings::remote_endpoints::list_remote_endpoints,
             settings::remote_endpoints::add_remote_endpoint,
             settings::remote_endpoints::remove_remote_endpoint,
