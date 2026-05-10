@@ -26,6 +26,8 @@ import {
   type QuantOption,
   type RuntimeKind,
 } from "../../ipc/catalog";
+import { listLocalLlamaCppModels } from "../../ipc/chat";
+import { listRuntimeModels } from "../../ipc/runtimes";
 import {
   getLlamaServerPath,
   installLlamaCppRuntime,
@@ -92,6 +94,9 @@ export function ModelDetailDrawer({
   const [llamaInstallPct, setLlamaInstallPct] = useState<number | null>(null);
   const [llamaInstallDone, setLlamaInstallDone] = useState(false);
 
+  // 이 모델이 이미 로컬에 설치되었는지 — 중복 다운로드 차단용.
+  const [alreadyInstalled, setAlreadyInstalled] = useState<boolean>(false);
+
   const isLlamaCpp = model?.runner_compatibility[0] === "llama-cpp";
 
   const runtime = benchRuntime ?? pickRuntime(model) ?? DEFAULT_BENCH_RUNTIME;
@@ -112,6 +117,35 @@ export function ModelDetailDrawer({
       .then((p) => setLlamaReady(!!p && p.length > 0))
       .catch(() => setLlamaReady(false));
   }, [model, isLlamaCpp]);
+
+  // 모델 이미 설치 여부 — llama-cpp는 cache_dir GGUF, ollama는 /api/tags.
+  // mount 시 + 풀 완료 시 재확인 (P0-2 중복 다운 방지).
+  const refreshAlreadyInstalled = useCallback(async () => {
+    if (!model) {
+      setAlreadyInstalled(false);
+      return;
+    }
+    try {
+      if (isLlamaCpp) {
+        const ids = await listLocalLlamaCppModels();
+        setAlreadyInstalled(ids.includes(model.id));
+      } else {
+        // Ollama: 카탈로그 entry → runtime model id 변환 후 매칭.
+        const local = await listRuntimeModels("ollama");
+        const localIds = new Set(local.map((m) => m.id));
+        const wanted =
+          runtimeModelId(model, null, "ollama") ?? model.id;
+        setAlreadyInstalled(localIds.has(wanted));
+      }
+    } catch (e) {
+      console.warn("alreadyInstalled check failed:", e);
+      setAlreadyInstalled(false);
+    }
+  }, [model, isLlamaCpp]);
+
+  useEffect(() => {
+    void refreshAlreadyInstalled();
+  }, [refreshAlreadyInstalled]);
 
   const handleAutoInstallLlama = useCallback(async () => {
     setLlamaInstalling(true);
@@ -272,6 +306,14 @@ export function ModelDetailDrawer({
   const handleInstall = useCallback(async () => {
     if (!model) return;
 
+    // P0-2 (중복 차단): 이미 받은 모델은 사용자 명시 확인 후만 재다운.
+    if (alreadyInstalled) {
+      const ok = window.confirm(
+        "이미 받은 모델이에요. 다시 받으면 디스크 용량이 추가로 쌓일 수 있어요. 그래도 진행할까요?",
+      );
+      if (!ok) return;
+    }
+
     // Phase 13'.h.2.e.2 — runner_compatibility[0]이 우선 runtime.
     // 큐레이터가 manifest에 정렬해둔 순서를 따름 (예: vision 모델은 ["llama-cpp", "ollama"]).
     const preferred = model.runner_compatibility[0];
@@ -319,6 +361,13 @@ export function ModelDetailDrawer({
         setPullState({ kind: "done" });
         // 다음 측정에서 fresh 결과 받을 수 있도록 캐시 무효화 — bench가 자동 재요청.
         setBenchState({ kind: "idle" });
+        // P0-1/P0-2 — 즉시 alreadyInstalled 재확인 + 채팅/카탈로그가 알 수 있게 글로벌 이벤트.
+        void refreshAlreadyInstalled();
+        try {
+          window.dispatchEvent(new CustomEvent("lmmaster:model-installed", {
+            detail: { modelId: model.id },
+          }));
+        } catch { /* noop */ }
       } else if (outcome.kind === "cancelled") {
         setPullState({ kind: "cancelled" });
       } else {
@@ -329,7 +378,7 @@ export function ModelDetailDrawer({
       console.warn("startModelPull failed:", e);
       setPullState({ kind: "failed", message: msg });
     }
-  }, [model, selectedQuant]);
+  }, [model, selectedQuant, alreadyInstalled, refreshAlreadyInstalled]);
 
   const handleCancelPull = useCallback(async () => {
     if (!model) return;
@@ -393,7 +442,11 @@ export function ModelDetailDrawer({
 
   const installDisabled =
     pullState.kind === "starting" || pullState.kind === "running";
-  const installLabel = installLabelFor(pullState, t);
+  // P0-2: 이미 설치된 모델이면 "이미 받았어요" 우선 표시 (실제 클릭은 confirm으로 차단).
+  const installLabel =
+    alreadyInstalled && pullState.kind === "idle"
+      ? "이미 받았어요"
+      : installLabelFor(pullState, t);
 
   return (
     <div
@@ -411,6 +464,15 @@ export function ModelDetailDrawer({
         <header className="catalog-drawer-header">
           <h3 id="catalog-drawer-title" className="catalog-drawer-title">
             {model.display_name}
+            {alreadyInstalled && (
+              <span
+                className="catalog-drawer-installed-badge"
+                aria-label="이미 설치된 모델"
+                data-testid="drawer-installed-badge"
+              >
+                ✓ 받음
+              </span>
+            )}
           </h3>
           <div className="catalog-drawer-header-actions">
             <button
@@ -779,6 +841,11 @@ function PullProgressPanel({
         ? Math.min(100, Math.round((state.completed / state.total) * 100))
         : null;
     const eta = etaToCopy(state.etaSecs);
+    // 100% 도달 후엔 sha256 검증 + atomic rename에 시간 걸려요. 잔류 라벨 대신 명확한 안내.
+    const statusLabel =
+      pct === 100
+        ? "다 받았어요. 파일 검증 중이에요 (큰 모델은 30초~1분)"
+        : statusLabelKo(state.status);
     return (
       <section
         className="model-pull-panel is-running"
@@ -787,7 +854,7 @@ function PullProgressPanel({
         data-testid="model-pull-panel"
       >
         <div className="model-pull-row">
-          <span className="model-pull-status">{statusLabelKo(state.status)}</span>
+          <span className="model-pull-status">{statusLabel}</span>
           {pct != null && (
             <span className="model-pull-pct num">{pct}%</span>
           )}

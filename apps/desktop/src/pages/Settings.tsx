@@ -795,20 +795,42 @@ function WorkspacePanel() {
         <legend className="settings-legend">
           {t("screens.settings.workspace.path")}
         </legend>
+        <p className="settings-hint">
+          이 폴더에 받은 AI 모델 파일, 대화 기록, 설정값이 모두 저장돼요.
+        </p>
         <p className="settings-readonly-text">
           <code className="num">{status?.workspace_root ?? "…"}</code>
         </p>
-        <button
-          type="button"
-          className="settings-btn-secondary"
-          disabled
-          aria-label={t("screens.settings.workspace.relocate")}
-        >
-          <span>{t("screens.settings.workspace.relocate")}</span>
-          <span className="settings-coming-soon">
-            {t("screens.settings.workspace.relocate.comingSoon")}
-          </span>
-        </button>
+        <div className="settings-actions">
+          <button
+            type="button"
+            className="settings-btn-primary"
+            onClick={() => {
+              void import("../ipc/models-dir").then(({ openModelsDir }) =>
+                openModelsDir().catch((e) => console.warn("openModelsDir failed:", e)),
+              );
+            }}
+            data-testid="settings-workspace-open"
+          >
+            폴더 열기
+          </button>
+          <button
+            type="button"
+            className="settings-btn-secondary"
+            onClick={() => {
+              window.alert(
+                "다른 폴더로 옮기는 방법:\n\n" +
+                  "1. LMmaster 앱을 완전히 종료해 주세요.\n" +
+                  "2. 위에 표시된 워크스페이스 폴더 전체를 원하는 위치로 잘라내기 → 붙여넣기 하세요.\n" +
+                  "3. 환경 변수 LMMASTER_DATA_DIR 에 새 폴더 경로를 등록한 뒤 LMmaster를 다시 실행하세요.\n\n" +
+                  "자동 이동 기능은 데이터 안전 검증을 위해 다음 버전에 들어갈 예정이에요.",
+              );
+            }}
+            data-testid="settings-workspace-relocate-guide"
+          >
+            다른 폴더로 옮기는 방법 보기
+          </button>
+        </div>
       </fieldset>
 
       <fieldset className="settings-fieldset">

@@ -24,6 +24,10 @@ import {
   refreshCatalogNow,
   type LastRefresh,
 } from "../ipc/catalog-refresh";
+import {
+  detectEnvironment,
+  type EnvironmentReport,
+} from "../ipc/environment";
 import type { CustomModel } from "../ipc/workbench";
 
 import { CustomModelsSection } from "../components/catalog/CustomModelsSection";
@@ -77,6 +81,16 @@ export function CatalogPage() {
   const [refreshBusy, setRefreshBusy] = useState(false);
   const [hfModalOpen, setHfModalOpen] = useState(false);
   const [adultMode, setAdultMode] = useAdultContentMode();
+  // P1-B: 카탈로그 헤더에 내 PC 사양 + 런타임 상태 표시.
+  const [env, setEnv] = useState<EnvironmentReport | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    detectEnvironment()
+      .then((r) => { if (!cancelled) setEnv(r); })
+      .catch((e) => console.warn("catalog env detect failed:", e));
+    return () => { cancelled = true; };
+  }, []);
 
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
 
@@ -333,6 +347,9 @@ export function CatalogPage() {
           </div>
         </div>
         <p className="catalog-page-subtitle">{t("catalog.subtitle")}</p>
+
+        {/* P1-B: 내 PC 사양 + 런타임 상태 컨텍스트 바 */}
+        {env && <CatalogContextBar env={env} />}
       </header>
 
       <div className="catalog-shell">
@@ -478,6 +495,69 @@ export function CatalogPage() {
           setSelected(customModelToEntry(model));
         }}
       />
+    </div>
+  );
+}
+
+// P1-B: 카탈로그 헤더 — 내 PC 사양 + 런타임 상태 한 줄 컨텍스트.
+function CatalogContextBar({ env }: { env: EnvironmentReport }) {
+  const ramGb = (env.hardware.mem.total_bytes / (1024 ** 3)).toFixed(0);
+  const gpu = env.hardware.gpus[0];
+  const vramBytes = gpu?.vram_bytes ?? null;
+  const vramGb = vramBytes != null ? (vramBytes / (1024 ** 3)).toFixed(1) : null;
+  const gpuName = gpu?.name ?? "GPU 없음";
+
+  // 런타임 상태 — 사용 가능한 게 0개면 경고 배너.
+  const runtimes = env.runtimes;
+  const ollama = runtimes.find((r) => r.runtime === "ollama");
+  const lmStudio = runtimes.find((r) => r.runtime === "lm-studio");
+  const ollamaReady = ollama?.status === "running" || ollama?.status === "installed";
+  const lmStudioReady = lmStudio?.status === "running" || lmStudio?.status === "installed";
+  const noRuntimeReady = !ollamaReady && !lmStudioReady;
+
+  return (
+    <div className="catalog-context-bar" data-testid="catalog-context-bar">
+      <div className="catalog-context-specs">
+        <span className="catalog-context-label">내 PC</span>
+        <span className="catalog-context-chip num">
+          {vramGb ? `VRAM ${vramGb}GB` : "VRAM 미감지"}
+        </span>
+        <span className="catalog-context-chip num">RAM {ramGb}GB</span>
+        <span className="catalog-context-chip catalog-context-gpu" title={gpuName}>
+          {gpuName}
+        </span>
+      </div>
+      <div className="catalog-context-runtimes">
+        <span
+          className={`catalog-context-runtime${ollamaReady ? " is-ready" : ""}`}
+          title="Ollama 런타임 상태"
+        >
+          {ollamaReady ? "● " : "○ "}Ollama
+        </span>
+        <span
+          className={`catalog-context-runtime${lmStudioReady ? " is-ready" : ""}`}
+          title="LM Studio 런타임 상태"
+        >
+          {lmStudioReady ? "● " : "○ "}LM Studio
+        </span>
+      </div>
+      {noRuntimeReady && (
+        <div className="catalog-context-notice" role="alert">
+          <strong>먼저 런타임을 1개 이상 설치해 주세요.</strong>{" "}
+          모델만 받아도 실행할 수 없어요.{" "}
+          <button
+            type="button"
+            className="catalog-context-cta"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent("lmmaster:navigate", { detail: "install" }),
+              );
+            }}
+          >
+            설치 센터로 이동할게요 →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -91,32 +91,31 @@ export function ChatPage() {
   const [isPinnedToBottom, setIsPinnedToBottom] = useState(true);
 
   // 1) 카탈로그 + Ollama에 받은 모델 목록 + LlamaCpp 설정 로드.
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all([
-      getCatalog(),
-      listRuntimeModels("ollama"),
-      getLlamaServerPath(),
-      listLocalLlamaCppModels(),
-      listAllRemoteModels(),
-    ])
-      .then(([view, local, llamaPath, llamaCppIds, remotes]) => {
-        if (cancelled) return;
+  // P0-1: 함수로 추출 → 새로고침 버튼/글로벌 이벤트로 재호출 가능.
+  const refreshModelLists = useCallback(
+    async (opts?: { applyPreselect?: boolean }): Promise<void> => {
+      try {
+        const [view, local, llamaPath, llamaCppIds, remotes] = await Promise.all([
+          getCatalog(),
+          listRuntimeModels("ollama"),
+          getLlamaServerPath(),
+          listLocalLlamaCppModels(),
+          listAllRemoteModels(),
+        ]);
         setEntries(view.entries);
         setLocalModels(local);
         setLlamaServerConfigured(llamaPath !== null && llamaPath.length > 0);
         setLlamaCppLocal(new Set(llamaCppIds));
         setRemoteModels(remotes);
-        // preselect: 사용자가 catalog drawer에서 보낸 모델 우선.
+
+        if (!opts?.applyPreselect) return;
+        // preselect: 사용자가 catalog drawer에서 보낸 모델 우선 (mount 시 1회만).
         let preselect: string | null = null;
         try {
           preselect = window.localStorage.getItem("lmmaster.chat.preselect");
           if (preselect) {
             window.localStorage.removeItem("lmmaster.chat.preselect");
-            // Phase 13'.h.2.e.2 — runtime hint도 함께 정리 (Drawer가 set한 값).
-            window.localStorage.removeItem(
-              "lmmaster.chat.preselect.runtime",
-            );
+            window.localStorage.removeItem("lmmaster.chat.preselect.runtime");
           }
         } catch {
           /* ignore */
@@ -126,18 +125,28 @@ export function ChatPage() {
         } else if (local.length > 0) {
           setSelectedRuntimeId(local[0]?.id ?? "");
         } else if (llamaCppIds.length > 0) {
-          // llama-cpp 기반 모델만 설치된 경우에도 자동 선택 — Ollama 없어도 입력창 활성.
           setSelectedRuntimeId(llamaCppIds[0] ?? "");
         }
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        console.warn("chat: catalog/runtime fetch failed:", e);
-      });
-    return () => {
-      cancelled = true;
+      } catch (e) {
+        console.warn("chat: model list refresh failed:", e);
+      }
+    },
+    [],
+  );
+
+  // mount 시 1회 — preselect 적용.
+  useEffect(() => {
+    void refreshModelLists({ applyPreselect: true });
+  }, [refreshModelLists]);
+
+  // P0-1: 모델 설치 완료 글로벌 이벤트 → 자동 새로고침.
+  useEffect(() => {
+    const onInstalled = () => {
+      void refreshModelLists();
     };
-  }, []);
+    window.addEventListener("lmmaster:model-installed", onInstalled);
+    return () => window.removeEventListener("lmmaster:model-installed", onInstalled);
+  }, [refreshModelLists]);
 
   // 2) 메시지 변경 시 sentinel로 부드럽게 스크롤 — 단, 사용자가 위로 올린 상태면 잠금 유지.
   //    rAF로 layout 후 실행해 streaming delta로 bubble 높이 자라는 동안 race 없이 따라감.
@@ -552,6 +561,16 @@ Background: Aya and User are alone in a cozy room.
           disabled={messages.length === 0 || running}
         >
           처음부터 다시
+        </button>
+        <button
+          type="button"
+          className="chat-action"
+          onClick={() => void refreshModelLists()}
+          disabled={running}
+          title="방금 받은 모델이 안 보이면 눌러주세요"
+          data-testid="chat-refresh-models"
+        >
+          모델 목록 새로고침
         </button>
       </div>
 

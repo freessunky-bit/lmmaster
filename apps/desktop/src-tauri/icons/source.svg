@@ -1,12 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 32 32"
-     fill="none" stroke="#48dc84" stroke-width="1.5"
-     stroke-linecap="round" stroke-linejoin="round">
-  <path d="M16 3 L24 11 L29 16 L16 29 L3 16 L8 11 Z"/>
-  <path d="M8 11 L24 11"/>
-  <path d="M3 16 L29 16"/>
-  <path d="M16 3 L3 16"/>
-  <path d="M16 3 L29 16"/>
-  <path d="M16 29 L8 11"/>
-  <path d="M16 29 L24 11"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- LMmaster 앱 아이콘 — Brand.tsx 다이아몬드 디자인 + 다크 surface + 네온 그린 sage line-art. -->
+
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="60%">
+      <stop offset="0%" stop-color="#1a2520" />
+      <stop offset="55%" stop-color="#0f1612" />
+      <stop offset="100%" stop-color="#070a08" />
+    </radialGradient>
+
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="14" result="b" />
+      <feMerge>
+        <feMergeNode in="b" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <linearGradient id="stroke" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#7cd4cc" />
+      <stop offset="55%" stop-color="#5eddae" />
+      <stop offset="100%" stop-color="#3fb887" />
+    </linearGradient>
+
+    <linearGradient id="innerLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5eddae" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#3fb887" stop-opacity="0.05" />
+    </linearGradient>
+  </defs>
+
+  <!-- 배경: 둥근 사각 (Windows/Mac 마스킹과 일관). -->
+  <rect x="0" y="0" width="1024" height="1024" rx="184" ry="184" fill="url(#bg)" />
+
+  <!-- 다이아몬드 안쪽 면 subtle fill. -->
+  <path
+    d="M512 144 L768 400 L928 512 L512 880 L96 512 L256 400 Z"
+    fill="url(#innerLight)"
+    opacity="0.6"
+  />
+
+  <!-- 다이아몬드 line-art (Brand.tsx 좌표를 32 → 1024 스케일로 확대). -->
+  <g
+    fill="none"
+    stroke="url(#stroke)"
+    stroke-width="14"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    filter="url(#glow)"
+  >
+    <!-- Outer hexagonal silhouette -->
+    <path d="M512 144 L768 400 L928 512 L512 880 L96 512 L256 400 Z" />
+    <!-- Crown table -->
+    <path d="M256 400 L768 400" />
+    <!-- Girdle -->
+    <path d="M96 512 L928 512" />
+    <!-- Crown long facets -->
+    <path d="M512 144 L96 512" />
+    <path d="M512 144 L928 512" />
+    <!-- Pavilion long facets -->
+    <path d="M512 880 L256 400" />
+    <path d="M512 880 L768 400" />
+  </g>
 </svg>
