@@ -22,6 +22,8 @@ import {
   Users,
 } from "lucide-react";
 
+import { version as APP_VERSION } from "../../package.json";
+
 import { listLocalLlamaCppModels } from "../ipc/chat";
 import { listRuntimeModels } from "../ipc/runtimes";
 import {
@@ -138,7 +140,7 @@ export function PersonaSurveyPage() {
         <div className="personas-title-row">
           <Users size={22} aria-hidden="true" className="personas-title-icon" />
           <h2 className="personas-title">가상 한국인 설문 시뮬레이션</h2>
-          <span className="personas-badge">베타 v0.8.3</span>
+          <span className="personas-badge">베타 v{APP_VERSION}</span>
         </div>
         <p className="personas-subtitle">
           엔비디아 <strong>Nemotron-Personas-Korea</strong> 데이터셋에서 조건에 맞는

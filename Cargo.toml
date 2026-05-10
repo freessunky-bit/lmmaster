@@ -35,7 +35,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.8.5"
+version = "0.8.6"
 edition = "2021"
 rust-version = "1.78"
 license = "MIT OR Apache-2.0"
@@ -145,7 +145,7 @@ ndarray = "0.16"
 # parquet (arrow-rs) — async reader + Range request 호환 (HfParquetReader).
 # arrow-array / arrow-schema — RecordBatch 처리.
 # text-splitter — RecursiveCharacter Rust + tokenizers integration.
-parquet = { version = "53", default-features = false, features = ["async", "arrow"] }
+parquet = { version = "53", default-features = false, features = ["async", "arrow", "snap"] }
 arrow-array = "53"
 arrow-schema = "53"
 text-splitter = { version = "0.18", features = ["tokenizers"] }

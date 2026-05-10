@@ -14,7 +14,7 @@ use std::sync::Arc;
 use adapter_llama_cpp::LlamaCppAdapter;
 use adapter_lmstudio::LmStudioAdapter;
 use adapter_ollama::OllamaAdapter;
-use chat_protocol::{ChatEvent, ChatMessage, ChatOutcome};
+use chat_protocol::{ChatEvent, ChatMessage, ChatOutcome, SamplingParams};
 use serde::Serialize;
 use shared_types::RuntimeKind;
 use tauri::ipc::Channel;
@@ -64,8 +64,10 @@ pub async fn start_chat(
     runtime_kind: RuntimeKind,
     model_id: String,
     messages: Vec<ChatMessage>,
+    sampling: Option<SamplingParams>,
     channel: Channel<ChatEvent>,
 ) -> Result<ChatOutcomeIpc, ChatApiError> {
+    let sampling_ref = sampling.as_ref();
     let registry: Arc<ChatRegistry> = (*registry).clone();
     let chat_id = Uuid::new_v4().to_string();
     let cancel = registry.start(&chat_id);
@@ -103,7 +105,7 @@ pub async fn start_chat(
                         }
                     },
                     &cancel,
-                    None,
+                    sampling_ref,
                 )
                 .await;
             Ok(outcome.into())
@@ -128,7 +130,7 @@ pub async fn start_chat(
                         }
                     },
                     &cancel,
-                    None,
+                    sampling_ref,
                 )
                 .await;
             Ok(outcome.into())
@@ -204,7 +206,7 @@ pub async fn start_chat(
                         }
                     },
                     &cancel,
-                    None,
+                    sampling_ref,
                 )
                 .await;
             Ok(outcome.into())

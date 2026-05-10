@@ -16,6 +16,8 @@ import {
   useState,
 } from "react";
 
+import { Sliders } from "lucide-react";
+
 import {
   cancelAllChats,
   chatApiErrorMessage,
@@ -26,6 +28,13 @@ import {
   type ChatEvent,
   type ChatMessage,
 } from "../ipc/chat";
+import {
+  CHAT_SAMPLING_KEY,
+  effectiveSampling,
+  loadPersistedSampling,
+  SamplingDrawer,
+  type PersistedSampling,
+} from "./persona-survey/SamplingDrawer";
 import {
   getCatalog,
   runtimeModelId,
@@ -93,6 +102,12 @@ export function ChatPage() {
   // 시스템 프롬프트 — 매 채팅 turn의 맨 앞에 role:"system"으로 삽입.
   const [systemPrompt, setSystemPrompt] = useState("");
   const [systemPromptOpen, setSystemPromptOpen] = useState(false);
+  // v0.8.5 — 추론 파라미터 (temperature / top_p / max_tokens / repeat_penalty / seed).
+  // localStorage `lmmaster.chat.sampling.v1` (페르소나 시뮬과 분리 보관).
+  const [sampling, setSampling] = useState<PersistedSampling>(() =>
+    loadPersistedSampling(CHAT_SAMPLING_KEY),
+  );
+  const [samplingDrawerOpen, setSamplingDrawerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -432,6 +447,7 @@ export function ChatPage() {
           runtimeKind: selectedRuntime,
           modelId: selectedRuntimeId,
           messages: turn,
+          sampling: effectiveSampling(sampling),
           onEvent: (e: ChatEvent) => {
             setMessages((prev) => mergeChatEvent(prev, assistantMsg.id, e));
           },
@@ -462,7 +478,7 @@ export function ChatPage() {
     } finally {
       setRunning(false);
     }
-  }, [input, selectedRuntimeId, selectedRuntime, running, messages, attached]);
+  }, [input, selectedRuntimeId, selectedRuntime, running, messages, attached, systemPrompt, sampling]);
 
   const handleAttachFiles = useCallback(
     async (files: FileList | null) => {
@@ -668,6 +684,16 @@ Background: Aya and User are alone in a cozy room.
         >
           모델 목록 새로고침
         </button>
+        <button
+          type="button"
+          className="chat-action"
+          onClick={() => setSamplingDrawerOpen(true)}
+          disabled={running}
+          title="temperature·top_p·max_tokens 등 추론 파라미터를 조절해요"
+          data-testid="chat-sampling-button"
+        >
+          <Sliders size={14} aria-hidden="true" /> 추론 설정 ({samplingPresetLabel(sampling)})
+        </button>
       </div>
 
       {availableModels.length === 0 && (
@@ -861,8 +887,29 @@ Background: Aya and User are alone in a cozy room.
           )}
         </div>
       </footer>
+
+      <SamplingDrawer
+        open={samplingDrawerOpen}
+        initial={sampling}
+        storageKey={CHAT_SAMPLING_KEY}
+        onClose={() => setSamplingDrawerOpen(false)}
+        onApply={(next) => setSampling(next)}
+      />
     </div>
   );
+}
+
+function samplingPresetLabel(p: PersistedSampling): string {
+  switch (p.preset) {
+    case "precise":
+      return "정확하게";
+    case "balanced":
+      return "균형";
+    case "creative":
+      return "창의적";
+    case "custom":
+      return "직접";
+  }
 }
 
 function mergeChatEvent(

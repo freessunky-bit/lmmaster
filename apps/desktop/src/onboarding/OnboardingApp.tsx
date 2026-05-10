@@ -157,14 +157,19 @@ function OnboardingShell({ onComplete }: { onComplete: () => void }) {
             </Steps.List>
 
             <div className="onb-content" aria-live="polite">
+              {/*
+                stepper-content sync — Steps.Root의 step prop은 즉시 update되지만 AnimatePresence
+                mode="wait"는 exit 애니메이션 동안 이전 step content를 유지해요. 200ms는 사용자
+                인식상 두 스텝이 잠깐 동시 활성화된 것처럼 보일 수 있어 짧게 (~80ms) 사용해요.
+              */}
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={step}
                   className="onb-content-inner"
-                  initial={{ opacity: 0, x: 24 }}
+                  initial={{ opacity: 0, x: 16 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -24 }}
-                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.08, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <ErrorBoundary
                     FallbackComponent={StepErrorFallback}

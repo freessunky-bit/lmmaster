@@ -3,7 +3,7 @@
 // 정책:
 // - role="dialog" aria-modal="true" + Esc/배경 클릭 닫기 + 첫 input auto-focus.
 // - 프리셋 3종 (정확/균형/창의) + "직접 조절" 펼침. raw slider 단독 X.
-// - 영속: localStorage `lmmaster.personas-survey.sampling.v1` (Step 4 한정 ephemeral).
+// - 영속: localStorage `storageKey` (page별로 다른 키 — 페르소나 시뮬과 채팅이 독립 보관).
 // - 5종 노출: max_tokens / temperature / top_p / repeat_penalty / seed. top_k·num_ctx는 v0.8.5+.
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -11,7 +11,8 @@ import { Sliders, X } from "lucide-react";
 
 import type { SamplingParams } from "../../ipc/personas";
 
-const STORAGE_KEY = "lmmaster.personas-survey.sampling.v1";
+export const PERSONAS_SAMPLING_KEY = "lmmaster.personas-survey.sampling.v1";
+export const CHAT_SAMPLING_KEY = "lmmaster.chat.sampling.v1";
 
 export type SamplingPreset = "precise" | "balanced" | "creative" | "custom";
 
@@ -34,9 +35,11 @@ const DEFAULT_CUSTOM: SamplingParams = {
   seed: null,
 };
 
-export function loadPersistedSampling(): PersistedSampling {
+export function loadPersistedSampling(
+  storageKey: string = PERSONAS_SAMPLING_KEY,
+): PersistedSampling {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return { preset: "balanced" };
     const parsed = JSON.parse(raw) as PersistedSampling;
     if (
@@ -67,9 +70,18 @@ interface Props {
   onApply: (next: PersistedSampling) => void;
   /** 자동 포커스 대상 — "잘렸어요" 칩에서 클릭한 경우 max_tokens에 포커스. */
   focusField?: "max_tokens" | null;
+  /** localStorage key — 페이지별 분리 (페르소나 시뮬 vs 채팅). */
+  storageKey?: string;
 }
 
-export function SamplingDrawer({ open, initial, onClose, onApply, focusField }: Props) {
+export function SamplingDrawer({
+  open,
+  initial,
+  onClose,
+  onApply,
+  focusField,
+  storageKey = PERSONAS_SAMPLING_KEY,
+}: Props) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -118,13 +130,13 @@ export function SamplingDrawer({ open, initial, onClose, onApply, focusField }: 
     const persisted: PersistedSampling =
       preset === "custom" ? { preset: "custom", custom } : { preset };
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+      localStorage.setItem(storageKey, JSON.stringify(persisted));
     } catch {
       /* private mode 등 — 무시 */
     }
     onApply(persisted);
     onClose();
-  }, [preset, custom, onApply, onClose]);
+  }, [preset, custom, onApply, onClose, storageKey]);
 
   const handleReset = useCallback(() => {
     setPreset("balanced");

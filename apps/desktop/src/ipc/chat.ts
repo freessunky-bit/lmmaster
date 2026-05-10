@@ -7,6 +7,7 @@
 import { invoke, Channel } from "@tauri-apps/api/core";
 
 import type { RuntimeKind } from "./catalog";
+import type { SamplingParams } from "./personas";
 
 /**
  * Phase 13'.h.2.e.4 — 사용자 cache_dir에 받은 LlamaCpp 모델 catalog id 리스트.
@@ -83,6 +84,8 @@ export async function startChat(args: {
   runtimeKind: RuntimeKind;
   modelId: string;
   messages: ChatMessage[];
+  /** v0.8.5 — 사용자 조절 sampling 파라미터. None이면 어댑터 디폴트. */
+  sampling?: SamplingParams | null;
   onEvent: (event: ChatEvent) => void;
 }): Promise<ChatOutcome> {
   const channel = new Channel<ChatEvent>();
@@ -91,6 +94,7 @@ export async function startChat(args: {
     runtimeKind: args.runtimeKind,
     modelId: args.modelId,
     messages: args.messages,
+    sampling: args.sampling ?? null,
     channel,
   });
 }

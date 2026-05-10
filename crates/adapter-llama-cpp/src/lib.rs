@@ -47,9 +47,11 @@ impl LlamaCppAdapter {
 
     pub fn with_endpoint(endpoint: impl Into<String>) -> Self {
         // Phase R-C (ADR-0055) — 폴백 제거. fail-fast on TLS init issue.
+        // 전체 요청 timeout 미설정 — chat_stream SSE는 큰 모델(Nemotron 9B/13B 등)에서 첫 토큰까지
+        // 60초 넘길 수 있어요 (low-VRAM PC에서 RAM swap). 짧은 검사용 요청(detect/health/warmup)은
+        // 호출 측에서 `.timeout(PROBE_TIMEOUT)` 명시. cancel은 CancellationToken으로 사용자 제어.
         let http = reqwest::Client::builder()
             .connect_timeout(Duration::from_millis(500))
-            .timeout(Duration::from_secs(60))
             .pool_idle_timeout(Duration::from_secs(30))
             .no_proxy()
             .build()
