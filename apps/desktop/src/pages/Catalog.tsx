@@ -505,7 +505,14 @@ function CatalogContextBar({ env }: { env: EnvironmentReport }) {
   const gpu = env.hardware.gpus[0];
   const vramBytes = gpu?.vram_bytes ?? null;
   const vramGb = vramBytes != null ? (vramBytes / (1024 ** 3)).toFixed(1) : null;
-  const gpuName = gpu?.name ?? "GPU 없음";
+  // gpu.model이 빈 문자열일 수 있어 trim() + vendor 폴백 (NVIDIA 4090인데 model 누락 케이스 등).
+  const gpuName = (() => {
+    if (!gpu) return "GPU 미감지";
+    const m = gpu.model?.trim();
+    if (m) return m;
+    if (gpu.vendor) return `${gpu.vendor.toUpperCase()} GPU`;
+    return "GPU 모델 미상";
+  })();
 
   // 런타임 상태 — 사용 가능한 게 0개면 경고 배너.
   const runtimes = env.runtimes;

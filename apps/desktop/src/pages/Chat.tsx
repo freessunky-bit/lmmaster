@@ -19,6 +19,7 @@ import {
 import {
   cancelAllChats,
   chatApiErrorMessage,
+  listLocalGgufFiles,
   listLocalLlamaCppModels,
   startChat,
   startRemoteChat,
@@ -80,6 +81,15 @@ export function ChatPage() {
   const [llamaCppLocal, setLlamaCppLocal] = useState<Set<string>>(new Set());
   // 원격 연결에서 조회한 모델 목록.
   const [remoteModels, setRemoteModels] = useState<RemoteModelInfo[]>([]);
+  // FIX-2: cache_dir의 .gguf 파일들 (catalog 매칭 실패해도 노출).
+  const [looseGgufFiles, setLooseGgufFiles] = useState<string[]>([]);
+  // FIX-3: fetch 실패 추적 — 빈 상태에서 어디가 막혔는지 사용자에게 안내.
+  const [fetchErrors, setFetchErrors] = useState<{
+    catalog?: string;
+    ollama?: string;
+    llamaCpp?: string;
+    remote?: string;
+  }>({});
   // 시스템 프롬프트 — 매 채팅 turn의 맨 앞에 role:"system"으로 삽입.
   const [systemPrompt, setSystemPrompt] = useState("");
   const [systemPromptOpen, setSystemPromptOpen] = useState(false);
@@ -90,45 +100,90 @@ export function ChatPage() {
   // 사용자가 위로 스크롤해서 history 읽는 중이면 auto-scroll 잠금 — ChatGPT/Open WebUI 패턴.
   const [isPinnedToBottom, setIsPinnedToBottom] = useState(true);
 
-  // 1) 카탈로그 + Ollama에 받은 모델 목록 + LlamaCpp 설정 로드.
-  // P0-1: 함수로 추출 → 새로고침 버튼/글로벌 이벤트로 재호출 가능.
+  // 1) 카탈로그 + Ollama 모델 + LlamaCpp 설정 + 원격 + cache_dir 직접 스캔 로드.
+  // FIX-1: Promise.allSettled로 silent fail 방지 — Ollama 한 곳이 reject돼도 나머지는 적용.
+  // FIX-2: list_local_gguf_files (cache_dir 직접 스캔) 추가 — catalog 매칭 실패해도 받은 파일은 노출.
   const refreshModelLists = useCallback(
     async (opts?: { applyPreselect?: boolean }): Promise<void> => {
-      try {
-        const [view, local, llamaPath, llamaCppIds, remotes] = await Promise.all([
-          getCatalog(),
-          listRuntimeModels("ollama"),
-          getLlamaServerPath(),
-          listLocalLlamaCppModels(),
-          listAllRemoteModels(),
-        ]);
-        setEntries(view.entries);
-        setLocalModels(local);
-        setLlamaServerConfigured(llamaPath !== null && llamaPath.length > 0);
-        setLlamaCppLocal(new Set(llamaCppIds));
-        setRemoteModels(remotes);
+      const results = await Promise.allSettled([
+        getCatalog(),                  // 0
+        listRuntimeModels("ollama"),   // 1
+        getLlamaServerPath(),          // 2
+        listLocalLlamaCppModels(),     // 3
+        listAllRemoteModels(),         // 4
+        listLocalGgufFiles(),          // 5 (FIX-2 신규)
+      ]);
 
-        if (!opts?.applyPreselect) return;
-        // preselect: 사용자가 catalog drawer에서 보낸 모델 우선 (mount 시 1회만).
-        let preselect: string | null = null;
-        try {
-          preselect = window.localStorage.getItem("lmmaster.chat.preselect");
-          if (preselect) {
-            window.localStorage.removeItem("lmmaster.chat.preselect");
-            window.localStorage.removeItem("lmmaster.chat.preselect.runtime");
-          }
-        } catch {
-          /* ignore */
-        }
+      const errors: typeof fetchErrors = {};
+
+      // 0: catalog
+      let local: RuntimeModelView[] = [];
+      let llamaCppIds: string[] = [];
+      if (results[0].status === "fulfilled") {
+        setEntries(results[0].value.entries);
+      } else {
+        errors.catalog = String(results[0].reason);
+        console.warn("chat: getCatalog failed:", results[0].reason);
+      }
+      // 1: ollama models
+      if (results[1].status === "fulfilled") {
+        local = results[1].value;
+        setLocalModels(local);
+      } else {
+        errors.ollama = String(results[1].reason);
+        console.warn("chat: listRuntimeModels(ollama) failed:", results[1].reason);
+        setLocalModels([]);
+      }
+      // 2: llama-server path
+      if (results[2].status === "fulfilled") {
+        setLlamaServerConfigured(
+          results[2].value !== null && results[2].value.length > 0,
+        );
+      } else {
+        console.warn("chat: getLlamaServerPath failed:", results[2].reason);
+      }
+      // 3: llama-cpp catalog-matched models
+      if (results[3].status === "fulfilled") {
+        llamaCppIds = results[3].value;
+        setLlamaCppLocal(new Set(llamaCppIds));
+      } else {
+        errors.llamaCpp = String(results[3].reason);
+        console.warn("chat: listLocalLlamaCppModels failed:", results[3].reason);
+      }
+      // 4: remote endpoints
+      if (results[4].status === "fulfilled") {
+        setRemoteModels(results[4].value);
+      } else {
+        errors.remote = String(results[4].reason);
+        console.warn("chat: listAllRemoteModels failed:", results[4].reason);
+      }
+      // 5: cache_dir 직접 .gguf 파일 (catalog 매칭 무관 노출)
+      if (results[5].status === "fulfilled") {
+        setLooseGgufFiles(results[5].value);
+      } else {
+        console.warn("chat: listLocalGgufFiles failed:", results[5].reason);
+      }
+
+      setFetchErrors(errors);
+
+      if (!opts?.applyPreselect) return;
+      // preselect: catalog drawer가 보낸 모델 우선 (mount 시 1회만).
+      let preselect: string | null = null;
+      try {
+        preselect = window.localStorage.getItem("lmmaster.chat.preselect");
         if (preselect) {
-          setSelectedRuntimeId(preselect);
-        } else if (local.length > 0) {
-          setSelectedRuntimeId(local[0]?.id ?? "");
-        } else if (llamaCppIds.length > 0) {
-          setSelectedRuntimeId(llamaCppIds[0] ?? "");
+          window.localStorage.removeItem("lmmaster.chat.preselect");
+          window.localStorage.removeItem("lmmaster.chat.preselect.runtime");
         }
-      } catch (e) {
-        console.warn("chat: model list refresh failed:", e);
+      } catch {
+        /* ignore */
+      }
+      if (preselect) {
+        setSelectedRuntimeId(preselect);
+      } else if (local.length > 0) {
+        setSelectedRuntimeId(local[0]?.id ?? "");
+      } else if (llamaCppIds.length > 0) {
+        setSelectedRuntimeId(llamaCppIds[0] ?? "");
       }
     },
     [],
@@ -243,8 +298,28 @@ export function ChatPage() {
         runtime: "ollama" as RuntimeKind, // 타입 호환용 — 실제 라우팅은 runtimeId prefix로 분기.
       });
     }
+    // FIX-2: cache_dir의 .gguf 파일 중 catalog-매칭 안 된 것 fallback 노출.
+    // runtimeId 형식 "loose::{filename}" — handleSend에서 별도 분기 (filename으로 llama-cpp 직접 실행 미구현 시 안내).
+    const matchedFilenames = new Set<string>();
+    for (const e of entries) {
+      const q = e.quantization_options[0];
+      const fp = q?.file_path;
+      if (fp) matchedFilenames.add(fp);
+    }
+    // mmproj 등 부가 파일은 제외 — 단순 휴리스틱: "mmproj" 포함 시 스킵.
+    for (const filename of looseGgufFiles) {
+      if (matchedFilenames.has(filename)) continue;
+      if (filename.toLowerCase().includes("mmproj")) continue;
+      const runtimeId = `loose::${filename}`;
+      list.push({
+        id: runtimeId,
+        runtimeId,
+        displayName: `📁 ${filename}`,
+        runtime: "llama-cpp",
+      });
+    }
     return list;
-  }, [entries, localModels, runtimeIdsByModelId, llamaCppLocal, remoteModels]);
+  }, [entries, localModels, runtimeIdsByModelId, llamaCppLocal, remoteModels, looseGgufFiles]);
 
   // Phase 13'.h — 선택된 모델의 카탈로그 정보. vision_support 판정용.
   // Phase 13'.h.2.e.2 — LlamaCpp 모델은 e.id로 직접 매칭.
@@ -315,6 +390,27 @@ export function ChatPage() {
     const turn: ChatMessage[] = [...systemMsg, ...history, userTurn];
 
     try {
+      // FIX-2: "loose::" prefix는 cache_dir 직접 파일 — catalog 매칭 안 된 GGUF.
+      // 현재는 직접 실행 미구현 → 사용자에게 안내 메시지로 종료.
+      if (selectedRuntimeId.startsWith("loose::")) {
+        const filename = selectedRuntimeId.slice("loose::".length);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsg.id
+              ? {
+                  ...m,
+                  streaming: false,
+                  errorMessage:
+                    `이 파일(${filename})은 cache 폴더에 있지만 카탈로그와 매칭되지 않아 직접 실행이 어려워요. ` +
+                    `카탈로그 → 다시 불러오기로 카탈로그를 갱신해 보거나, ` +
+                    `파일이 카탈로그의 모델인지 확인해 주세요.`,
+                }
+              : m,
+          ),
+        );
+        setRunning(false);
+        return;
+      }
       // 원격 모델이면 startRemoteChat으로 분기 — runtimeId prefix "remote::" 판별.
       const isRemote = selectedRuntimeId.startsWith("remote::");
       let outcome;
@@ -579,6 +675,20 @@ Background: Aya and User are alone in a cozy room.
           <p className="chat-empty-text">
             아직 받은 모델이 없어요. 카탈로그에서 먼저 받아주세요.
           </p>
+          {/* FIX-3: 빈 상태 진단 — 어디가 막혔는지 사용자에게 명시 */}
+          <p className="chat-empty-diag num">
+            인식 결과: catalog {entries.length}개 · ollama {localModels.length}개 ·{" "}
+            llama-cpp {llamaCppLocal.size}개 · 직접 받음 {looseGgufFiles.length}개 ·{" "}
+            원격 {remoteModels.length}개
+          </p>
+          {Object.keys(fetchErrors).length > 0 && (
+            <p className="chat-empty-diag is-error">
+              실패한 조회:{" "}
+              {Object.entries(fetchErrors)
+                .map(([k, v]) => `${k}(${v.slice(0, 50)})`)
+                .join(", ")}
+            </p>
+          )}
         </div>
       )}
 

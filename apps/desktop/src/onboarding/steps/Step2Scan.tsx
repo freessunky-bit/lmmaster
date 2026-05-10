@@ -284,8 +284,10 @@ function gpuVendorLabel(vendor: GpuInfo["vendor"]): string {
 }
 
 function formatGpuBody(gpu: GpuInfo): string {
+  const name =
+    gpu.model?.trim() || (gpu.vendor ? `${gpu.vendor.toUpperCase()} GPU` : "GPU");
   if (gpu.vram_bytes && gpu.vram_bytes > 0) {
-    return `${gpu.name} · ${formatGiB(gpu.vram_bytes)} VRAM`;
+    return `${name} · ${formatGiB(gpu.vram_bytes)} VRAM`;
   }
-  return gpu.name;
+  return name;
 }

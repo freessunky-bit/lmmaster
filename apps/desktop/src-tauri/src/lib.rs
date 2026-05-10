@@ -109,6 +109,7 @@ pub fn run() {
             chat::start_chat,
             chat::cancel_all_chats,
             chat::llama_cpp::list_local_llama_cpp_models,
+            chat::llama_cpp::list_local_gguf_files,
             chat::remote::start_remote_chat,
             settings::remote_endpoints::list_remote_endpoints,
             settings::remote_endpoints::add_remote_endpoint,

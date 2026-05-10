@@ -52,11 +52,13 @@ export type GpuVendor =
 
 export interface GpuInfo {
   vendor: GpuVendor;
-  name: string;
+  /** Rust hardware-probe::GpuInfo.model 직렬화. NVML/DXGI에서 가져온 GPU 모델명. */
+  model: string;
   vram_bytes?: number | null;
-  driver?: string | null;
-  cuda?: string | null;
-  metal_family?: string | null;
+  /** PCI vendor + device ID. Rust 측 (u16, u16) → [number, number]로 직렬화. */
+  pci_id?: [number, number] | null;
+  driver_version?: string | null;
+  apple_family?: string | null;
 }
 
 export interface RuntimeInfo {

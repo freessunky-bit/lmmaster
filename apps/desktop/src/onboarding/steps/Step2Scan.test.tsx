@@ -41,7 +41,7 @@ const FAKE_ENV = {
     cpu: { brand: "Intel", vendor_id: "GI", physical_cores: 8, logical_cores: 16, frequency_mhz: 3000 },
     mem: { total_bytes: 16 * 1024 ** 3, available_bytes: 8 * 1024 ** 3 },
     disks: [{ mount_point: "C:", kind: "ssd" as const, total_bytes: 500e9, available_bytes: 250e9 }],
-    gpus: [{ vendor: "nvidia" as const, name: "RTX 4080", vram_bytes: 16 * 1024 ** 3 }],
+    gpus: [{ vendor: "nvidia" as const, model: "RTX 4080", vram_bytes: 16 * 1024 ** 3 }],
     runtimes: {},
     probed_at: "2026-04-27T00:00:00Z",
     probe_ms: 100,

@@ -275,6 +275,20 @@
   margin: 0;
 }
 
+/* FIX-3: 빈 상태 진단 라벨 — 디버깅 친화. */
+.chat-empty-diag {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+.chat-empty-diag.is-error {
+  color: var(--error, #f87171);
+  opacity: 1;
+  word-break: break-all;
+}
+
 .chat-stream-wrap {
   position: relative;
   flex: 1;

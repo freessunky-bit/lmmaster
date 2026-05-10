@@ -16,6 +16,14 @@ export async function listLocalLlamaCppModels(): Promise<string[]> {
   return invoke<string[]>("list_local_llama_cpp_models");
 }
 
+/**
+ * FIX-2 (모델 인식 누락) — cache_dir의 모든 .gguf 파일명 직접 반환.
+ * catalog 매칭이 실패해도 사용자가 받은 파일은 노출되도록 fallback.
+ */
+export async function listLocalGgufFiles(): Promise<string[]> {
+  return invoke<string[]>("list_local_gguf_files");
+}
+
 export interface ChatMessage {
   /** "system" / "user" / "assistant". */
   role: "system" | "user" | "assistant";

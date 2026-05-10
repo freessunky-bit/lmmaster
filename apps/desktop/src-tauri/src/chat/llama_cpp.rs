@@ -167,6 +167,43 @@ pub fn list_local_llama_cpp_models(
     Ok(ids)
 }
 
+/// FIX-2 (모델 인식 누락) — cache_dir의 모든 .gguf 파일을 catalog 매칭과 무관하게 반환.
+///
+/// 정책:
+/// - `list_local_llama_cpp_models`는 catalog 매칭에 의존 (catalog stale / file_path 미스매치 시 못 잡음).
+/// - 본 IPC는 cache_dir 폴더만 스캔 → "사용자가 받은 GGUF 파일" 그대로 반환.
+/// - frontend Chat이 catalog-matched 모델 + 본 결과를 합쳐 "직접 받음" 섹션으로 노출.
+#[tauri::command]
+pub fn list_local_gguf_files(app: tauri::AppHandle) -> Result<Vec<String>, String> {
+    use tauri::Manager;
+    let cache_dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("app_local_data_dir 실패: {e}"))?
+        .join("models");
+    if !cache_dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut out: Vec<String> = Vec::new();
+    let entries = std::fs::read_dir(&cache_dir).map_err(|e| format!("read_dir 실패: {e}"))?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let name = match path.file_name().and_then(|n| n.to_str()) {
+            Some(n) => n.to_string(),
+            None => continue,
+        };
+        // .gguf 파일만 (mmproj도 .gguf 확장자라 포함됨 — frontend가 -mmproj 접미사로 판별).
+        if name.to_lowercase().ends_with(".gguf") {
+            out.push(name);
+        }
+    }
+    out.sort();
+    Ok(out)
+}
+
 /// MmprojSpec → mmproj 파일명. URL의 basename 우선, 없으면 `<id>-mmproj.gguf`.
 fn derive_mmproj_filename(spec: &MmprojSpec, fallback_id: &str) -> String {
     spec.url
