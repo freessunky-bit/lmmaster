@@ -184,12 +184,10 @@ pub async fn download_personas_dataset(
         file_total: 0,
     });
 
-    let files = list_dataset_parquets().await.map_err(|e| {
-        let msg = e.to_string();
+    let files = list_dataset_parquets().await.inspect_err(|e| {
         let _ = channel.send(PersonasDatasetEvent::Failed {
-            message: msg.clone(),
+            message: e.to_string(),
         });
-        e
     })?;
     let total_files = files.len();
     let total_bytes: u64 = files.iter().map(|(_, s)| *s).sum();

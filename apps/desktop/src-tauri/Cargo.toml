@@ -38,6 +38,11 @@ rand = "0.8"
 # Phase 11'.c (ADR-0049) — HF Search API URL + GitHub Issue prefilled body 인코딩.
 urlencoding = "2"
 
+# v0.8.x — 페르소나 시뮬 (Personas-Korea Parquet 파싱 + 필터 + 샘플링).
+parquet = { workspace = true }
+arrow-array = { workspace = true }
+arrow-schema = { workspace = true }
+
 # LMmaster crates
 shared-types.workspace = true
 core-gateway.workspace = true

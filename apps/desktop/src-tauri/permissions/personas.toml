@@ -1,0 +1,29 @@
+"$schema" = "../gen/schemas/desktop-schema.json"
+
+# v0.8.x — 페르소나 시뮬레이션 (Personas-Korea + 로컬 LLM).
+# 데이터셋 자동 다운 / 샘플링 / 배치 실행 / 리포트 프롬프트.
+
+[[permission]]
+identifier = "allow-get-personas-dataset-status"
+description = "Personas-Korea 데이터셋 캐시 상태 조회 (파일 수, 크기, installed)."
+commands.allow = ["get_personas_dataset_status"]
+
+[[permission]]
+identifier = "allow-download-personas-dataset"
+description = "Personas-Korea .parquet 파일 자동 다운로드 (HF API + reqwest, 진행률 Channel)."
+commands.allow = ["download_personas_dataset"]
+
+[[permission]]
+identifier = "allow-personas-sample"
+description = "Parquet 파싱 + 조건 필터 + shuffle + truncate → 페르소나 N명 추출."
+commands.allow = ["personas_sample"]
+
+[[permission]]
+identifier = "allow-personas-run-survey"
+description = "N명 × M문항 배치 LLM 호출 → SurveyAnswer 스트림."
+commands.allow = ["personas_run_survey"]
+
+[[permission]]
+identifier = "allow-personas-generate-report-prompt"
+description = "결과 통계 + 스타일(McKinsey/Nielsen/Academic) → 외부 LLM용 마크다운 프롬프트."
+commands.allow = ["personas_generate_report_prompt"]

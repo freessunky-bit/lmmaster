@@ -8,3 +8,6 @@
 //! - v0.8.1+: 페르소나 정의 / 설문 / 배치 실행 / 리포트.
 
 pub mod dataset;
+pub mod report;
+pub mod sample;
+pub mod survey;

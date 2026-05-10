@@ -7,3 +7,10 @@
 identifier = "allow-list-local-llama-cpp-models"
 description = "사용자 app_local_data_dir/models에 GGUF 존재하는 LlamaCpp catalog entry id 반환."
 commands.allow = ["list_local_llama_cpp_models"]
+
+# FIX-2 (v0.7.11) — cache_dir의 모든 .gguf 파일을 catalog 매칭과 무관하게 반환.
+# Chat 'loose::' fallback section.
+[[permission]]
+identifier = "allow-list-local-gguf-files"
+description = "사용자 cache_dir의 .gguf 파일명 목록 반환 (catalog 매칭 무관)."
+commands.allow = ["list_local_gguf_files"]
