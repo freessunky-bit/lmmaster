@@ -133,7 +133,8 @@ pub async fn start_model_pull(
                 .join("models");
             // HF 토큰 로드 — gated 모델(naver-hyperclovax 등) 다운로드에 필요.
             let hf_auth = crate::settings::hf_token::auth_header_value(&app);
-            let result = llama_cpp::pull_llama_model(&entry, &cache_dir, &channel, &cancel, hf_auth).await;
+            let result =
+                llama_cpp::pull_llama_model(&entry, &cache_dir, &channel, &cancel, hf_auth).await;
             match result {
                 Ok(()) => Ok(PullOutcomeIpc::Completed),
                 Err(e) => {
