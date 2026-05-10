@@ -10,7 +10,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use chat_protocol::{ChatEvent, ChatMessage};
+use chat_protocol::{ChatEvent, ChatMessage, FinishReason};
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use tauri::ipc::Channel;
@@ -181,6 +181,7 @@ pub async fn start_remote_chat(
                     // 스트림 정상 종료 ([DONE] 없이 닫히는 경우 포함).
                     let _ = channel.send(ChatEvent::Completed {
                         took_ms: started.elapsed().as_millis() as u64,
+                        finish_reason: FinishReason::Aborted,
                     });
                     return Ok(ChatOutcomeIpc::Completed);
                 }
@@ -190,6 +191,7 @@ pub async fn start_remote_chat(
                         tracing::warn!(endpoint_id, error = %e, "원격 스트림 중단 — 부분 응답으로 마감");
                         let _ = channel.send(ChatEvent::Completed {
                             took_ms: started.elapsed().as_millis() as u64,
+                            finish_reason: FinishReason::Aborted,
                         });
                         return Ok(ChatOutcomeIpc::Completed);
                     }
@@ -212,6 +214,7 @@ pub async fn start_remote_chat(
                             if data == "[DONE]" {
                                 let _ = channel.send(ChatEvent::Completed {
                                     took_ms: started.elapsed().as_millis() as u64,
+                                    finish_reason: FinishReason::Unknown,
                                 });
                                 return Ok(ChatOutcomeIpc::Completed);
                             }
@@ -230,9 +233,15 @@ pub async fn start_remote_chat(
                                                 }
                                             }
                                         }
-                                        if choice.finish_reason.as_deref() == Some("stop") {
+                                        if let Some(reason) = choice.finish_reason.as_deref() {
+                                            let mapped = match reason {
+                                                "stop" => FinishReason::Stop,
+                                                "length" => FinishReason::Length,
+                                                _ => FinishReason::Unknown,
+                                            };
                                             let _ = channel.send(ChatEvent::Completed {
                                                 took_ms: started.elapsed().as_millis() as u64,
+                                                finish_reason: mapped,
                                             });
                                             return Ok(ChatOutcomeIpc::Completed);
                                         }

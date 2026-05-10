@@ -105,6 +105,7 @@
     "allow-personas-sample",
     "allow-personas-run-survey",
     "allow-personas-generate-report-prompt",
+    "allow-personas-generate-report-prompt-plan",
     "allow-get-gateway-allow-external",
     "allow-set-gateway-allow-external",
     "allow-list-lan-addresses",

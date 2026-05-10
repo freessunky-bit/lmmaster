@@ -456,14 +456,17 @@ impl BenchAdapter for LmStudioAdapter {
 
 impl LmStudioAdapter {
     /// 사용자 in-app 채팅 — OpenAI 호환 SSE 스트리밍.
+    ///
+    /// v0.8.4 — `sampling: Option<&SamplingParams>` 추가. None은 LM Studio 디폴트 사용.
     pub async fn chat_stream(
         &self,
         model_id: &str,
         messages: &[chat_protocol::ChatMessage],
         on_event: impl Fn(chat_protocol::ChatEvent),
         cancel: &CancellationToken,
+        sampling: Option<&chat_protocol::SamplingParams>,
     ) -> chat_protocol::ChatOutcome {
-        use chat_protocol::{ChatEvent, ChatOutcome};
+        use chat_protocol::{ChatEvent, ChatOutcome, FinishReason};
 
         let started = Instant::now();
         let openai_messages: Vec<OpenAIChatTurn> =
@@ -473,6 +476,11 @@ impl LmStudioAdapter {
             model: model_id,
             messages: openai_messages,
             stream: true,
+            max_tokens: sampling.and_then(|p| p.max_tokens),
+            temperature: sampling.and_then(|p| p.temperature),
+            top_p: sampling.and_then(|p| p.top_p),
+            repeat_penalty: sampling.and_then(|p| p.repeat_penalty),
+            seed: sampling.and_then(|p| p.seed),
         };
         let send_fut = self
             .http
@@ -541,6 +549,7 @@ impl LmStudioAdapter {
                                 if payload == b"[DONE]" {
                                     on_event(ChatEvent::Completed {
                                         took_ms: started.elapsed().as_millis() as u64,
+                                        finish_reason: FinishReason::Unknown,
                                     });
                                     return ChatOutcome::Completed;
                                 }
@@ -558,9 +567,15 @@ impl LmStudioAdapter {
                                             on_event(ChatEvent::Delta { text: text.to_string() });
                                         }
                                     }
-                                    if choice.finish_reason.is_some() {
+                                    if let Some(reason) = choice.finish_reason.as_deref() {
+                                        let mapped = match reason {
+                                            "stop" => FinishReason::Stop,
+                                            "length" => FinishReason::Length,
+                                            _ => FinishReason::Unknown,
+                                        };
                                         on_event(ChatEvent::Completed {
                                             took_ms: started.elapsed().as_millis() as u64,
+                                            finish_reason: mapped,
                                         });
                                         return ChatOutcome::Completed;
                                     }
@@ -573,6 +588,7 @@ impl LmStudioAdapter {
                                 tracing::warn!(error = %e, "lm-studio 스트림 중단 — 부분 응답으로 마감");
                                 on_event(ChatEvent::Completed {
                                     took_ms: started.elapsed().as_millis() as u64,
+                                    finish_reason: FinishReason::Aborted,
                                 });
                                 return ChatOutcome::Completed;
                             }
@@ -583,6 +599,7 @@ impl LmStudioAdapter {
                         None => {
                             on_event(ChatEvent::Completed {
                                 took_ms: started.elapsed().as_millis() as u64,
+                                finish_reason: FinishReason::Aborted,
                             });
                             return ChatOutcome::Completed;
                         }
@@ -937,7 +954,9 @@ mod tests {
             content: "ping".into(),
             images: None,
         }];
-        let outcome = a.chat_stream("test", &messages, on_event, &cancel).await;
+        let outcome = a
+            .chat_stream("test", &messages, on_event, &cancel, None)
+            .await;
 
         assert!(
             matches!(outcome, OllamaChatOutcome::Completed),
@@ -970,7 +989,9 @@ mod tests {
             content: "ping".into(),
             images: None,
         }];
-        let outcome = a.chat_stream("test", &messages, on_event, &cancel).await;
+        let outcome = a
+            .chat_stream("test", &messages, on_event, &cancel, None)
+            .await;
 
         assert!(
             matches!(outcome, OllamaChatOutcome::Failed(_)),

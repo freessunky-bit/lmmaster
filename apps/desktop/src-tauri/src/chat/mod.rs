@@ -103,6 +103,7 @@ pub async fn start_chat(
                         }
                     },
                     &cancel,
+                    None,
                 )
                 .await;
             Ok(outcome.into())
@@ -127,6 +128,7 @@ pub async fn start_chat(
                         }
                     },
                     &cancel,
+                    None,
                 )
                 .await;
             Ok(outcome.into())
@@ -202,6 +204,7 @@ pub async fn start_chat(
                         }
                     },
                     &cancel,
+                    None,
                 )
                 .await;
             Ok(outcome.into())

@@ -10,7 +10,7 @@
 use std::sync::{Arc, Mutex};
 
 use adapter_ollama::OllamaAdapter;
-use chat_protocol::{ChatEvent, ChatMessage, ChatOutcome};
+use chat_protocol::{ChatEvent, ChatMessage, ChatOutcome, FinishReason, SamplingParams};
 use serde::{Deserialize, Serialize};
 use shared_types::RuntimeKind;
 use tauri::ipc::Channel;
@@ -60,12 +60,17 @@ pub struct SurveyDef {
 }
 
 /// 한 페르소나의 한 문항 응답.
+///
+/// v0.8.4 — `truncated` flag 추가. `FinishReason::Length`인 경우 true → UI는 "잘렸어요" 칩 표시.
 #[derive(Debug, Clone, Serialize)]
 pub struct SurveyAnswer {
     pub persona_uuid: String,
     pub question_id: String,
     pub answer: String,
     pub took_ms: u64,
+    /// 응답이 토큰 한계 도달로 잘렸는지. v0.8.4 추가, 백워드 호환은 frontend optional.
+    #[serde(default)]
+    pub truncated: bool,
 }
 
 /// 진행 이벤트 — Channel<PersonasSurveyEvent>로 frontend stream.
@@ -94,6 +99,9 @@ pub struct RunSurveyArgs {
     /// 추가 system 지시문 (사용자 정의). 페르소나 narrative 앞에 붙음.
     #[serde(default)]
     pub system_extra: Option<String>,
+    /// v0.8.4 — 사용자 조절 sampling 파라미터. None이면 어댑터/모델 디폴트.
+    #[serde(default)]
+    pub sampling: Option<SamplingParams>,
 }
 
 fn build_system_prompt(p: &Persona, extra: Option<&str>) -> String {
@@ -208,26 +216,33 @@ pub async fn personas_run_survey(
             });
 
             let q_started = std::time::Instant::now();
+            // (응답 텍스트, finish_reason). finish_reason은 Completed event에서 update.
+            let buf: Arc<Mutex<(String, FinishReason)>> =
+                Arc::new(Mutex::new((String::new(), FinishReason::Unknown)));
             let answer = match args.runtime_kind {
                 RuntimeKind::Ollama => {
                     let adapter = OllamaAdapter::new();
-                    let buf: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
                     let buf_c = buf.clone();
                     let outcome = adapter
                         .chat_stream(
                             &args.model_id,
                             &messages,
                             move |event: ChatEvent| {
-                                if let ChatEvent::Delta { text } = event {
-                                    if let Ok(mut b) = buf_c.lock() {
-                                        b.push_str(&text);
+                                if let Ok(mut state) = buf_c.lock() {
+                                    match event {
+                                        ChatEvent::Delta { text } => state.0.push_str(&text),
+                                        ChatEvent::Completed { finish_reason, .. } => {
+                                            state.1 = finish_reason;
+                                        }
+                                        _ => {}
                                     }
                                 }
                             },
                             &cancel,
+                            args.sampling.as_ref(),
                         )
                         .await;
-                    let collected = buf.lock().map(|b| b.clone()).unwrap_or_default();
+                    let collected = buf.lock().map(|s| s.0.clone()).unwrap_or_default();
                     match outcome {
                         ChatOutcome::Completed => collected,
                         ChatOutcome::Cancelled => {
@@ -288,23 +303,27 @@ pub async fn personas_run_survey(
                     drop(state);
 
                     let adapter = adapter_llama_cpp::LlamaCppAdapter::with_endpoint(&endpoint);
-                    let buf: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
                     let buf_c = buf.clone();
                     let outcome = adapter
                         .chat_stream(
                             &args.model_id,
                             &messages,
                             move |event: ChatEvent| {
-                                if let ChatEvent::Delta { text } = event {
-                                    if let Ok(mut b) = buf_c.lock() {
-                                        b.push_str(&text);
+                                if let Ok(mut state) = buf_c.lock() {
+                                    match event {
+                                        ChatEvent::Delta { text } => state.0.push_str(&text),
+                                        ChatEvent::Completed { finish_reason, .. } => {
+                                            state.1 = finish_reason;
+                                        }
+                                        _ => {}
                                     }
                                 }
                             },
                             &cancel,
+                            args.sampling.as_ref(),
                         )
                         .await;
-                    let collected = buf.lock().map(|b| b.clone()).unwrap_or_default();
+                    let collected = buf.lock().map(|s| s.0.clone()).unwrap_or_default();
                     match outcome {
                         ChatOutcome::Completed => collected,
                         ChatOutcome::Cancelled => {
@@ -327,12 +346,17 @@ pub async fn personas_run_survey(
             };
 
             let took_ms = q_started.elapsed().as_millis() as u64;
+            let truncated = matches!(
+                buf.lock().map(|s| s.1).unwrap_or(FinishReason::Unknown),
+                FinishReason::Length
+            );
             let _ = channel.send(PersonasSurveyEvent::Answer {
                 answer: SurveyAnswer {
                     persona_uuid: persona.uuid.clone(),
                     question_id: question.id.clone(),
                     answer: answer.trim().to_string(),
                     took_ms,
+                    truncated,
                 },
             });
             completed += 1;

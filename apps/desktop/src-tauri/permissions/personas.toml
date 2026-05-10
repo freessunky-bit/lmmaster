@@ -27,3 +27,8 @@ commands.allow = ["personas_run_survey"]
 identifier = "allow-personas-generate-report-prompt"
 description = "결과 통계 + 스타일(McKinsey/Nielsen/Academic) → 외부 LLM용 마크다운 프롬프트."
 commands.allow = ["personas_generate_report_prompt"]
+
+[[permission]]
+identifier = "allow-personas-generate-report-prompt-plan"
+description = "v0.8.4 — 토큰 한도 초과 시 chunked map-reduce 프롬프트 계획 (chunks + final_synthesis)."
+commands.allow = ["personas_generate_report_prompt_plan"]

@@ -267,6 +267,17 @@ fn parse_port_from_endpoint(endpoint: &str) -> Option<u16> {
 // - cancel은 stream drop으로 server abort.
 // - vision_support=true + mmproj 미적용 server → server가 422 또는 텍스트 무시 — stderr_map이 매핑.
 
+/// llama.cpp `finish_reason` 문자열을 통합 `chat_protocol::FinishReason`으로 매핑.
+fn map_openai_finish_reason(reason: Option<&str>) -> chat_protocol::FinishReason {
+    use chat_protocol::FinishReason;
+    match reason {
+        Some("stop") => FinishReason::Stop,
+        Some("length") => FinishReason::Length,
+        Some(_) => FinishReason::Unknown,
+        None => FinishReason::Unknown,
+    }
+}
+
 impl LlamaCppAdapter {
     /// 사용자 in-app 채팅 — OpenAI 호환 SSE 스트리밍.
     pub async fn chat_stream(
@@ -275,8 +286,9 @@ impl LlamaCppAdapter {
         messages: &[chat_protocol::ChatMessage],
         on_event: impl Fn(chat_protocol::ChatEvent),
         cancel: &CancellationToken,
+        sampling: Option<&chat_protocol::SamplingParams>,
     ) -> chat_protocol::ChatOutcome {
-        use chat_protocol::{ChatEvent, ChatOutcome};
+        use chat_protocol::{ChatEvent, ChatOutcome, FinishReason};
 
         let started = Instant::now();
         let openai_messages: Vec<OpenAIChatTurn> =
@@ -286,6 +298,11 @@ impl LlamaCppAdapter {
             model: model_id,
             messages: openai_messages,
             stream: true,
+            max_tokens: sampling.and_then(|p| p.max_tokens),
+            temperature: sampling.and_then(|p| p.temperature),
+            top_p: sampling.and_then(|p| p.top_p),
+            repeat_penalty: sampling.and_then(|p| p.repeat_penalty),
+            seed: sampling.and_then(|p| p.seed),
         };
         let send_fut = self
             .http
@@ -351,8 +368,11 @@ impl LlamaCppAdapter {
                                     },
                                 };
                                 if payload == b"[DONE]" {
+                                    // [DONE] 마커만으론 finish_reason 못 받음 — Unknown.
+                                    // (대부분 직전 chunk의 finish_reason 핸들러에서 정확 매핑됨)
                                     on_event(ChatEvent::Completed {
                                         took_ms: started.elapsed().as_millis() as u64,
+                                        finish_reason: FinishReason::Unknown,
                                     });
                                     return ChatOutcome::Completed;
                                 }
@@ -373,6 +393,9 @@ impl LlamaCppAdapter {
                                     if choice.finish_reason.is_some() {
                                         on_event(ChatEvent::Completed {
                                             took_ms: started.elapsed().as_millis() as u64,
+                                            finish_reason: map_openai_finish_reason(
+                                                choice.finish_reason.as_deref(),
+                                            ),
                                         });
                                         return ChatOutcome::Completed;
                                     }
@@ -385,6 +408,7 @@ impl LlamaCppAdapter {
                                 tracing::warn!(error = %e, "llama-server 스트림 중단 — 부분 응답으로 마감");
                                 on_event(ChatEvent::Completed {
                                     took_ms: started.elapsed().as_millis() as u64,
+                                    finish_reason: FinishReason::Aborted,
                                 });
                                 return ChatOutcome::Completed;
                             }
@@ -395,6 +419,7 @@ impl LlamaCppAdapter {
                         None => {
                             on_event(ChatEvent::Completed {
                                 took_ms: started.elapsed().as_millis() as u64,
+                                finish_reason: FinishReason::Aborted,
                             });
                             return ChatOutcome::Completed;
                         }
@@ -586,6 +611,7 @@ mod tests {
                 }],
                 move |e| events_clone.lock().unwrap().push(e),
                 &cancel,
+                None,
             )
             .await;
         assert!(matches!(outcome, ChatOutcome::Completed));
@@ -623,6 +649,7 @@ mod tests {
                 }],
                 |_| {},
                 &cancel,
+                None,
             )
             .await;
         match outcome {
@@ -665,6 +692,7 @@ mod tests {
                 }],
                 |_| {},
                 &cancel,
+                None,
             )
             .await;
         assert!(matches!(outcome, ChatOutcome::Cancelled));
@@ -721,7 +749,9 @@ mod tests {
             content: "ping".into(),
             images: None,
         }];
-        let outcome = a.chat_stream("test", &messages, on_event, &cancel).await;
+        let outcome = a
+            .chat_stream("test", &messages, on_event, &cancel, None)
+            .await;
 
         assert!(
             matches!(outcome, ChatOutcome::Completed),
@@ -753,7 +783,9 @@ mod tests {
             content: "ping".into(),
             images: None,
         }];
-        let outcome = a.chat_stream("test", &messages, on_event, &cancel).await;
+        let outcome = a
+            .chat_stream("test", &messages, on_event, &cancel, None)
+            .await;
 
         assert!(
             matches!(outcome, ChatOutcome::Failed(_)),

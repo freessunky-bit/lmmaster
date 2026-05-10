@@ -93,7 +93,20 @@ export interface SurveyAnswer {
   question_id: string;
   answer: string;
   took_ms: number;
+  /** v0.8.4 — 응답이 토큰 한계로 잘렸으면 true. */
+  truncated?: boolean;
 }
+
+// v0.8.4 — 사용자 조절 sampling 파라미터.
+export interface SamplingParams {
+  max_tokens?: number | null;
+  temperature?: number | null;
+  top_p?: number | null;
+  repeat_penalty?: number | null;
+  seed?: number | null;
+}
+
+export type FinishReason = "stop" | "length" | "aborted" | "meta" | "unknown";
 
 export type PersonasSurveyEvent =
   | { kind: "started"; total_calls: number }
@@ -115,6 +128,8 @@ export async function personasRunSurvey(args: {
   runtimeKind: "ollama" | "llama-cpp";
   modelId: string;
   systemExtra?: string;
+  /** v0.8.4 — sampling 파라미터. None이면 어댑터 디폴트. */
+  sampling?: SamplingParams | null;
   onEvent: (e: PersonasSurveyEvent) => void;
 }): Promise<void> {
   const channel = new Channel<PersonasSurveyEvent>();
@@ -126,6 +141,7 @@ export async function personasRunSurvey(args: {
       runtime_kind: args.runtimeKind,
       model_id: args.modelId,
       system_extra: args.systemExtra ?? null,
+      sampling: args.sampling ?? null,
     },
     channel,
   });
@@ -167,4 +183,34 @@ export async function personasGenerateReportPrompt(
   req: ReportRequest,
 ): Promise<string> {
   return invoke<string>("personas_generate_report_prompt", { req });
+}
+
+// ── v0.8.4: chunked map-reduce 리포트 ─────────────────────────────
+
+export interface ReportPromptChunk {
+  /** 1-based 순번. */
+  seq: number;
+  /** 총 청크 수. */
+  total: number;
+  /** 헤더 + 부분 데이터 + 부분 분석 지시 포함 prompt. */
+  prompt: string;
+  /** 휴리스틱 토큰 추정. */
+  estimated_tokens: number;
+}
+
+export interface ReportPromptPlan {
+  /** 청크 N개. total === 1이면 single-shot. */
+  chunks: ReportPromptChunk[];
+  /** 모든 청크 paste 후 사용자가 별도 발사할 종합 합성 prompt. 청크 1개면 null. */
+  final_synthesis: string | null;
+  /** UI 표시용 합산 토큰 추정. */
+  estimated_tokens_total: number;
+}
+
+export async function personasGenerateReportPromptPlan(
+  req: ReportRequest,
+): Promise<ReportPromptPlan> {
+  return invoke<ReportPromptPlan>("personas_generate_report_prompt_plan", {
+    req,
+  });
 }

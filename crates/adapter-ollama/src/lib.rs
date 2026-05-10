@@ -396,7 +396,7 @@ enum PullAttemptOutcome {
 // Phase R-E.3 (ADR-0058) — ChatMessage / ChatEvent / ChatOutcome은 `chat-protocol`
 // crate로 추출. 외부 사용처는 그대로 `adapter_ollama::ChatMessage` import 가능 (re-export).
 
-pub use chat_protocol::{ChatEvent, ChatMessage, ChatOutcome};
+pub use chat_protocol::{ChatEvent, ChatMessage, ChatOutcome, FinishReason, SamplingParams};
 
 /// Ollama `/api/chat` request DTO.
 #[derive(Debug, Serialize)]
@@ -405,15 +405,74 @@ struct ChatRequest<'a> {
     messages: &'a [ChatMessage],
     stream: bool,
     keep_alive: &'a str,
+    /// v0.8.4 — sampling 파라미터 (`num_predict`, `temperature`, ...). None이면 직렬화 skip.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    options: Option<OllamaOptions>,
 }
 
-/// Ollama `/api/chat` 응답 chunk — `{message: {role, content}, done}`.
+/// Ollama `/api/chat` request `options` 객체.
+///
+/// 정책: 모든 필드 `Option` — `None`이면 wire에서 제외, Ollama 기본값 사용.
+#[derive(Debug, Default, Serialize)]
+struct OllamaOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    num_predict: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    temperature: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    top_p: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    repeat_penalty: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    seed: Option<i64>,
+}
+
+impl OllamaOptions {
+    fn from_sampling(p: &SamplingParams) -> Self {
+        Self {
+            num_predict: p.max_tokens.map(|n| n.min(i32::MAX as u32) as i32),
+            temperature: p.temperature,
+            top_p: p.top_p,
+            repeat_penalty: p.repeat_penalty,
+            seed: p.seed,
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.num_predict.is_none()
+            && self.temperature.is_none()
+            && self.top_p.is_none()
+            && self.repeat_penalty.is_none()
+            && self.seed.is_none()
+    }
+}
+
+/// Ollama `done_reason` 문자열을 통합 `FinishReason`으로 매핑.
+///
+/// Ollama 0.4+ 스펙:
+/// - `"stop"` — 자연 종료 (EOS / stop word)
+/// - `"length"` — `num_predict` 한계 도달
+/// - `"load"` / `"unload"` — 메타 이벤트 (실 응답 아님)
+fn map_ollama_done_reason(reason: Option<&str>) -> FinishReason {
+    match reason {
+        Some("stop") => FinishReason::Stop,
+        Some("length") => FinishReason::Length,
+        Some("load") | Some("unload") => FinishReason::Meta,
+        Some(_) => FinishReason::Unknown,
+        None => FinishReason::Unknown,
+    }
+}
+
+/// Ollama `/api/chat` 응답 chunk — `{message: {role, content}, done, done_reason}`.
 #[derive(Debug, Deserialize)]
 struct ChatChunk {
     #[serde(default)]
     message: Option<ChatChunkMessage>,
     #[serde(default)]
     done: bool,
+    /// v0.8.4 — Ollama 0.4+ `done_reason`. `"stop"`, `"length"`, `"load"`, `"unload"`.
+    #[serde(default)]
+    done_reason: Option<String>,
     #[serde(default)]
     error: Option<String>,
 }
@@ -438,13 +497,23 @@ impl OllamaAdapter {
         messages: &[ChatMessage],
         on_event: impl Fn(ChatEvent),
         cancel: &CancellationToken,
+        sampling: Option<&SamplingParams>,
     ) -> ChatOutcome {
         let started = Instant::now();
+        let options = sampling.map(OllamaOptions::from_sampling).and_then(|o| {
+            // 모든 필드가 None이면 wire에서 options 자체 skip (백워드 호환).
+            if o.is_empty() {
+                None
+            } else {
+                Some(o)
+            }
+        });
         let body = ChatRequest {
             model: model_id,
             messages,
             stream: true,
             keep_alive: "5m",
+            options,
         };
         let send_fut = self.http.post(self.url("/api/chat")).json(&body).send();
         let resp = tokio::select! {
@@ -521,6 +590,9 @@ impl OllamaAdapter {
                                 if chunk.done {
                                     on_event(ChatEvent::Completed {
                                         took_ms: started.elapsed().as_millis() as u64,
+                                        finish_reason: map_ollama_done_reason(
+                                            chunk.done_reason.as_deref(),
+                                        ),
                                     });
                                     return ChatOutcome::Completed;
                                 }
@@ -532,6 +604,7 @@ impl OllamaAdapter {
                                 tracing::warn!(error = %e, "ollama 스트림 중단 — 부분 응답으로 마감");
                                 on_event(ChatEvent::Completed {
                                     took_ms: started.elapsed().as_millis() as u64,
+                                    finish_reason: FinishReason::Aborted,
                                 });
                                 return ChatOutcome::Completed;
                             }
@@ -543,6 +616,7 @@ impl OllamaAdapter {
                             // stream EOF — done 마커 못 받아도 부분 응답으로 마감 (graceful).
                             on_event(ChatEvent::Completed {
                                 took_ms: started.elapsed().as_millis() as u64,
+                                finish_reason: FinishReason::Aborted,
                             });
                             return ChatOutcome::Completed;
                         }
@@ -1496,7 +1570,9 @@ mod tests {
             content: "ping".into(),
             images: None,
         }];
-        let outcome = a.chat_stream("test", &messages, on_event, &cancel).await;
+        let outcome = a
+            .chat_stream("test", &messages, on_event, &cancel, None)
+            .await;
 
         // R-C.2 정책: delta 1건 이상 emit + transport 에러 → Completed.
         assert!(
@@ -1541,7 +1617,9 @@ mod tests {
             content: "ping".into(),
             images: None,
         }];
-        let outcome = a.chat_stream("test", &messages, on_event, &cancel).await;
+        let outcome = a
+            .chat_stream("test", &messages, on_event, &cancel, None)
+            .await;
 
         assert!(
             matches!(outcome, ChatOutcome::Failed(_)),

@@ -39,11 +39,37 @@ pub enum ChatEvent {
     Completed {
         /// 총 응답 ms — 호출 측 elapsed 측정용 hint.
         took_ms: u64,
+        /// v0.8.4 추가 — 잘림(`Length`) / 정상 종료(`Stop`) / 메타(`Meta`) / 끊김(`Aborted`) 구분.
+        /// 백워드 호환: 누락 시 `Unknown`.
+        #[serde(default = "default_finish_reason")]
+        finish_reason: FinishReason,
     },
     Cancelled,
     Failed {
         message: String,
     },
+}
+
+fn default_finish_reason() -> FinishReason {
+    FinishReason::Unknown
+}
+
+/// 응답 종료 원인 — 토큰 한계 도달 감지(`Length`)와 정상 종료(`Stop`) 등을 구분.
+///
+/// v0.8.4 추가. Ollama `done_reason` / llama.cpp `finish_reason` 또는 `stop_type`을 통합 매핑.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FinishReason {
+    /// 정상 종료 — EOS / stop word / 자연 마침.
+    Stop,
+    /// 토큰 한계 도달 — `num_predict` / `max_tokens` 임계 도달. UI 안내 트리거.
+    Length,
+    /// 사용자 cancel 또는 외부 abort (graceful early disconnect 등). UI는 "잘렸어요" 카피 X.
+    Aborted,
+    /// 모델 로드/언로드 등 메타 이벤트 (Ollama "load"/"unload"). 일반 응답 아님.
+    Meta,
+    /// 알 수 없음 — 필드 누락 / 신규 값. 안전 디폴트로 `Stop`과 동일 처리.
+    Unknown,
 }
 
 /// Chat 호출 결과 — 어댑터 함수 반환 + IPC outcome.
@@ -52,6 +78,31 @@ pub enum ChatOutcome {
     Completed,
     Cancelled,
     Failed(String),
+}
+
+/// 사용자 조절 가능한 추론 파라미터 — v0.8.4.
+///
+/// 정책:
+/// - 모든 필드 `Option` — `None`은 어댑터/모델 디폴트 사용.
+/// - 어댑터별 wire 매핑은 각 어댑터 내부 (Ollama options vs OpenAI request fields).
+/// - `serde(skip_serializing_if = "Option::is_none")`로 백워드 호환 보존.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct SamplingParams {
+    /// 최대 응답 토큰 수. None이면 모델/서버 디폴트 (Ollama -1, llama.cpp -1 = unlimited).
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub max_tokens: Option<u32>,
+    /// 0.0 (deterministic) ~ 1.5+ (creative). None이면 어댑터 디폴트 (대개 0.7~0.8).
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub temperature: Option<f32>,
+    /// nucleus sampling. 0.0~1.0.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub top_p: Option<f32>,
+    /// 1.0이면 페널티 없음. 1.1~1.3이 일반적.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub repeat_penalty: Option<f32>,
+    /// 재현성용. None이면 서버 랜덤 (Ollama -1, llama.cpp -1).
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub seed: Option<i64>,
 }
 
 #[cfg(test)]
@@ -103,10 +154,101 @@ mod tests {
 
     #[test]
     fn chat_event_completed_round_trip() {
-        let e = ChatEvent::Completed { took_ms: 1234 };
+        let e = ChatEvent::Completed {
+            took_ms: 1234,
+            finish_reason: FinishReason::Stop,
+        };
         let json = serde_json::to_string(&e).unwrap();
         let back: ChatEvent = serde_json::from_str(&json).unwrap();
-        assert_eq!(back, ChatEvent::Completed { took_ms: 1234 });
+        assert_eq!(
+            back,
+            ChatEvent::Completed {
+                took_ms: 1234,
+                finish_reason: FinishReason::Stop,
+            }
+        );
+    }
+
+    // v0.8.4 — finish_reason / SamplingParams 테스트.
+
+    #[test]
+    fn finish_reason_round_trip_kebab() {
+        for r in [
+            FinishReason::Stop,
+            FinishReason::Length,
+            FinishReason::Aborted,
+            FinishReason::Meta,
+            FinishReason::Unknown,
+        ] {
+            let json = serde_json::to_string(&r).unwrap();
+            let back: FinishReason = serde_json::from_str(&json).unwrap();
+            assert_eq!(back, r);
+            // kebab-case: "length", "aborted" 등 lowercase.
+            assert!(json.chars().filter(|c| *c != '"').all(|c| !c.is_uppercase()));
+        }
+    }
+
+    #[test]
+    fn legacy_completed_without_finish_reason_deserializes_unknown() {
+        // v0.8.3 와이어 — finish_reason 필드 없음.
+        let json = r#"{"kind":"completed","took_ms":1234}"#;
+        let e: ChatEvent = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            e,
+            ChatEvent::Completed {
+                took_ms: 1234,
+                finish_reason: FinishReason::Unknown,
+            }
+        );
+    }
+
+    #[test]
+    fn chat_event_completed_with_length_serializes_kebab() {
+        let e = ChatEvent::Completed {
+            took_ms: 500,
+            finish_reason: FinishReason::Length,
+        };
+        let v = serde_json::to_value(&e).unwrap();
+        assert_eq!(v["finish_reason"], "length");
+    }
+
+    #[test]
+    fn sampling_params_default_serializes_empty_object() {
+        // 모든 필드 None → JSON `{}` (skip 적용).
+        let p = SamplingParams::default();
+        let v = serde_json::to_value(&p).unwrap();
+        assert_eq!(v, serde_json::json!({}), "모든 필드 None → 빈 객체");
+    }
+
+    #[test]
+    fn sampling_params_partial_serialize_skips_none() {
+        let p = SamplingParams {
+            max_tokens: Some(512),
+            temperature: Some(0.7),
+            top_p: None,
+            repeat_penalty: None,
+            seed: None,
+        };
+        let v = serde_json::to_value(&p).unwrap();
+        assert_eq!(v["max_tokens"], 512);
+        assert!((v["temperature"].as_f64().unwrap() - 0.7).abs() < 0.001);
+        assert!(v.get("top_p").is_none());
+        assert!(v.get("repeat_penalty").is_none());
+        assert!(v.get("seed").is_none());
+    }
+
+    #[test]
+    fn sampling_params_round_trip_full() {
+        let p = SamplingParams {
+            max_tokens: Some(2048),
+            temperature: Some(0.5),
+            top_p: Some(0.95),
+            repeat_penalty: Some(1.1),
+            seed: Some(42),
+        };
+        let json = serde_json::to_string(&p).unwrap();
+        let back: SamplingParams = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, p);
     }
 
     #[test]

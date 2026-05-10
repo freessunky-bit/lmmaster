@@ -4,9 +4,11 @@
 // v0.8.1: Step 2 페르소나 정의 (폼) + 샘플링 미리보기.
 // v0.8.2: Step 3 설문 정의 (텍스트) + Step 4 배치 실행.
 // v0.8.3: 결과 통계 + 외부 LLM 프롬프트 생성 (3종 스타일).
+// v0.8.4: 추론 파라미터 GUI + chunked map-reduce 리포트 (토큰 한계 자동 분할).
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   BarChart3,
   CheckCircle2,
   ClipboardCopy,
@@ -15,6 +17,7 @@ import {
   FileText,
   Loader2,
   Play,
+  Sliders,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -24,7 +27,7 @@ import { listRuntimeModels } from "../ipc/runtimes";
 import {
   downloadPersonasDataset,
   getPersonasDatasetStatus,
-  personasGenerateReportPrompt,
+  personasGenerateReportPromptPlan,
   personasRunSurvey,
   personasSample,
   type Persona,
@@ -32,11 +35,18 @@ import {
   type PersonasDatasetEvent,
   type PersonasDatasetStatus,
   type PersonasSurveyEvent,
+  type ReportPromptPlan,
   type ReportStyle,
   type SurveyAnswer,
   type SurveyDef,
   type SurveyQuestion,
 } from "../ipc/personas";
+import {
+  SamplingDrawer,
+  effectiveSampling,
+  loadPersistedSampling,
+  type PersistedSampling,
+} from "./persona-survey/SamplingDrawer";
 
 import "./persona-survey.css";
 
@@ -84,9 +94,8 @@ export function PersonaSurveyPage() {
   // Step 3 — 설문
   const [survey, setSurvey] = useState<SurveyDef | null>(null);
 
-  // Step 4 — 실행 결과
+  // Step 4 — 실행 결과 (reportPlan은 RunReportCard 내부에서 관리)
   const [answers, setAnswers] = useState<SurveyAnswer[]>([]);
-  const [reportPrompt, setReportPrompt] = useState<string>("");
 
   const refreshDatasetStatus = useCallback(async () => {
     try {
@@ -198,8 +207,6 @@ export function PersonaSurveyPage() {
             survey={survey}
             answers={answers}
             setAnswers={setAnswers}
-            reportPrompt={reportPrompt}
-            setReportPrompt={setReportPrompt}
           />
         )}
       </Step>
@@ -631,15 +638,11 @@ function RunReportCard({
   survey,
   answers,
   setAnswers,
-  reportPrompt,
-  setReportPrompt,
 }: {
   personas: Persona[];
   survey: SurveyDef;
   answers: SurveyAnswer[];
   setAnswers: (a: SurveyAnswer[]) => void;
-  reportPrompt: string;
-  setReportPrompt: (s: string) => void;
 }) {
   const [models, setModels] = useState<RunModelChoice[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
@@ -648,7 +651,14 @@ function RunReportCard({
   const [systemExtra, setSystemExtra] = useState<string>("");
   const [style, setStyle] = useState<ReportStyle>("mckinsey");
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  // v0.8.4 — 리포트 프롬프트 plan + 청크 복사 진행률.
+  const [reportPlan, setReportPlan] = useState<ReportPromptPlan | null>(null);
+  const [copiedChunks, setCopiedChunks] = useState<Set<number>>(new Set());
+  const [synthCopied, setSynthCopied] = useState(false);
+  // v0.8.4 — sampling Drawer state.
+  const [sampling, setSampling] = useState<PersistedSampling>(() => loadPersistedSampling());
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerFocusField, setDrawerFocusField] = useState<"max_tokens" | null>(null);
 
   // 사용 가능 모델 로드 (Ollama + llama-cpp).
   useEffect(() => {
@@ -685,6 +695,7 @@ function RunReportCard({
         runtimeKind: rk as "ollama" | "llama-cpp",
         modelId: mid!,
         systemExtra: systemExtra.trim() || undefined,
+        sampling: effectiveSampling(sampling),
         onEvent: (e: PersonasSurveyEvent) => {
           if (e.kind === "answer") {
             collected.push(e.answer);
@@ -702,35 +713,65 @@ function RunReportCard({
       setRunning(false);
       setProgress(null);
     }
-  }, [personas, survey, selectedModel, systemExtra, setAnswers]);
+  }, [personas, survey, selectedModel, systemExtra, sampling, setAnswers]);
 
-  // 통계 집계 + 리포트 프롬프트 생성.
+  // v0.8.4 — 통계 집계 + chunked 리포트 plan 생성.
   const handleGenerateReport = useCallback(async () => {
     setError(null);
+    setCopiedChunks(new Set());
+    setSynthCopied(false);
     try {
       const summaries = aggregateAnswers(survey, answers);
       const distribution = describeDistribution(personas);
-      const prompt = await personasGenerateReportPrompt({
+      const plan = await personasGenerateReportPromptPlan({
         survey_title: survey.title,
         persona_count: personas.length,
         persona_distribution: distribution,
         question_summaries: summaries,
         style,
       });
-      setReportPrompt(prompt);
+      setReportPlan(plan);
     } catch (e) {
       setError((e as { message?: string }).message ?? String(e));
     }
-  }, [survey, answers, personas, style, setReportPrompt]);
+  }, [survey, answers, personas, style]);
 
-  const handleCopy = useCallback(async () => {
-    if (!reportPrompt) return;
+  const handleCopyChunk = useCallback(async (seq: number, prompt: string) => {
     try {
-      await navigator.clipboard.writeText(reportPrompt);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(prompt);
+      setCopiedChunks((prev) => new Set(prev).add(seq));
+      setTimeout(() => {
+        setCopiedChunks((prev) => {
+          const next = new Set(prev);
+          next.delete(seq);
+          return next;
+        });
+      }, 2000);
     } catch { /* noop */ }
-  }, [reportPrompt]);
+  }, []);
+
+  const handleCopySynth = useCallback(async (synth: string) => {
+    try {
+      await navigator.clipboard.writeText(synth);
+      setSynthCopied(true);
+      setTimeout(() => setSynthCopied(false), 2000);
+    } catch { /* noop */ }
+  }, []);
+
+  // v0.8.4 — 잘림 칩 클릭 → drawer 열고 max_tokens auto-focus.
+  const openDrawerForTruncation = useCallback(() => {
+    setDrawerFocusField("max_tokens");
+    setDrawerOpen(true);
+  }, []);
+  const openDrawer = useCallback(() => {
+    setDrawerFocusField(null);
+    setDrawerOpen(true);
+  }, []);
+
+  const truncatedCount = useMemo(
+    () => answers.filter((a) => a.truncated).length,
+    [answers],
+  );
 
   const handleDownloadCsv = useCallback(() => {
     const csv = answersToCsv(answers, personas, survey);
@@ -780,6 +821,15 @@ function RunReportCard({
           {running ? <Loader2 size={14} className="personas-spin" /> : <Play size={14} />}
           {running ? "응답 생성 중…" : "배치 시작"}
         </button>
+        <button
+          type="button"
+          className="personas-btn-secondary"
+          onClick={openDrawer}
+          disabled={running}
+          title="추론 파라미터 (max_tokens, temperature, top_p, ...)"
+        >
+          <Sliders size={14} aria-hidden="true" /> 추론 설정 ({samplingPresetLabel(sampling)})
+        </button>
       </div>
 
       {progress && (
@@ -807,6 +857,20 @@ function RunReportCard({
                 <span className="personas-card-meta">결과를 차트나 LLM 프롬프트로 가공해 보세요</span>
               </div>
             </div>
+            {truncatedCount > 0 && (
+              <button
+                type="button"
+                className="personas-truncated-chip"
+                onClick={openDrawerForTruncation}
+                title="잘린 응답이 있어요 — 최대 토큰을 늘려서 다시 받아볼래요?"
+              >
+                <AlertTriangle size={14} aria-hidden="true" />
+                <span>
+                  <strong>{truncatedCount}건</strong>이 토큰 한도로 잘렸어요 ·{" "}
+                  <em>최대 답변 길이 늘려서 다시 받아볼래요?</em>
+                </span>
+              </button>
+            )}
           </div>
 
           <div className="personas-form-grid">
@@ -829,21 +893,133 @@ function RunReportCard({
             </button>
           </div>
 
-          {reportPrompt && (
-            <div className="personas-prompt-area">
-              <div className="personas-form-actions" style={{ justifyContent: "space-between" }}>
-                <strong>외부 LLM(ChatGPT/Gemini/Claude)에 붙여넣을 프롬프트</strong>
-                <button type="button" className="personas-btn-primary" onClick={handleCopy}>
-                  <ClipboardCopy size={14} /> {copied ? "복사 완료!" : "클립보드 복사"}
-                </button>
-              </div>
-              <textarea className="personas-textarea" value={reportPrompt} readOnly rows={14} />
-            </div>
+          {reportPlan && (
+            <ChunkedReportSection
+              plan={reportPlan}
+              copiedChunks={copiedChunks}
+              synthCopied={synthCopied}
+              onCopyChunk={handleCopyChunk}
+              onCopySynth={handleCopySynth}
+            />
           )}
         </>
       )}
+
+      <SamplingDrawer
+        open={drawerOpen}
+        initial={sampling}
+        focusField={drawerFocusField}
+        onClose={() => setDrawerOpen(false)}
+        onApply={(next) => setSampling(next)}
+      />
     </div>
   );
+}
+
+// ── ChunkedReportSection (v0.8.4) ────────────────────────────────────
+
+function ChunkedReportSection({
+  plan,
+  copiedChunks,
+  synthCopied,
+  onCopyChunk,
+  onCopySynth,
+}: {
+  plan: ReportPromptPlan;
+  copiedChunks: Set<number>;
+  synthCopied: boolean;
+  onCopyChunk: (seq: number, prompt: string) => void;
+  onCopySynth: (synth: string) => void;
+}) {
+  const isMulti = plan.chunks.length > 1;
+  return (
+    <div className="personas-prompt-area">
+      <div
+        className="personas-form-actions"
+        style={{ justifyContent: "space-between" }}
+      >
+        <strong>
+          외부 LLM(ChatGPT/Gemini/Claude)에 붙여넣을 프롬프트
+          {isMulti && (
+            <span className="personas-card-meta num">
+              {" "}
+              · {plan.chunks.length}개 청크 + 종합 1개 · 약{" "}
+              {plan.estimated_tokens_total.toLocaleString()} 토큰
+            </span>
+          )}
+        </strong>
+      </div>
+      {isMulti && (
+        <p className="personas-card-info-text">
+          데이터가 커서 외부 LLM 한 번에 못 보내요. <strong>{plan.chunks.length}개 청크를 순서대로</strong>{" "}
+          복사해서 같은 대화창에 붙여 넣은 뒤, 마지막에 <strong>종합 합성</strong>{" "}
+          프롬프트를 붙여 주세요. 외부 LLM이 모든 청크를 종합해 한 편의 리포트로 작성해요.
+        </p>
+      )}
+      {plan.chunks.map((chunk) => (
+        <div key={chunk.seq} className="personas-chunk-card">
+          <div className="personas-form-actions" style={{ justifyContent: "space-between" }}>
+            <strong>
+              청크 {chunk.seq} / {chunk.total} ·{" "}
+              <span className="personas-card-meta num">
+                약 {chunk.estimated_tokens.toLocaleString()} 토큰
+              </span>
+            </strong>
+            <button
+              type="button"
+              className="personas-btn-primary"
+              onClick={() => onCopyChunk(chunk.seq, chunk.prompt)}
+            >
+              <ClipboardCopy size={14} aria-hidden="true" />{" "}
+              {copiedChunks.has(chunk.seq) ? "복사 완료!" : "이 청크 복사"}
+            </button>
+          </div>
+          <textarea
+            className="personas-textarea"
+            value={chunk.prompt}
+            readOnly
+            rows={isMulti ? 8 : 14}
+          />
+        </div>
+      ))}
+      {plan.final_synthesis && (
+        <div className="personas-chunk-card personas-chunk-synth">
+          <div className="personas-form-actions" style={{ justifyContent: "space-between" }}>
+            <strong>종합 합성 프롬프트 (모든 청크를 보낸 뒤 마지막에)</strong>
+            <button
+              type="button"
+              className="personas-btn-primary"
+              onClick={() => onCopySynth(plan.final_synthesis!)}
+            >
+              <ClipboardCopy size={14} aria-hidden="true" />{" "}
+              {synthCopied ? "복사 완료!" : "합성 프롬프트 복사"}
+            </button>
+          </div>
+          <textarea
+            className="personas-textarea"
+            value={plan.final_synthesis}
+            readOnly
+            rows={8}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── sampling 프리셋 라벨 ─────────────────────────────────────────────
+
+function samplingPresetLabel(p: PersistedSampling): string {
+  switch (p.preset) {
+    case "precise":
+      return "정확하게";
+    case "balanced":
+      return "균형";
+    case "creative":
+      return "창의적";
+    case "custom":
+      return "직접";
+  }
 }
 
 // ── 통계 집계 헬퍼 ───────────────────────────────────────────────────

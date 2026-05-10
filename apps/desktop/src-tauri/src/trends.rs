@@ -270,7 +270,7 @@ impl Summarizer for OllamaSummarizer {
         let cancel = CancellationToken::new();
         let outcome = self
             .adapter
-            .chat_stream(&self.model_id, &messages, on_event, &cancel)
+            .chat_stream(&self.model_id, &messages, on_event, &cancel, None)
             .await;
 
         match outcome {
@@ -341,7 +341,7 @@ impl Summarizer for LmStudioSummarizer {
         let cancel = CancellationToken::new();
         let outcome = self
             .adapter
-            .chat_stream(&self.model_id, &messages, on_event, &cancel)
+            .chat_stream(&self.model_id, &messages, on_event, &cancel, None)
             .await;
 
         match outcome {

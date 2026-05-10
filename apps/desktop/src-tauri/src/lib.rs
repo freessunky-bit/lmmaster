@@ -117,6 +117,7 @@ pub fn run() {
             personas::sample::personas_sample,
             personas::survey::personas_run_survey,
             personas::report::personas_generate_report_prompt,
+            personas::report::personas_generate_report_prompt_plan,
             settings::remote_endpoints::list_remote_endpoints,
             settings::remote_endpoints::add_remote_endpoint,
             settings::remote_endpoints::remove_remote_endpoint,

@@ -19,6 +19,18 @@ pub struct ChatRequest<'a> {
     pub model: &'a str,
     pub messages: Vec<ChatTurn>,
     pub stream: bool,
+    /// v0.8.4 — 사용자 조절 sampling 파라미터. None은 모두 skip.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temperature: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub top_p: Option<f32>,
+    /// llama.cpp 확장 필드 — Ollama·LM Studio도 동일 의미.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repeat_penalty: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub seed: Option<i64>,
 }
 
 /// `messages[i]` — 한 turn (system / user / assistant). content는 plain text 또는 array.
@@ -136,10 +148,44 @@ mod tests {
                 content: Content::Text("ping".into()),
             }],
             stream: true,
+            max_tokens: None,
+            temperature: None,
+            top_p: None,
+            repeat_penalty: None,
+            seed: None,
         };
         let v = serde_json::to_value(&req).unwrap();
         assert_eq!(v["model"], "gemma-3-4b");
         assert_eq!(v["stream"], true);
         assert_eq!(v["messages"][0]["content"], "ping");
+        // v0.8.4 — 모든 sampling None → 직렬화 skip.
+        assert!(v.get("max_tokens").is_none());
+        assert!(v.get("temperature").is_none());
+        assert!(v.get("top_p").is_none());
+        assert!(v.get("repeat_penalty").is_none());
+        assert!(v.get("seed").is_none());
+    }
+
+    #[test]
+    fn request_with_sampling_serializes_fields() {
+        let req = ChatRequest {
+            model: "gemma-3-4b",
+            messages: vec![ChatTurn {
+                role: "user".into(),
+                content: Content::Text("ping".into()),
+            }],
+            stream: true,
+            max_tokens: Some(512),
+            temperature: Some(0.5),
+            top_p: Some(0.9),
+            repeat_penalty: Some(1.1),
+            seed: Some(42),
+        };
+        let v = serde_json::to_value(&req).unwrap();
+        assert_eq!(v["max_tokens"], 512);
+        assert!((v["temperature"].as_f64().unwrap() - 0.5).abs() < 0.001);
+        assert!((v["top_p"].as_f64().unwrap() - 0.9).abs() < 0.001);
+        assert!((v["repeat_penalty"].as_f64().unwrap() - 1.1).abs() < 0.001);
+        assert_eq!(v["seed"], 42);
     }
 }
